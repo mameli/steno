@@ -122,6 +122,7 @@ Regole:
 - Cartella `<Vault>/Meetings/_Template/`. Se è vuota, Steno crea `Generico.md` all'avvio dell'app e quando si sceglie il Vault.
 - Formato: frontmatter con `nome` e `lingua_riepilogo` (`auto` | `it` | `en`, default `auto` = lingua della Riunione). Il corpo, cioè le istruzioni libere e la struttura di intestazioni, si passa al modello così com'è.
 - Il Template si sceglie all'avvio (default dalle impostazioni) e si può cambiare fino allo stop.
+- Nelle Impostazioni, sezione Template: elenco, Template di default, "Nuovo Template" (nome → file creato dal Generico e aperto in Obsidian), "Apri in Obsidian", "Elimina" (sposta il file nel Cestino; se era il default si torna al Generico). Il testo si scrive in Obsidian: Steno non ha un editor.
 
 ## Riepilogo
 

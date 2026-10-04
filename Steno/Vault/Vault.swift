@@ -34,10 +34,28 @@ struct Vault {
         try Template.genericFileContent.write(to: url, atomically: true, encoding: .utf8)
     }
 
+    /// Crea un Template nuovo partendo dal Generico e restituisce il nome del file (senza `.md`).
+    func createTemplate(named name: String) throws -> String {
+        guard let safeName = VaultNaming.fileName(name) else { throw VaultError.invalidName(name) }
+        try FileManager.default.createDirectory(at: templatesFolder, withIntermediateDirectories: true)
+        let fileName = VaultNaming.available(safeName, taken: Self.noteNames(in: templatesFolder))
+        try Template.newFileContent(name: fileName)
+            .write(to: templateURL(fileName), atomically: true, encoding: .utf8)
+        return fileName
+    }
+
+    /// Sposta il Template nel Cestino: si può recuperare.
+    func trashTemplate(named name: String) throws {
+        try FileManager.default.trashItem(at: templateURL(name), resultingItemURL: nil)
+    }
+
+    func templateURL(_ name: String) -> URL {
+        templatesFolder.appending(path: name + ".md")
+    }
+
     /// Il Template con quel nome di file; se non c'è più, il Generico.
     func template(named name: String) -> Template {
-        let url = templatesFolder.appending(path: name + ".md")
-        guard let content = try? String(contentsOf: url, encoding: .utf8) else {
+        guard let content = try? String(contentsOf: templateURL(name), encoding: .utf8) else {
             return Template(fileName: Template.genericName, content: Template.genericFileContent)
         }
         return Template(fileName: name, content: content)
@@ -154,11 +172,13 @@ struct Vault {
 enum VaultError: LocalizedError {
     case unreachable(String)
     case busy(String)
+    case invalidName(String)
 
     var errorDescription: String? {
         switch self {
         case .unreachable(let path): "Vault non raggiungibile: \(path)."
         case .busy(let file): "\(file) continua a cambiare mentre Steno prova ad aggiornarla."
+        case .invalidName(let name): "\"\(name)\" non è un nome valido per un file."
         }
     }
 }

@@ -33,4 +33,13 @@ struct VaultNamingTests {
         // Il file system del Mac non distingue maiuscole e minuscole.
         #expect(VaultNaming.available(name, taken: [name.lowercased()]) == "\(name) (2)")
     }
+
+    @Test("il nome di un file scelto dall'utente perde i caratteri vietati da Obsidian", arguments: [
+        ("Retro: sprint/12", "Retro sprint 12"),
+        ("  1:1 #settimanale ", "1 1 settimanale"),
+        ("???", nil),
+    ] as [(String, String?)])
+    func fileName(input: String, expected: String?) {
+        #expect(VaultNaming.fileName(input) == expected)
+    }
 }

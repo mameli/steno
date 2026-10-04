@@ -25,7 +25,10 @@ Prima di iniziare: Steno avviato dal menu (icona a onda), vault e Profilo "OpenR
 
 - [ ] **Due Riunioni di fila**: ferma la prima e avvia subito la seconda → nel menu "Elaborazione in corso… (altre 1 in coda)", poi due notifiche.
 - [ ] **Riunioni recenti → Apri nota**: apre la nota giusta, anche se l'hai rinominata o spostata.
-- [ ] **Rigenera con Template**: crea in `Meetings/_Template/` un Template tuo (copiando `Generico.md`), poi *Rigenera con Template* → il Riepilogo cambia, durata e Trascrizione no.
+- [ ] **Nuovo Template**: Impostazioni → *Template* → scrivi un nome → *Crea e apri* → si apre in Obsidian; cambia istruzioni e sezioni e salva.
+- [ ] **Template di default**: scegli il nuovo Template come default → la prossima Riunione parte con quello.
+- [ ] **Elimina Template**: *Elimina* → conferma → il file è nel Cestino del Mac; se era il default, torna il Generico.
+- [ ] **Rigenera con Template**: *Riunioni recenti* → una Riunione → *Rigenera con Template* → il tuo Template → il Riepilogo cambia, durata e Trascrizione no.
 - [ ] **Riprova**: togli la connessione a internet, fai una Riunione breve → "Elaborazione non riuscita" e ⚠️ nella nota e nel menu; ricollegati e *Riprova* → Riepilogo generato.
 
 ## 4. Casi limite

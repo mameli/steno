@@ -38,10 +38,15 @@ public enum VaultNaming {
     }
 
     private static func sanitized(_ title: String) -> String {
-        let words = title
+        fileName(title) ?? defaultTitle
+    }
+
+    /// Un nome scelto dall'utente reso valido come nome di file in Obsidian, `nil` se non resta niente.
+    public static func fileName(_ name: String) -> String? {
+        let words = name
             .components(separatedBy: forbidden)
             .joined(separator: " ")
             .split(whereSeparator: \.isWhitespace)
-        return words.isEmpty ? defaultTitle : words.joined(separator: " ")
+        return words.isEmpty ? nil : words.joined(separator: " ")
     }
 }

@@ -53,4 +53,14 @@ struct TemplateTests {
             ## Domande aperte
             """)
     }
+
+    @Test("un Template nuovo parte dal Generico con il nome scelto")
+    func newTemplate() {
+        let template = Template(fileName: "Retro sprint", content: Template.newFileContent(name: "Retro sprint"))
+        let generic = Template(fileName: Template.genericName, content: Template.genericFileContent)
+
+        #expect(template.name == "Retro sprint")
+        #expect(template.summaryLanguage == nil)
+        #expect(template.body == generic.body)
+    }
 }

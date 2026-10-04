@@ -22,11 +22,9 @@ struct SettingsView: View {
                         Button("Scegli…", action: chooseVault)
                     }
                 }
-                Picker("Template di default", selection: $defaultTemplate) {
-                    ForEach(Vault.templateChoices(including: defaultTemplate), id: \.self) { Text($0).tag($0) }
-                }
-                .onChange(of: defaultTemplate) { AppSettings.defaultTemplate = defaultTemplate }
             }
+
+            TemplatesSection(defaultTemplate: $defaultTemplate, vaultPath: vaultPath)
 
             Section {
                 if profiles.isEmpty {
@@ -97,6 +95,106 @@ struct SettingsView: View {
         profiles.removeAll { $0.id == id }
         if activeProfileID == id.uuidString { activeProfileID = "" }
         selectedProfileID = profiles.first?.id
+    }
+}
+
+/// I Template del Vault: si creano qui e si scrivono in Obsidian, come le altre note.
+private struct TemplatesSection: View {
+    @Binding var defaultTemplate: String
+    /// Cambia quando si sceglie un altro Vault: l'elenco va riletto.
+    let vaultPath: String
+    @State private var names: [String] = []
+    @State private var newName = ""
+    @State private var status: String?
+    @State private var pendingDeletion: String?
+
+    var body: some View {
+        Section {
+            if Vault.configured == nil {
+                Text("Scegli prima il Vault.").foregroundStyle(.secondary)
+            } else {
+                Picker("Template di default", selection: $defaultTemplate) {
+                    ForEach(Vault.templateChoices(including: defaultTemplate), id: \.self) { Text($0).tag($0) }
+                }
+                .onChange(of: defaultTemplate) { AppSettings.defaultTemplate = defaultTemplate }
+
+                ForEach(names, id: \.self) { name in
+                    HStack {
+                        Text(name)
+                        if name == defaultTemplate {
+                            Text("Default").font(.caption).foregroundStyle(.green)
+                        }
+                        Spacer()
+                        Button("Apri in Obsidian") { open(name) }
+                        Button("Elimina", role: .destructive) { pendingDeletion = name }
+                    }
+                }
+
+                LabeledContent("Nuovo Template") {
+                    HStack {
+                        PasteableTextField(placeholder: "es. 1:1 settimanale", text: $newName)
+                        Button("Crea e apri", action: create)
+                            .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+                if let status {
+                    Text(status).foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            Text("Template")
+        } footer: {
+            Text("Un Template nuovo parte dal Generico: in Obsidian cambi istruzioni e sezioni. Sono in Meetings/_Template/ nel Vault.")
+                .foregroundStyle(.secondary)
+        }
+        .onAppear(perform: reload)
+        .onChange(of: vaultPath) { reload() }
+        .confirmationDialog(
+            "Spostare il Template \"\(pendingDeletion ?? "")\" nel Cestino?",
+            isPresented: Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } })
+        ) {
+            Button("Sposta nel Cestino", role: .destructive) {
+                if let name = pendingDeletion { delete(name) }
+            }
+        } message: {
+            Text("Le Riunioni che lo usavano passano al Template Generico.")
+        }
+    }
+
+    private func reload() {
+        names = Vault.configured?.templateNames() ?? []
+    }
+
+    private func create() {
+        guard let vault = Vault.configured else { return }
+        do {
+            let name = try vault.createTemplate(named: newName)
+            newName = ""
+            reload()
+            status = "Creato \"\(name)\": modificalo in Obsidian."
+            open(name)
+        } catch {
+            status = error.localizedDescription
+        }
+    }
+
+    private func open(_ name: String) {
+        guard let vault = Vault.configured else { return }
+        Vault.openInObsidian(vault.templateURL(name))
+    }
+
+    private func delete(_ name: String) {
+        guard let vault = Vault.configured else { return }
+        do {
+            try vault.trashTemplate(named: name)
+            if defaultTemplate == name { defaultTemplate = Template.genericName }
+            try? vault.ensureDefaultTemplate()
+            reload()
+            status = "\"\(name)\" è nel Cestino."
+        } catch {
+            status = error.localizedDescription
+        }
+        pendingDeletion = nil
     }
 }
 

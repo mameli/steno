@@ -25,6 +25,11 @@ public struct Template: Equatable, Sendable {
 
         """
 
+    /// Il contenuto di un Template nuovo creato dall'utente: il Generico con il nome scelto.
+    public static func newFileContent(name: String) -> String {
+        genericFileContent.replacingOccurrences(of: "nome: \(genericName)", with: "nome: \(name)")
+    }
+
     public init(fileName: String, content: String) {
         let (values, body) = Self.splitFrontmatter(content)
         name = values["nome"].flatMap { $0.isEmpty ? nil : $0 } ?? fileName
