@@ -119,15 +119,22 @@ actor MeetingTranscription {
         }
     }
 
+    /// Legge il segmento a blocchi da 10 secondi: una lettura unica di minuti di AAC, con il
+    /// voice processing attivo nello stesso processo, fa girare a vuoto il decoder di macOS.
     private static func loadSamples(_ url: URL) throws -> [Float] {
         let file = try AVAudioFile(forReading: url)
-        guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)),
-              (try? file.read(into: buffer)) != nil,
-              let channel = buffer.floatChannelData?[0]
-        else {
+        let blockFrames = AVAudioFrameCount(10 * Recording.sampleRate)
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: blockFrames) else {
             throw TranscriptionError.unreadableAudio(url.lastPathComponent)
         }
-        return Array(UnsafeBufferPointer(start: channel, count: Int(buffer.frameLength)))
+        var samples: [Float] = []
+        samples.reserveCapacity(Int(file.length))
+        while file.framePosition < file.length {
+            try file.read(into: buffer, frameCount: blockFrames)
+            guard buffer.frameLength > 0, let channel = buffer.floatChannelData?[0] else { break }
+            samples.append(contentsOf: UnsafeBufferPointer(start: channel, count: Int(buffer.frameLength)))
+        }
+        return samples
     }
 }
 
