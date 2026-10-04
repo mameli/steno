@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 import StenoCore
 
@@ -92,6 +93,46 @@ struct TranscriptTests {
             **[00:42] Io:** Sì, sul primo punto.
 
             **[1:02:03] Altri:** Chiudiamo qui.
+
+            """)
+    }
+
+    @Test("il file della Trascrizione nel Vault ha frontmatter con steno_id, link alla Nota e lingua")
+    func vaultFile() {
+        let transcript = Transcript(utterances: [
+            Utterance(track: .others, start: 0, end: 4, text: "Buongiorno a tutti."),
+        ])
+
+        let file = transcript.vaultFile(
+            stenoID: UUID(uuidString: "6F1C2A00-0000-4000-8000-000000000001")!,
+            meetingNoteName: "2026-10-04 1430 - Riunione",
+            language: "it"
+        )
+
+        #expect(file == """
+            ---
+            steno_id: 6F1C2A00-0000-4000-8000-000000000001
+            riunione: "[[2026-10-04 1430 - Riunione]]"
+            lingua: it
+            ---
+            **[00:00] Altri:** Buongiorno a tutti.
+
+            """)
+    }
+
+    @Test("senza parlato la lingua non compare nel frontmatter")
+    func vaultFileWithoutLanguage() {
+        let file = Transcript(utterances: []).vaultFile(
+            stenoID: UUID(uuidString: "6F1C2A00-0000-4000-8000-000000000001")!,
+            meetingNoteName: "2026-10-04 1430 - Riunione",
+            language: nil
+        )
+
+        #expect(file == """
+            ---
+            steno_id: 6F1C2A00-0000-4000-8000-000000000001
+            riunione: "[[2026-10-04 1430 - Riunione]]"
+            ---
 
             """)
     }

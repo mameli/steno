@@ -11,10 +11,18 @@ private let logger = Logger(subsystem: "dev.mameli.steno", category: "riunione")
 @MainActor
 @Observable
 final class MeetingController {
+    /// Quello che serve per elaborare una Riunione dopo lo stop.
+    private struct MeetingContext {
+        let stenoID: UUID
+        let startedAt: Date
+        let noteURL: URL?
+        let transcription: MeetingTranscription
+    }
+
     private var machine = MeetingStateMachine()
     private let recorder = MeetingRecorder()
     private let transcriber = LocalTranscriber()
-    private var transcription: MeetingTranscription?
+    private var current: MeetingContext?
     private var now = Date()
     private var isRequestingPermission = false
     private var ticker: Task<Void, Never>?
@@ -22,24 +30,11 @@ final class MeetingController {
     private(set) var lastError: String?
     private(set) var lastRecordingDirectory: URL?
     private(set) var lastTranscriptURL: URL?
-    private(set) var transcriptionsInProgress = 0
-
-    // Finché non c'è una finestra impostazioni:
-    // `defaults write dev.mameli.steno echoCancellation -bool false`
-    // `defaults write dev.mameli.steno language it` (oppure `en`, `auto`)
-    private var echoCancellation: Bool {
-        UserDefaults.standard.bool(forKey: "echoCancellation")
-    }
-
-    /// `nil` per rilevare la lingua in automatico.
-    private var forcedLanguage: String? {
-        UserDefaults.standard.string(forKey: "language").flatMap {
-            LocalTranscriber.supportedLanguages.contains($0) ? $0 : nil
-        }
-    }
+    private(set) var lastNoteURL: URL?
+    private(set) var processingCount = 0
 
     init() {
-        UserDefaults.standard.register(defaults: ["echoCancellation": true, "language": "auto"])
+        Settings.registerDefaults()
     }
 
     var isInProgress: Bool { machine.state != .idle }
@@ -61,9 +56,10 @@ final class MeetingController {
         guard granted else { return }
 
         now = Date()
-        let transcription = MeetingTranscription(transcriber: transcriber, language: forcedLanguage)
+        let transcription = MeetingTranscription(transcriber: transcriber, language: Settings.forcedLanguage)
+        let started: MeetingRecorder.Started
         do {
-            try recorder.start(at: now, echoCancellation: echoCancellation) { segment, directory in
+            started = try recorder.start(at: now, echoCancellation: Settings.echoCancellation) { segment, directory in
                 Task { await transcription.segmentClosed(segment, in: directory) }
             }
         } catch {
@@ -78,8 +74,13 @@ final class MeetingController {
             _ = try? recorder.stop(at: now)
             return
         }
-        self.transcription = transcription
         lastError = nil
+        current = MeetingContext(
+            stenoID: started.meetingID,
+            startedAt: now,
+            noteURL: createMeetingNote(stenoID: started.meetingID, startedAt: now),
+            transcription: transcription
+        )
         startTicker()
 
         // Al primo uso scarica il modello: meglio farlo mentre la Riunione è in corso.
@@ -117,43 +118,120 @@ final class MeetingController {
             logger.error("\(self.lastError!, privacy: .public)")
         }
 
-        if let transcription {
-            self.transcription = nil
-            Task { await transcribe(stopped.recording, in: stopped.directory, with: transcription) }
+        if let context = current {
+            current = nil
+            Task { await process(stopped.recording, in: stopped.directory, context: context) }
         }
     }
 
-    private func transcribe(_ recording: Recording, in directory: URL, with transcription: MeetingTranscription) async {
-        transcriptionsInProgress += 1
-        defer { transcriptionsInProgress -= 1 }
+    /// Crea la Nota della Riunione nel Vault e la apre in Obsidian. Se non riesce la Riunione
+    /// prosegue lo stesso: la nota verrà creata a fine Elaborazione.
+    private func createMeetingNote(stenoID: UUID, startedAt: Date) -> URL? {
+        guard let vault = Vault.configured else { return nil }
         do {
-            let finished = try await transcription.finish(recording, in: directory)
-            // Con più Elaborazioni in parallelo, conta quella della Riunione più recente.
-            if directory == lastRecordingDirectory {
-                lastTranscriptURL = finished.url
+            let url = try vault.createMeetingNote(stenoID: stenoID, startedAt: startedAt)
+            if Settings.openInObsidian {
+                Task {
+                    // Obsidian deve prima accorgersi del file nuovo.
+                    try? await Task.sleep(for: .milliseconds(500))
+                    Vault.openInObsidian(url)
+                }
             }
-            if !finished.failedSegments.isEmpty {
-                lastError = "Trascrizione incompleta: " + finished.failedSegments.joined(separator: "; ")
-                logger.error("\(self.lastError!, privacy: .public)")
-            }
+            return url
         } catch {
-            logger.error("Trascrizione fallita: \(error, privacy: .public)")
-            lastError = "Trascrizione fallita: \(error.localizedDescription)"
+            logger.error("Nota della Riunione non creata: \(error, privacy: .public)")
+            lastError = "\(error.localizedDescription) La nota verrà creata a fine Elaborazione."
+            return nil
         }
+    }
+
+    /// Elaborazione: Trascrizione, poi scrittura nel Vault (anche quando la Trascrizione fallisce,
+    /// così la nota non resta su "Registrazione in corso").
+    private func process(_ recording: Recording, in directory: URL, context: MeetingContext) async {
+        processingCount += 1
+        defer { processingCount -= 1 }
+        // Con più Elaborazioni in parallelo, i link del menu seguono la Riunione più recente.
+        let isLatest = directory == lastRecordingDirectory
+        var problems: [String] = []
+
+        let finished: MeetingTranscription.Finished?
+        do {
+            finished = try await context.transcription.finish(recording, in: directory)
+        } catch {
+            finished = nil
+            problems.append("Trascrizione non riuscita: \(error.localizedDescription)")
+        }
+        if let finished {
+            if isLatest { lastTranscriptURL = finished.url }
+            if !finished.failedSegments.isEmpty {
+                problems.append("Trascrizione incompleta: " + finished.failedSegments.joined(separator: "; "))
+            }
+        }
+
+        if let vault = Vault.configured {
+            do {
+                let noteURL = try writeToVault(vault, finished, recording: recording, context: context)
+                if isLatest { lastNoteURL = noteURL }
+            } catch {
+                problems.append("Scrittura nel Vault non riuscita: \(error.localizedDescription)")
+            }
+        }
+
+        if !problems.isEmpty {
+            lastError = problems.joined(separator: " ")
+            logger.error("\(self.lastError!, privacy: .public)")
+        } else if isLatest {
+            lastError = nil
+        }
+    }
+
+    private func writeToVault(
+        _ vault: Vault, _ finished: MeetingTranscription.Finished?, recording: Recording, context: MeetingContext
+    ) throws -> URL {
+        let noteURL = try vault.findMeetingNote(stenoID: context.stenoID, expected: context.noteURL)
+            ?? vault.createMeetingNote(stenoID: context.stenoID, startedAt: context.startedAt)
+        guard let finished else {
+            try vault.update(noteURL) {
+                $0.recordFailure(stenoID: context.stenoID, reason: "Trascrizione non riuscita: la Registrazione è salvata, si potrà riprovare.")
+            }
+            return noteURL
+        }
+        let transcriptURL = try vault.writeTranscript(
+            finished.transcript,
+            stenoID: context.stenoID,
+            meetingNoteName: noteURL.deletingPathExtension().lastPathComponent,
+            language: finished.language
+        )
+        try vault.update(noteURL) {
+            $0.recordTranscription(
+                stenoID: context.stenoID,
+                duration: recording.endedAt.timeIntervalSince(recording.startedAt),
+                language: finished.language,
+                provider: "Locale",
+                transcriptName: transcriptURL.deletingPathExtension().lastPathComponent
+            )
+        }
+        return noteURL
     }
 
     #if DEBUG
     /// Prove senza toccare il menu (l'esito finisce in `Steno/smoke-test.txt`, perché `log show` non è sempre leggibile):
     /// - `open Steno.app --args -smokeTestSeconds 20` registra per N secondi;
-    /// - `open Steno.app --args -transcribeRecording <cartella>` ritrascrive una Registrazione esistente.
+    /// - `open Steno.app --args -transcribeRecording <cartella>` rielabora una Registrazione esistente;
+    /// - `-vaultPath <cartella>` usa un altro Vault, `-openInObsidian NO` non apre Obsidian.
     func runSmokeTestIfRequested() async {
         if let path = UserDefaults.standard.string(forKey: "transcribeRecording") {
             let directory = URL(filePath: path, directoryHint: .isDirectory)
             lastRecordingDirectory = directory
             do {
                 let recording = try Recording.load(from: directory.appending(path: "riunione.json"))
-                let transcription = MeetingTranscription(transcriber: transcriber, language: forcedLanguage)
-                await transcribe(recording, in: directory, with: transcription)
+                let context = MeetingContext(
+                    stenoID: recording.meetingID,
+                    startedAt: recording.startedAt,
+                    noteURL: nil,
+                    transcription: MeetingTranscription(transcriber: transcriber, language: Settings.forcedLanguage)
+                )
+                await process(recording, in: directory, context: context)
             } catch {
                 lastError = error.localizedDescription
             }

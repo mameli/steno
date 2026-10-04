@@ -43,7 +43,7 @@ Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in
    3. rilegge la Nota della Riunione ed estrae le Note personali;
    4. genera Riepilogo e titolo con il Profilo di riepilogo;
    5. riscrive la Zona gestita e le chiavi di Steno nel frontmatter;
-   6. rinomina la nota e la Trascrizione con il titolo, se l'utente non l'ha già rinominata;
+   6. rinomina la nota e la Trascrizione con il titolo, se l'utente non l'ha già rinominata (dalla fase 4, quando il titolo esiste);
    7. notifica "Riepilogo pronto" (clic → apre la nota in Obsidian).
 5. Se un passo fallisce: la Zona gestita mostra `⚠️ Riepilogo non generato: <motivo>`. La Riunione resta in "Riunioni recenti" con **Riprova**. Nessun ripiego su un altro Provider.
 
@@ -66,7 +66,7 @@ Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in
 - **Locale**: WhisperKit, modello `openai_whisper-large-v3-v20240930_turbo_632MB` (646 MB), scaricato al primo uso in `~/Library/Application Support/Steno/Modelli` e preparato mentre la prima Riunione è in corso. Lingua `auto` oppure forzata `it`/`en`. La lingua si rileva una sola volta, su 30 secondi di solo parlato (i tratti con voce, senza silenzi) del primo segmento che ne contiene, di qualsiasi Traccia, scegliendo solo tra italiano e inglese, e vale per tutta la Riunione. Non si preferisce più Altri (era la difesa contro lo "svedese" della fase 1, nato dal silenzio): rilevando solo sul parlato il problema sparisce, e nella call reale l'eco residuo in Io resta sotto la soglia del parlato. La lingua usata viene salvata nella cache di ogni segmento; se poi si forza una lingua diversa, il segmento viene ritrascritto. Si può forzare con `defaults write dev.mameli.steno language it` (o `en`, `auto`) finché non ci sono le impostazioni. Rilevarla sui primi 30 secondi non basta: nella prova reale della fase 1 la Traccia Io iniziava con 80 secondi di quasi silenzio e Whisper l'ha classificata come svedese.
 - **Remota**: `POST {baseURL}/audio/transcriptions` (multipart, un segmento per richiesta) tramite l'adattatore compatibile OpenAI. Viene usata solo allo stop: durante la call l'audio non lascia mai il Mac.
 
-File `<Vault>/Meetings/Trascrizioni/2026-10-04 1430 - <Titolo> (trascrizione).md`:
+File `<Vault>/Meetings/Trascrizioni/2026-10-04 1430 - <Titolo> (trascrizione).md` (una copia senza frontmatter resta anche in `trascrizione.md` nella cartella della Registrazione). Una nuova Elaborazione della stessa Riunione sovrascrive il file esistente, ritrovato tramite `steno_id`:
 
 ```markdown
 ---
@@ -94,7 +94,7 @@ trascrizione: "[[2026-10-04 1430 - Titolo (trascrizione)]]"
 tags: [riunione]
 ---
 %% steno:inizio %%
-⏺ Registrazione in corso…            ← poi "⏳ Elaborazione…", poi il Riepilogo
+⏺ Registrazione in corso: il Riepilogo comparirà qui dopo lo stop.   ← poi il Riepilogo
 %% steno:fine %%
 
 ## Note personali
@@ -102,7 +102,12 @@ tags: [riunione]
 ```
 
 Regole:
-- Steno riscrive **solo** il testo tra `%% steno:inizio %%` e `%% steno:fine %%` e le **proprie** chiavi del frontmatter. Le chiavi aggiunte dall'utente restano.
+- Steno riscrive **solo** il testo tra `%% steno:inizio %%` e `%% steno:fine %%` e le **proprie** chiavi del frontmatter (`durata`, `lingua`, `provider_trascrizione`, `provider_riepilogo`, `template`, `trascrizione`). Le chiavi aggiunte dall'utente restano. `data` e `tags` si scrivono solo alla creazione: da quel momento appartengono all'utente. `steno_id` viene ripristinato a ogni aggiornamento se l'utente l'ha cancellato, altrimenti la nota non si ritroverebbe più.
+- Lo `steno_id` conta solo nel frontmatter (un testo uguale nel corpo non identifica la nota). I marcatori della Zona gestita dentro i blocchi di codice non contano. Le note con a capo Windows o BOM vengono lette correttamente e riscritte con a capo `\n`.
+- Steno aggiorna la nota sul file stesso (non lo sostituisce), controllando che non sia cambiata tra lettura e scrittura: se Obsidian l'ha salvata nel frattempo, la rilegge e riapplica la modifica.
+- Se l'Elaborazione fallisce, la Zona gestita mostra `⚠️ <motivo>` invece di restare su "Registrazione in corso".
+- Tra la creazione e la fine dell'Elaborazione Steno non scrive nella nota (niente stato intermedio "Elaborazione in corso"): il progresso si vede nella barra dei menu.
+- Se all'avvio il Vault non è raggiungibile (volume non montato, cartella spostata) la Riunione si registra lo stesso e la nota viene creata a fine Elaborazione. Lo stesso succede se l'utente cancella la nota durante la Riunione.
 - **Note personali** = tutto il corpo fuori dalla Zona gestita, senza l'intestazione `## Note personali`. Se è vuoto, il Riepilogo si basa solo sulla Trascrizione.
 - Se i marcatori sono stati cancellati, Steno li ricrea in testa al corpo, senza cancellare niente.
 - La nota si ritrova tramite `steno_id`: prima al percorso noto, altrimenti cercando nella cartella Meetings. Se l'utente l'ha rinominata o spostata, Steno non la rinomina.
@@ -168,8 +173,8 @@ Ogni fase si chiude con una verifica concreta.
 | 0 | Progetto Xcode + `StenoCore`, firma, Info.plist, `MenuBarExtra` con Avvia/Ferma | L'app parte nella barra dei menu e chiede i permessi una volta sola |
 | 1 | **Cattura** delle due Tracce a segmenti, cancellazione d'eco | Una call Meet/Teams di 12 minuti produce 3+3 segmenti udibili, con Io senza eco degli altri |
 | 2 | **Trascrizione locale** a blocchi + fusione Io/Altri | Il file Trascrizione della call di prova è leggibile, ordinato e attribuito |
-| 3 | **Vault**: Nota della Riunione, Zona gestita, frontmatter, rinomina, `steno_id` | Test verdi; la nota appare in Obsidian all'avvio e le Note personali restano intatte dopo l'Elaborazione |
-| 4 | **Riepilogo**: Profili, Keychain, client compatibile OpenAI, Template, suddivisione in blocchi, titolo; trascrizione remota | Riepilogo corretto della call di prova sia con Ollama sia con un Provider UE |
+| 3 | **Vault**: Nota della Riunione, Zona gestita, frontmatter, `steno_id` (la rinomina passa alla fase 4, insieme al titolo) | Test verdi; la nota appare in Obsidian all'avvio e le Note personali restano intatte dopo l'Elaborazione |
+| 4 | **Riepilogo**: Profili, Keychain, client compatibile OpenAI, Template, suddivisione in blocchi, titolo e rinomina; trascrizione remota | Riepilogo corretto della call di prova sia con Ollama sia con un Provider UE |
 | 5 | **Flusso completo**: coda persistente, Rigenerazione, Riprova, notifiche, scorciatoia, conservazione | Due Riunioni consecutive elaborate in coda; Riprova dopo aver spento Ollama |
 | 6 | **Stop per silenzio** | Una call finita senza stop si ferma da sola e il silenzio finale viene tagliato |
 

@@ -40,9 +40,9 @@ private struct MeetingMenu: View {
             Button("Avvia riunione") { Task { await controller.start() } }
         }
 
-        if controller.transcriptionsInProgress > 0 {
+        if controller.processingCount > 0 {
             Divider()
-            Text("Trascrizione in corso…")
+            Text("Elaborazione in corso…")
         }
 
         if let lastError = controller.lastError {
@@ -58,6 +58,9 @@ private struct MeetingMenu: View {
         }
         if let transcript = controller.lastTranscriptURL {
             Button("Apri ultima Trascrizione") { NSWorkspace.shared.open(transcript) }
+        }
+        if let note = controller.lastNoteURL {
+            Button("Apri ultima Nota della Riunione") { Vault.openInObsidian(note) }
         }
         #endif
 

@@ -68,6 +68,15 @@ public struct Transcript: Sendable {
             .joined(separator: "\n")
     }
 
+    /// Il file della Trascrizione nel Vault: frontmatter con il collegamento alla Nota della Riunione.
+    /// `language` è `nil` se nella Riunione non si è sentito parlato.
+    public func vaultFile(stenoID: UUID, meetingNoteName: String, language: String?) -> String {
+        var frontmatter = ["---", "steno_id: \(stenoID.uuidString)", "riunione: \(MeetingNote.wikiLink(meetingNoteName))"]
+        if let language { frontmatter.append("lingua: \(language)") }
+        frontmatter.append("---")
+        return frontmatter.joined(separator: "\n") + "\n" + markdown
+    }
+
     /// Whisper descrive il non parlato tra parentesi: `[BLANK_AUDIO]`, `[Musica]`,
     /// e sul silenzio inventa intere frasi tra parentesi tonde.
     private static func isAnnotation(_ text: String) -> Bool {

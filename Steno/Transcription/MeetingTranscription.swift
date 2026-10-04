@@ -4,9 +4,12 @@ import StenoCore
 /// Trascrive i segmenti di una Riunione man mano che si chiudono e allo stop
 /// scrive `trascrizione.md` nella cartella della Registrazione.
 actor MeetingTranscription {
-    /// La Trascrizione scritta e i segmenti che non è stato possibile trascrivere.
+    /// La Trascrizione scritta, la lingua usata (`nil` se non c'era parlato)
+    /// e i segmenti che non è stato possibile trascrivere.
     struct Finished {
         let url: URL
+        let transcript: Transcript
+        let language: String?
         let failedSegments: [String]
     }
 
@@ -51,8 +54,10 @@ actor MeetingTranscription {
             }
         }
         let url = directory.appending(path: "trascrizione.md")
-        try Transcript(utterances: utterances).markdown.write(to: url, atomically: true, encoding: .utf8)
-        return Finished(url: url, failedSegments: failed)
+        let transcript = Transcript(utterances: utterances)
+        try transcript.markdown.write(to: url, atomically: true, encoding: .utf8)
+        let language: String? = if let forcedLanguage { forcedLanguage } else { try? await languageDetection?.value }
+        return Finished(url: url, transcript: transcript, language: language, failedSegments: failed)
     }
 
     private func startIfNeeded(_ segment: Segment, in directory: URL) {

@@ -12,6 +12,12 @@ final class MeetingRecorder {
         let others: SegmentedTrackWriter
     }
 
+    /// Una Registrazione appena avviata: l'identificativo è lo `steno_id` della Riunione.
+    struct Started {
+        let meetingID: UUID
+        let directory: URL
+    }
+
     /// Una Registrazione chiusa. `errors` elenca le Tracce che si sono interrotte prima dello stop.
     struct Stopped {
         let directory: URL
@@ -36,7 +42,9 @@ final class MeetingRecorder {
         return TrackSegmenter.defaultSegmentDuration
     }
 
-    func start(at startedAt: Date, echoCancellation: Bool, onSegmentClosed: @escaping SegmentClosedHandler) throws {
+    func start(
+        at startedAt: Date, echoCancellation: Bool, onSegmentClosed: @escaping SegmentClosedHandler
+    ) throws -> Started {
         let meetingID = UUID()
         let directory = Self.meetingsDirectory.appending(path: meetingID.uuidString, directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -67,6 +75,7 @@ final class MeetingRecorder {
         }
 
         active = Active(meetingID: meetingID, directory: directory, startedAt: startedAt, me: me, others: others)
+        return Started(meetingID: meetingID, directory: directory)
     }
 
     /// Ferma la cattura, chiude i segmenti e scrive `riunione.json` con quello che c'è,
