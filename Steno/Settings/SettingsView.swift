@@ -2,12 +2,12 @@ import AppKit
 import StenoCore
 import SwiftUI
 
-/// Finestra Impostazioni essenziale: Vault, Profili per il Riepilogo, Template di default.
+/// Finestra Impostazioni essenziale: Vault, Template di default, Profili per il Riepilogo.
 struct SettingsView: View {
     @State private var vaultPath = AppSettings.vaultPath ?? ""
     @State private var profiles = AppSettings.summaryProfiles
     @AppStorage(AppSettings.activeProviderProfileKey) private var activeProfileID = ""
-    @State private var selectedProfileID = AppSettings.activeProviderProfileID ?? AppSettings.summaryProfiles.first?.id
+    @State private var selectedProfileID = AppSettings.activeProviderProfile?.id ?? AppSettings.summaryProfiles.first?.id
     @State private var defaultTemplate = AppSettings.defaultTemplate
 
     var body: some View {
@@ -29,24 +29,23 @@ struct SettingsView: View {
             }
 
             Section {
-                Picker("Profilo attivo", selection: $activeProfileID) {
-                    Text("Nessuno").tag("")
-                    ForEach(profiles) { Text($0.displayName).tag($0.id.uuidString) }
+                if profiles.isEmpty {
+                    Text("Nessun Profilo. Aggiungine uno per generare i Riepiloghi.")
+                        .foregroundStyle(.secondary)
                 }
-
-                Picker("Modifica", selection: $selectedProfileID) {
-                    ForEach(profiles) { Text($0.displayName).tag(UUID?.some($0.id)) }
+                ForEach(profiles) { profile in
+                    ProfileRow(
+                        profile: profile,
+                        isActive: profile.id.uuidString == activeProfileID,
+                        isSelected: profile.id == selectedProfileID
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture { selectedProfileID = profile.id }
                 }
-                .disabled(profiles.isEmpty)
-
-                if let index = profiles.firstIndex(where: { $0.id == selectedProfileID }) {
-                    ProfileEditor(profile: $profiles[index])
-                        .id(profiles[index].id)
-                }
-
                 HStack {
                     Button("Aggiungi Profilo", action: addProfile)
-                    Button("Elimina Profilo", role: .destructive, action: deleteSelectedProfile)
+                    Spacer()
+                    Button("Elimina", role: .destructive, action: deleteSelectedProfile)
                         .disabled(selectedProfileID == nil)
                 }
             } header: {
@@ -55,10 +54,19 @@ struct SettingsView: View {
                 Text("Qualsiasi server con API compatibile OpenAI. Per le riunioni di lavoro usa solo Provider locali o con sede e dati in UE.")
                     .foregroundStyle(.secondary)
             }
+
+            if let index = profiles.firstIndex(where: { $0.id == selectedProfileID }) {
+                ProfileEditor(
+                    profile: $profiles[index],
+                    isActive: profiles[index].id.uuidString == activeProfileID,
+                    activate: { activeProfileID = profiles[index].id.uuidString }
+                )
+                .id(profiles[index].id)
+            }
         }
         .formStyle(.grouped)
         .frame(width: 560)
-        .frame(minHeight: 520)
+        .frame(minHeight: 600)
         .onChange(of: profiles) { AppSettings.summaryProfiles = profiles }
     }
 
@@ -76,7 +84,7 @@ struct SettingsView: View {
 
     private func addProfile() {
         let profile = ProviderProfile(
-            name: "Nuovo Profilo", baseURL: "", model: "", maxContextTokens: ProviderProfile.defaultMaxContextTokens
+            name: "", baseURL: "", model: "", maxContextTokens: ProviderProfile.defaultMaxContextTokens
         )
         profiles.append(profile)
         selectedProfileID = profile.id
@@ -92,46 +100,105 @@ struct SettingsView: View {
     }
 }
 
+private struct ProfileRow: View {
+    let profile: ProviderProfile
+    let isActive: Bool
+    let isSelected: Bool
+
+    var body: some View {
+        HStack {
+            Image(systemName: isSelected ? "pencil.circle.fill" : "circle")
+                .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+            VStack(alignment: .leading) {
+                Text(profile.displayName)
+                Text(profile.model.isEmpty ? "Da configurare" : profile.model)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if isActive {
+                Text("In uso").font(.caption).foregroundStyle(.green)
+            }
+        }
+    }
+}
+
 private struct ProfileEditor: View {
     @Binding var profile: ProviderProfile
+    let isActive: Bool
+    let activate: () -> Void
     @State private var apiKey = ""
     @State private var hasStoredKey = false
     @State private var status: String?
     @State private var isTesting = false
 
     var body: some View {
-        TextField("Nome", text: $profile.name)
-        TextField("URL base", text: $profile.baseURL, prompt: Text("https://api.mistral.ai/v1"))
-        TextField("Modello", text: $profile.model, prompt: Text("mistral-medium-latest"))
-        TextField("Contesto massimo (token)", value: $profile.maxContextTokens, format: .number)
-        LabeledContent("Chiave API") {
-            HStack {
-                SecureField(hasStoredKey ? "Salvata nel Portachiavi" : "Nessuna (server locale)", text: $apiKey)
-                Button("Salva") { saveKey() }
-                    .disabled(apiKey.isEmpty)
-                if hasStoredKey {
-                    Button("Rimuovi") {
-                        Keychain.deleteAPIKey(for: profile.id)
-                        hasStoredKey = false
+        Section("Profilo: \(profile.displayName)") {
+            TextField("Nome", text: $profile.name, prompt: Text("es. Mistral UE"))
+            TextField("URL base", text: $profile.baseURL, prompt: Text("es. https://api.mistral.ai/v1"))
+            TextField("Modello", text: $profile.model, prompt: Text("es. mistral-medium-latest"))
+            TextField("Contesto massimo (token)", value: $profile.maxContextTokens, format: .number)
+
+            LabeledContent("Chiave API") {
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text(hasStoredKey ? "Salvata nel Portachiavi" : "Nessuna (va bene per i server locali)")
+                        .foregroundStyle(hasStoredKey ? .green : .secondary)
+                    HStack {
+                        // Le app nella barra dei menu non hanno il menu Composizione: ⌘V nei campi
+                        // non sempre funziona, questo pulsante legge direttamente dagli appunti.
+                        Button("Incolla e salva") { pasteKey() }
+                        if hasStoredKey {
+                            Button("Rimuovi", role: .destructive) {
+                                Keychain.deleteAPIKey(for: profile.id)
+                                hasStoredKey = false
+                                status = "Chiave rimossa."
+                            }
+                        }
                     }
                 }
             }
-        }
-        HStack {
-            Button("Prova connessione") { Task { await test() } }
-                .disabled(isTesting || profile.baseURL.isEmpty || profile.model.isEmpty)
-            if isTesting { ProgressView().controlSize(.small) }
-            if let status { Text(status).foregroundStyle(.secondary).lineLimit(2) }
+            LabeledContent("Oppure scrivila") {
+                HStack {
+                    SecureField("", text: $apiKey, prompt: Text("chiave API"))
+                    Button("Salva") { save(apiKey) }
+                        .disabled(apiKey.isEmpty)
+                }
+            }
+
+            HStack {
+                Button("Prova connessione") { Task { await test() } }
+                    .disabled(isTesting || profile.baseURL.isEmpty || profile.model.isEmpty)
+                if isTesting { ProgressView().controlSize(.small) }
+                Spacer()
+                if isActive {
+                    Text("In uso per i Riepiloghi").foregroundStyle(.green)
+                } else {
+                    Button("Usa per i Riepiloghi", action: activate)
+                }
+            }
+            if let status {
+                Text(status).foregroundStyle(.secondary).textSelection(.enabled)
+            }
         }
         .onAppear { hasStoredKey = Keychain.apiKey(for: profile.id) != nil }
     }
 
-    private func saveKey() {
+    private func pasteKey() {
+        guard let key = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !key.isEmpty
+        else {
+            status = "Negli appunti non c'è testo: copia prima la chiave."
+            return
+        }
+        save(key)
+    }
+
+    private func save(_ key: String) {
         do {
-            try Keychain.setAPIKey(apiKey, for: profile.id)
+            try Keychain.setAPIKey(key, for: profile.id)
             apiKey = ""
             hasStoredKey = true
-            status = "Chiave salvata."
+            status = "Chiave salvata nel Portachiavi."
         } catch {
             status = error.localizedDescription
         }
