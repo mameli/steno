@@ -18,7 +18,7 @@ Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in
 - **Profili** per il Riepilogo, adattatore compatibile OpenAI, chiavi nel Keychain, finestra Impostazioni essenziale
 - **Nota della Riunione** creata all'avvio e aperta in Obsidian; **Zona gestita**; Trascrizione in un file separato
 - Template letti dal Vault, **Rigenerazione**, "Riprova"
-- Registrazione conservata 7 giorni, coda di **Elaborazione**, stop per silenzio
+- Registrazione conservata 7 giorni, coda di **Elaborazione**
 
 **Fuori dalla v1** (in ordine di probabilità)
 1. Calendario (titolo e partecipanti da EventKit)
@@ -28,6 +28,7 @@ Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in
 5. Diarizzazione vera (Persona 1, 2…)
 6. Preset dei Provider già pronti
 7. Distribuzione ad altri (firma Developer ID, notarizzazione)
+8. Stop automatico per silenzio a fine call (era la fase 6)
 
 ## Flusso principale
 
@@ -37,7 +38,7 @@ Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in
    - la apre in Obsidian con `obsidian://open?path=<percorso assoluto>`;
    - avvia la cattura delle due Tracce.
 2. **Durante la call**: l'utente scrive le **Note personali** nella nota. I segmenti audio già chiusi vengono trascritti in background. Il Template si può cambiare dalla barra dei menu; il Profilo per il Riepilogo è quello attivo all'avvio.
-3. **Stop** (clic, scorciatoia o stop per silenzio). La Riunione entra nella coda di Elaborazione e si può subito avviare un'altra Riunione.
+3. **Stop** (clic o scorciatoia). La Riunione entra nella coda di Elaborazione e si può subito avviare un'altra Riunione.
 4. **Elaborazione** (una alla volta, in ordine di arrivo):
    1. completa la Trascrizione (gli ultimi segmenti);
    2. scrive il file della Trascrizione;
@@ -55,7 +56,7 @@ Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in
 - Ogni Traccia viene scritta in **segmenti di 5 minuti** (`io-000.m4a`, `altri-000.m4a`, …), AAC mono 16 kHz. Motivi: un crash perde al massimo un segmento; i segmenti chiusi si trascrivono durante la call; i file restano sotto i limiti di upload dei Provider remoti.
 - Le due Tracce condividono l'orologio d'avvio: ogni segmento registra il proprio offset dall'inizio della Riunione. L'elenco dei segmenti di ogni Traccia (`io-segmenti.json`, `altri-segmenti.json`) si aggiorna a ogni apertura, così gli offset sopravvivono a un crash; allo stop confluisce in `riunione.json`, che viene scritto anche se una Traccia si è interrotta.
 
-**Stop per silenzio**: se la Traccia Altri resta sotto una soglia RMS per 5 minuti → notifica "La riunione sembra finita: fermo?" con azioni *Ferma* / *Continua*. Senza risposta per altri 5 minuti → stop automatico, e il silenzio finale viene tagliato prima dell'Elaborazione.
+**Stop per silenzio**: fuori dalla v1 per scelta dell'utente (la Riunione si ferma sempre a mano, dal menu o con ⌃⌥⌘R).
 
 ## Trascrizione
 
@@ -146,7 +147,6 @@ Per ora solo da terminale (`defaults write dev.mameli.steno …`), da portare ne
 - lingua (`auto` | `it` | `en`)
 - cancellazione d'eco on/off
 - giorni di conservazione dell'audio (`retentionDays`, default 7)
-- soglie di silenzio (fase 6)
 
 La scorciatoia globale è fissa: ⌃⌥⌘R. Se un'altra app la usa già, il menu lo segnala.
 
@@ -188,7 +188,7 @@ Ogni fase si chiude con una verifica concreta.
 | 3 | **Vault**: Nota della Riunione, Zona gestita, frontmatter, `steno_id` (la rinomina passa alla fase 4, insieme al titolo) | Test verdi; la nota appare in Obsidian all'avvio e le Note personali restano intatte dopo l'Elaborazione |
 | 4 | **Riepilogo**: finestra Impostazioni, Profili, Keychain, client compatibile OpenAI, Template, suddivisione in blocchi, titolo e rinomina | Riepilogo corretto della call di prova con un Provider remoto (in sviluppo OpenRouter, solo registrazioni di prova). Restano da provare, quando l'utente li configura: un server locale (llama.cpp) e un Provider UE |
 | 5 | **Flusso completo**: coda persistente, Rigenerazione, Riprova, notifiche, scorciatoia, conservazione | Due Riunioni consecutive elaborate in coda; Riprova dopo aver spento il server locale |
-| 6 | **Stop per silenzio** | Una call finita senza stop si ferma da sola e il silenzio finale viene tagliato |
+| ~~6~~ | ~~Stop per silenzio~~ | Tolta: l'utente preferisce fermare sempre a mano |
 
 ## Rischi noti
 
