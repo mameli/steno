@@ -12,8 +12,12 @@ struct PasteableTextField: NSViewRepresentable {
         let field: NSTextField = isSecure ? ShortcutSecureTextField() : ShortcutTextField()
         field.placeholderString = placeholder
         field.delegate = context.coordinator
-        field.isBordered = true
-        field.bezelStyle = .roundedBezel
+        // Stesso aspetto dei campi SwiftUI in un Form raggruppato: senza bordo, allineato a destra.
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.alignment = .right
         field.lineBreakMode = .byTruncatingTail
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         return field

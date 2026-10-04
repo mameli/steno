@@ -133,7 +133,7 @@ private struct ProfileEditor: View {
     @State private var isTesting = false
 
     var body: some View {
-        Section("Profilo: \(profile.displayName)") {
+        Section {
             LabeledContent("Nome") {
                 PasteableTextField(placeholder: "es. Mistral UE", text: $profile.name)
             }
@@ -178,6 +178,11 @@ private struct ProfileEditor: View {
             if let status {
                 Text(status).foregroundStyle(.secondary).textSelection(.enabled)
             }
+        } header: {
+            Text("Profilo: \(profile.displayName)")
+        } footer: {
+            Text("Le modifiche si salvano da sole mentre scrivi. La chiave va nel Portachiavi appena la incolli.")
+                .foregroundStyle(.secondary)
         }
         .onAppear { hasStoredKey = Keychain.apiKey(for: profile.id) != nil }
     }
