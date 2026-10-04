@@ -67,7 +67,7 @@ Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in
 - **Locale**: WhisperKit, modello `openai_whisper-large-v3-v20240930_turbo_632MB` (646 MB), scaricato al primo uso in `~/Library/Application Support/Steno/Modelli` e preparato mentre la prima Riunione è in corso. Lingua `auto` oppure forzata `it`/`en`. La lingua si rileva una sola volta, su 30 secondi di solo parlato (i tratti con voce, senza silenzi) del primo segmento che ne contiene, di qualsiasi Traccia, scegliendo solo tra italiano e inglese, e vale per tutta la Riunione. Non si preferisce più Altri (era la difesa contro lo "svedese" della fase 1, nato dal silenzio): rilevando solo sul parlato il problema sparisce, e nella call reale l'eco residuo in Io resta sotto la soglia del parlato. La lingua usata viene salvata nella cache di ogni segmento; se poi si forza una lingua diversa, il segmento viene ritrascritto. Si può forzare con `defaults write dev.mameli.steno language it` (o `en`, `auto`) finché non ci sono le impostazioni. Rilevarla sui primi 30 secondi non basta: nella prova reale della fase 1 la Traccia Io iniziava con 80 secondi di quasi silenzio e Whisper l'ha classificata come svedese.
 - **Remota** (dopo la v1): `POST {baseURL}/audio/transcriptions` (multipart, un segmento per richiesta) tramite l'adattatore compatibile OpenAI. Verrà usata solo allo stop: durante la call l'audio non lascia mai il Mac.
 
-File `<Vault>/Meetings/Trascrizioni/2026-10-04 1430 - <Titolo> (trascrizione).md` (una copia senza frontmatter resta anche in `trascrizione.md` nella cartella della Registrazione). Una nuova Elaborazione della stessa Riunione sovrascrive il file esistente, ritrovato tramite `steno_id`:
+File `<Vault>/Meetings/Trascrizioni/2026-10-04 1430 - <Titolo> (trascrizione).md` (una copia senza frontmatter resta in `trascrizione.md` nella cartella della Registrazione, finché c'è l'audio). Una nuova Elaborazione della stessa Riunione sovrascrive il file esistente, ritrovato tramite `steno_id`:
 
 ```markdown
 ---
@@ -145,7 +145,10 @@ Regole:
 Per ora solo da terminale (`defaults write dev.mameli.steno …`), da portare nella finestra quando serviranno:
 - lingua (`auto` | `it` | `en`)
 - cancellazione d'eco on/off
-- scorciatoia globale, soglie di silenzio, giorni di conservazione della Registrazione (7) — fasi 5 e 6
+- giorni di conservazione dell'audio (`retentionDays`, default 7)
+- soglie di silenzio (fase 6)
+
+La scorciatoia globale è fissa: ⌃⌥⌘R. Se un'altra app la usa già, il menu lo segnala.
 
 Le cartelle sono fisse: `Meetings/`, `Meetings/Trascrizioni/`, `Meetings/_Template/`.
 
@@ -153,13 +156,18 @@ Le cartelle sono fisse: `Meetings/`, `Meetings/Trascrizioni/`, `Meetings/_Templa
 
 - **Inattiva**: Avvia riunione (scorciatoia) · Template ▸ · Profilo Riepilogo ▸ · Riunioni recenti ▸ (Apri nota · Rigenera con ▸ · Riprova) · Impostazioni… · Esci
 - **In registrazione**: nella barra solo un pallino rosso; nel menu "In registrazione · durata" · Ferma · Template ▸ · Impostazioni…
-- **In Elaborazione**: icona di avanzamento e numero di Riunioni in coda
+- **In Elaborazione**: clessidra nella barra; nel menu "Elaborazione in corso… (altre N in coda)"
 
 ## Stato e conservazione
 
-- `~/Library/Application Support/Steno/Riunioni/<steno_id>/`: segmenti audio + `riunione.json` (stato, percorsi, Profili, Template, lingua, errori).
-- Coda di Elaborazione persistente: al riavvio dell'app le Elaborazioni incomplete ripartono. Una Registrazione interrotta da un crash viene chiusa con i segmenti esistenti e messa in coda.
-- All'avvio dell'app e ogni giorno: cancellazione delle Registrazioni più vecchie di 7 giorni. La Trascrizione nel Vault resta.
+- `~/Library/Application Support/Steno/Riunioni/<steno_id>/`: segmenti audio, cache della trascrizione per segmento, `riunione.json` (inizio, fine, segmenti) ed `elaborazione.json` (stato: in registrazione, in coda, in corso, completata, fallita con motivo; Template; Profilo fissato all'avvio; percorso della nota).
+- Coda di Elaborazione persistente, una Riunione alla volta: al riavvio dell'app le Elaborazioni in coda o in corso ripartono, dalla più vecchia. Una Registrazione interrotta da un crash viene ricostruita dagli elenchi dei segmenti e messa in coda: si perde solo il segmento aperto al momento del crash (un file AAC non chiuso è illeggibile).
+- Un segmento illeggibile è un avviso ("Trascrizione incompleta"), non un fallimento: il Riepilogo si genera con quello che c'è.
+- All'avvio dell'app e ogni giorno: cancellazione dell'audio (e delle cache della trascrizione) delle Riunioni più vecchie di 7 giorni già elaborate o fallite, mai di quelle in registrazione, in coda o in corso. `riunione.json` ed `elaborazione.json` restano: la Riunione resta tra le recenti e si può Rigenerare.
+- **Notifiche**: "Riepilogo pronto" (clic → nota in Obsidian) o "Elaborazione non riuscita" con il motivo.
+- **Scorciatoia globale** ⌃⌥⌘R: avvia o ferma la Riunione da qualsiasi app.
+- **Riunioni recenti** (le ultime 5): Apri nota · Riprova (finché c'è l'audio: rifà tutta l'Elaborazione, i segmenti già trascritti vengono dalla cache) · Rigenera con Template ▸ / con Profilo ▸ (solo il Riepilogo, dalla Trascrizione nel Vault; non rinomina la nota e non cambia Template e Profilo salvati della Riunione, che Riprova continua a usare). Riprova e Rigenera compaiono solo per Riunioni concluse (completate o fallite), mai per una in registrazione o in coda. Una Rigenerazione interrotta da un riavvio non si ripete: la Riunione torna completata con il Riepilogo precedente.
+- Senza Vault configurato l'Elaborazione si ferma alla Trascrizione e la notifica dice "Trascrizione pronta", non "Riepilogo pronto".
 
 ## Struttura del progetto
 

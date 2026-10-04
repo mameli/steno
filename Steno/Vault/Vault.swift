@@ -86,11 +86,16 @@ struct Vault {
         return Self.firstFile(in: meetingsFolder, excluding: transcriptsFolder) { Self.belongs($0, to: stenoID) }
     }
 
+    /// Il file della Trascrizione di una Riunione, ritrovato tramite `steno_id`.
+    func findTranscript(stenoID: UUID) -> URL? {
+        Self.firstFile(in: transcriptsFolder) { Self.belongs($0, to: stenoID) }
+    }
+
     /// Scrive la Trascrizione nel Vault. Se esiste già un file della stessa Riunione lo
     /// sovrascrive, così una nuova Elaborazione non crea doppioni.
     func writeTranscript(_ transcript: Transcript, stenoID: UUID, meetingNoteName: String, language: String?) throws -> URL {
         try FileManager.default.createDirectory(at: transcriptsFolder, withIntermediateDirectories: true)
-        let url = Self.firstFile(in: transcriptsFolder) { Self.belongs($0, to: stenoID) } ?? {
+        let url = findTranscript(stenoID: stenoID) ?? {
             let name = VaultNaming.available("\(meetingNoteName) (trascrizione)", taken: Self.noteNames(in: transcriptsFolder))
             return transcriptsFolder.appending(path: name + ".md")
         }()

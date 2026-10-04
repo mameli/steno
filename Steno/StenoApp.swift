@@ -29,6 +29,8 @@ private struct MenuBarLabel: View {
     var body: some View {
         if controller.isInProgress {
             Image(nsImage: .recordingIndicator)
+        } else if controller.processor.pendingCount > 0 {
+            Image(systemName: "hourglass")
         } else {
             Image(systemName: "waveform")
         }
@@ -42,9 +44,13 @@ private struct MeetingMenu: View {
     var body: some View {
         if controller.isInProgress {
             Text("In registrazione · \(controller.elapsedText ?? "")")
-            Button("Ferma riunione") { controller.stop() }
+            // La scorciatoia è globale (GlobalHotKey): qui solo come promemoria, non come tasto del menu.
+            Button("Ferma riunione    ⌃⌥⌘R") { controller.stop() }
         } else {
-            Button("Avvia riunione") { Task { await controller.start() } }
+            Button("Avvia riunione    ⌃⌥⌘R") { Task { await controller.start() } }
+        }
+        if !controller.isHotKeyAvailable {
+            Text("⌃⌥⌘R è già usata da un'altra app")
         }
 
         Picker("Template", selection: Bindable(controller).templateName) {
@@ -55,14 +61,21 @@ private struct MeetingMenu: View {
             ProviderProfileMenu()
         }
 
-        if controller.processingCount > 0 {
+        if controller.processor.pendingCount > 0 {
             Divider()
-            Text("Elaborazione in corso…")
+            Text(controller.processor.pendingCount == 1
+                ? "Elaborazione in corso…"
+                : "Elaborazione in corso… (altre \(controller.processor.pendingCount - 1) in coda)")
         }
 
         if let lastError = controller.lastError {
             Divider()
             Text("⚠️ \(lastError)")
+        }
+
+        if !controller.processor.recent.isEmpty {
+            Divider()
+            RecentMeetingsMenu(processor: controller.processor)
         }
 
         #if DEBUG
@@ -71,11 +84,8 @@ private struct MeetingMenu: View {
                 NSWorkspace.shared.activateFileViewerSelecting([directory])
             }
         }
-        if let transcript = controller.lastTranscriptURL {
+        if let transcript = controller.processor.lastTranscriptURL {
             Button("Apri ultima Trascrizione") { NSWorkspace.shared.open(transcript) }
-        }
-        if let note = controller.lastNoteURL {
-            Button("Apri ultima Nota della Riunione") { Vault.openInObsidian(note) }
         }
         #endif
 
@@ -97,6 +107,55 @@ private struct MeetingMenu: View {
         if !controller.isInProgress {
             Button("Esci da Steno") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
+        }
+    }
+}
+
+/// Le ultime cinque Riunioni: apri la nota, Riprova, Rigenera con un altro Template o Profilo.
+private struct RecentMeetingsMenu: View {
+    let processor: MeetingProcessor
+
+    var body: some View {
+        Menu("Riunioni recenti") {
+            ForEach(processor.recent) { meeting in
+                Menu(label(meeting)) {
+                    Button("Apri nota") { processor.openNote(meeting.id) }
+                    // Riprova e Rigenera solo a Riunione conclusa: non si tocca una in registrazione o in coda.
+                    if meeting.status.canRetry {
+                        if meeting.hasAudio {
+                            Button("Riprova") { processor.retry(meeting.id) }
+                        }
+                        RegenerateMenus(processor: processor, meeting: meeting)
+                    }
+                }
+            }
+        }
+    }
+
+    private func label(_ meeting: MeetingProcessor.RecentMeeting) -> String {
+        switch meeting.status {
+        case .recording: "⏺ \(meeting.title)"
+        case .queued, .processing, .regenerating: "⏳ \(meeting.title)"
+        case .completed: meeting.title
+        case .failed: "⚠️ \(meeting.title)"
+        }
+    }
+}
+
+private struct RegenerateMenus: View {
+    let processor: MeetingProcessor
+    let meeting: MeetingProcessor.RecentMeeting
+
+    var body: some View {
+        Menu("Rigenera con Template") {
+            ForEach(Vault.templateChoices(including: AppSettings.defaultTemplate), id: \.self) { name in
+                Button(name) { processor.regenerate(meeting.id, templateName: name) }
+            }
+        }
+        Menu("Rigenera con Profilo") {
+            ForEach(AppSettings.summaryProfiles) { profile in
+                Button(profile.displayName) { processor.regenerate(meeting.id, profile: profile) }
+            }
         }
     }
 }

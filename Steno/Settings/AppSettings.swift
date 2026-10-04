@@ -13,6 +13,7 @@ enum AppSettings {
     /// Usata anche da `@AppStorage` nel menu e nelle Impostazioni, che così restano allineati.
     static let activeProviderProfileKey = "activeProviderProfile"
     private static let defaultTemplateKey = "defaultTemplate"
+    private static let retentionDaysKey = "retentionDays"
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -20,6 +21,7 @@ enum AppSettings {
             languageKey: "auto",
             openInObsidianKey: true,
             defaultTemplateKey: Template.genericName,
+            retentionDaysKey: Retention.days,
         ])
     }
 
@@ -27,6 +29,23 @@ enum AppSettings {
         get { UserDefaults.standard.string(forKey: vaultPathKey).flatMap { $0.isEmpty ? nil : $0 } }
         set { UserDefaults.standard.set(newValue, forKey: vaultPathKey) }
     }
+
+    /// Giorni di conservazione dell'audio: `defaults write dev.mameli.steno retentionDays -int 14`.
+    static var retentionDays: Int {
+        max(1, UserDefaults.standard.integer(forKey: retentionDaysKey))
+    }
+
+    #if DEBUG
+    /// Nelle prove automatiche ogni Riepilogo va al server finto, anche per Riunioni salvate con un altro Profilo.
+    static var testSummaryProfile: ProviderProfile? {
+        UserDefaults.standard.string(forKey: "testSummaryBaseURL").map {
+            ProviderProfile(
+                name: "Server di prova", baseURL: $0, model: "prova",
+                maxContextTokens: ProviderProfile.defaultMaxContextTokens
+            )
+        }
+    }
+    #endif
 
     /// `nil` per rilevare la lingua in automatico.
     static var forcedLanguage: String? {
@@ -61,12 +80,7 @@ enum AppSettings {
         #if DEBUG
         // Prove automatiche: `--args -testSummaryBaseURL http://localhost:8765/v1` usa un server finto
         // senza toccare i Profili dell'utente.
-        if let url = UserDefaults.standard.string(forKey: "testSummaryBaseURL") {
-            return ProviderProfile(
-                name: "Server di prova", baseURL: url, model: "prova",
-                maxContextTokens: ProviderProfile.defaultMaxContextTokens
-            )
-        }
+        if let testSummaryProfile { return testSummaryProfile }
         #endif
         return summaryProfiles.first { $0.id == activeProviderProfileID }
     }

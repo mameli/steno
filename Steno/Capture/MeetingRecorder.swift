@@ -30,7 +30,13 @@ final class MeetingRecorder {
     private var active: Active?
 
     static var meetingsDirectory: URL {
-        URL.applicationSupportDirectory.appending(path: "Steno/Riunioni", directoryHint: .isDirectory)
+        #if DEBUG
+        // Prove automatiche: le Registrazioni di prova restano fuori dalla cartella vera.
+        if let path = UserDefaults.standard.string(forKey: "dataDirectory") {
+            return URL(filePath: path, directoryHint: .isDirectory)
+        }
+        #endif
+        return URL.applicationSupportDirectory.appending(path: "Steno/Riunioni", directoryHint: .isDirectory)
     }
 
     private static var segmentDuration: TimeInterval {
@@ -93,7 +99,7 @@ final class MeetingRecorder {
             endedAt: endedAt,
             segments: outcomes.flatMap { $0.1.segments }
         )
-        try recording.save(to: active.directory.appending(path: "riunione.json"))
+        try recording.save(to: active.directory.appending(path: Recording.fileName))
 
         let errors = outcomes.compactMap { track, outcome in
             outcome.error.map { "Traccia \(track.rawValue): \($0.localizedDescription)" }

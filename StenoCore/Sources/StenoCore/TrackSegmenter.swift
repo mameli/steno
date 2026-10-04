@@ -7,9 +7,21 @@ public struct Segment: Equatable, Codable, Sendable {
     /// Secondi dall'inizio della Riunione.
     public let start: TimeInterval
 
+    public init(track: Track, index: Int, start: TimeInterval) {
+        self.track = track
+        self.index = index
+        self.start = start
+    }
+
     public var fileName: String {
         String(format: "%@-%03d.m4a", track.rawValue, index)
     }
+
+    /// Il risultato della trascrizione di questo segmento, salvato accanto all'audio.
+    public var transcriptionCacheFileName: String { fileName + ".json" }
+
+    /// L'elenco dei segmenti di una Traccia, aggiornato a ogni apertura (sopravvive a un crash).
+    public static func listFileName(for track: Track) -> String { "\(track.rawValue)-segmenti.json" }
 }
 
 /// Decide in quale segmento va scritto ogni buffer di una Traccia.

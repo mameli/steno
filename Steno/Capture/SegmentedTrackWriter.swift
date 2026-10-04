@@ -56,7 +56,7 @@ final class SegmentedTrackWriter: @unchecked Sendable {
     /// Elenco dei segmenti aggiornato a ogni apertura: se l'app va in crash
     /// prima dello stop, gli offset restano su disco.
     var segmentsFileURL: URL {
-        directory.appending(path: "\(track.rawValue)-segmenti.json")
+        directory.appending(path: Segment.listFileName(for: track))
     }
 
     func write(_ buffer: AVAudioPCMBuffer, hostTime: UInt64) {

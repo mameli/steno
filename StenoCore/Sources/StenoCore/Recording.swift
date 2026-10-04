@@ -14,6 +14,9 @@ public struct Recording: Codable, Equatable, Sendable {
         self.segments = segments
     }
 
+    /// Il manifesto nella cartella della Registrazione.
+    public static let fileName = "riunione.json"
+
     /// Frequenza di campionamento dei segmenti: mono 16 kHz, quella che si aspetta Whisper.
     public static let sampleRate: Double = 16_000
 
@@ -28,5 +31,14 @@ public struct Recording: Codable, Equatable, Sendable {
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
         try encoder.encode(self).write(to: url, options: .atomic)
+    }
+
+    /// Una Registrazione interrotta da un crash, ricostruita dagli elenchi dei segmenti che ogni
+    /// Traccia salva a ogni apertura. La fine è l'ultima scrittura su disco.
+    public static func recovered(stenoID: UUID, startedAt: Date, segments: [Segment], lastWrite: Date) -> Recording {
+        let ordered = Track.allCases.flatMap { track in
+            segments.filter { $0.track == track }.sorted { $0.index < $1.index }
+        }
+        return Recording(meetingID: stenoID, startedAt: startedAt, endedAt: lastWrite, segments: ordered)
     }
 }

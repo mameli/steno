@@ -53,7 +53,7 @@ actor MeetingTranscription {
                 pending[segment.fileName] = nil
             }
         }
-        let url = directory.appending(path: "trascrizione.md")
+        let url = directory.appending(path: Transcript.recordingCopyFileName)
         let transcript = Transcript(utterances: utterances)
         try transcript.markdown.write(to: url, atomically: true, encoding: .utf8)
         let language: String? = if let forcedLanguage { forcedLanguage } else { try? await languageDetection?.value }
@@ -66,7 +66,7 @@ actor MeetingTranscription {
     }
 
     private func transcribe(_ segment: Segment, in directory: URL) async throws -> [Utterance] {
-        let cacheURL = directory.appending(path: segment.fileName + ".json")
+        let cacheURL = directory.appending(path: segment.transcriptionCacheFileName)
         if let cached = try? JSONDecoder().decode(CachedSegment.self, from: Data(contentsOf: cacheURL)),
            cached.language == nil || forcedLanguage == nil || cached.language == forcedLanguage {
             if let language = cached.language, forcedLanguage == nil, languageDetection == nil {

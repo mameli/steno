@@ -30,6 +30,9 @@ public struct Paragraph: Equatable, Sendable {
 
 /// Il testo parlato di una Riunione, con le due Tracce fuse in ordine di tempo.
 public struct Transcript: Sendable {
+    /// La copia della Trascrizione nella cartella della Registrazione (si cancella con l'audio).
+    public static let recordingCopyFileName = "trascrizione.md"
+
     /// Oltre questa pausa la stessa Traccia riparte con un nuovo paragrafo e un nuovo timestamp.
     public static let paragraphBreak: TimeInterval = 30
     /// Una Battuta che inizia oltre questo tempo dall'inizio del paragrafo ne apre uno nuovo,
@@ -70,6 +73,38 @@ public struct Transcript: Sendable {
         paragraphs
             .map { "**[\(elapsedLabel($0.start))] \($0.track.label):** \($0.text)\n" }
             .joined(separator: "\n")
+    }
+
+    private init(paragraphs: [Paragraph]) {
+        self.paragraphs = paragraphs
+    }
+
+    /// Rilegge il file della Trascrizione scritto nel Vault (anche se corretto a mano): le righe
+    /// che non iniziano con `**[tempo] Io/Altri:**` restano nel paragrafo in cui si trovano.
+    public static func parse(vaultFile: String) -> (transcript: Transcript, language: String?) {
+        let lines = MeetingNote(content: vaultFile).content.components(separatedBy: "\n")
+        var bodyStart = 0
+        var language: String?
+        if lines.first?.trimmingCharacters(in: .whitespaces) == "---",
+           let close = lines.indices.dropFirst().first(where: { lines[$0].trimmingCharacters(in: .whitespaces) == "---" }) {
+            bodyStart = close + 1
+            language = lines[1..<close]
+                .first { $0.hasPrefix("lingua:") }
+                .map { $0.dropFirst("lingua:".count).trimmingCharacters(in: .whitespaces) }
+        }
+
+        let header = /^\*\*\[(\d+(?::\d{2}){1,2})\] (Io|Altri):\*\* ?(.*)$/
+        var paragraphs: [Paragraph] = []
+        for line in lines[bodyStart...] {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if let match = trimmed.wholeMatch(of: header) {
+                let seconds = match.1.split(separator: ":").reduce(0) { $0 * 60 + (Double($1) ?? 0) }
+                paragraphs.append(Paragraph(track: match.2 == "Io" ? .me : .others, start: seconds, text: String(match.3)))
+            } else if !trimmed.isEmpty, let last = paragraphs.popLast() {
+                paragraphs.append(Paragraph(track: last.track, start: last.start, text: last.text + " " + trimmed))
+            }
+        }
+        return (Transcript(paragraphs: paragraphs), language)
     }
 
     /// Il file della Trascrizione nel Vault: frontmatter con il collegamento alla Nota della Riunione.

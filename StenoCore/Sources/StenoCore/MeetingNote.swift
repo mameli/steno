@@ -120,7 +120,18 @@ public struct MeetingNote: Equatable, Sendable {
             (.transcript, Self.wikiLink(transcriptName)),
         ]
         if let language { values.append((.language, language)) }
+        setFrontmatter(values)
+        recordSummary(stenoID: stenoID, transcriptName: transcriptName, summary: summary)
+    }
 
+    /// Registra un nuovo Riepilogo di una Riunione già elaborata: cambiano Riepilogo, Template e
+    /// provider, mentre durata, lingua e Trascrizione restano quelli dell'Elaborazione.
+    public mutating func recordRegeneration(stenoID: UUID, transcriptName: String, summary: SummaryOutcome) {
+        recordSummary(stenoID: stenoID, transcriptName: transcriptName, summary: summary)
+    }
+
+    private mutating func recordSummary(stenoID: UUID, transcriptName: String, summary: SummaryOutcome) {
+        var values: [(key: StenoKey, value: String)] = [(.stenoID, stenoID.uuidString)]
         let summaryText: String
         switch summary {
         case .written(let text, let template, let provider):

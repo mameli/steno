@@ -136,4 +136,48 @@ struct TranscriptTests {
 
             """)
     }
+
+    @Test("il file della Trascrizione nel Vault si rilegge con paragrafi, tempi e lingua")
+    func parseVaultFile() {
+        let original = Transcript(utterances: [
+            Utterance(track: .others, start: 0, end: 4, text: "Buongiorno a tutti."),
+            Utterance(track: .me, start: 42.7, end: 45, text: "Sì, sul primo punto."),
+            Utterance(track: .others, start: 3723, end: 3730, text: "Chiudiamo qui."),
+        ])
+        let file = original.vaultFile(
+            stenoID: UUID(uuidString: "6F1C2A00-0000-4000-8000-000000000001")!,
+            meetingNoteName: "2026-10-04 1430 - Riunione",
+            language: "en"
+        )
+
+        let (parsed, language) = Transcript.parse(vaultFile: file)
+
+        #expect(language == "en")
+        #expect(parsed.paragraphs == [
+            Paragraph(track: .others, start: 0, text: "Buongiorno a tutti."),
+            Paragraph(track: .me, start: 42, text: "Sì, sul primo punto."),
+            Paragraph(track: .others, start: 3723, text: "Chiudiamo qui."),
+        ])
+    }
+
+    @Test("le righe aggiunte o corrette a mano nella Trascrizione restano nel paragrafo in cui sono")
+    func parseEditedVaultFile() {
+        let file = """
+            ---
+            steno_id: 1
+            ---
+            **[00:00] Altri:** Il budget è di 40 mila euro.
+            (corretto a mano: 45 mila)
+
+            **[00:12] Io:** Va bene.
+            """
+
+        let (parsed, language) = Transcript.parse(vaultFile: file)
+
+        #expect(language == nil)
+        #expect(parsed.paragraphs == [
+            Paragraph(track: .others, start: 0, text: "Il budget è di 40 mila euro. (corretto a mano: 45 mila)"),
+            Paragraph(track: .me, start: 12, text: "Va bene."),
+        ])
+    }
 }

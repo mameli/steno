@@ -357,4 +357,25 @@ struct MeetingNoteTests {
 
         #expect(note.content == "%% steno:inizio %%\nRiepilogo.\nAltro.\n%% steno:fine %%\n\nAppunti.")
     }
+
+    @Test("la Rigenerazione cambia Riepilogo, Template e provider ma lascia durata, lingua e Trascrizione")
+    func regeneration() {
+        var note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, timeZone: rome)
+        note.recordProcessing(
+            stenoID: stenoID, duration: 600, language: "it", transcriptionProvider: "Locale", transcriptName: "T",
+            summary: .written(text: "Vecchio.", template: "Generico", provider: "OpenRouter")
+        )
+
+        note.recordRegeneration(
+            stenoID: stenoID, transcriptName: "T",
+            summary: .written(text: "## Retro\nNuovo.", template: "Retro", provider: "Mistral UE")
+        )
+
+        #expect(note.content.contains("durata: 10m\n"))
+        #expect(note.content.contains("lingua: it\n"))
+        #expect(note.content.contains("template: Retro\n"))
+        #expect(note.content.contains("provider_riepilogo: Mistral UE\n"))
+        #expect(note.content.contains("%% steno:inizio %%\n## Retro\nNuovo.\n\nTrascrizione completa: [[T]]\n%% steno:fine %%"))
+        #expect(!note.content.contains("Vecchio."))
+    }
 }
