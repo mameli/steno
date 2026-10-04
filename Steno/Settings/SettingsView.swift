@@ -134,36 +134,35 @@ private struct ProfileEditor: View {
 
     var body: some View {
         Section("Profilo: \(profile.displayName)") {
-            TextField("Nome", text: $profile.name, prompt: Text("es. Mistral UE"))
-            TextField("URL base", text: $profile.baseURL, prompt: Text("es. https://api.mistral.ai/v1"))
-            TextField("Modello", text: $profile.model, prompt: Text("es. mistral-medium-latest"))
+            LabeledContent("Nome") {
+                PasteableTextField(placeholder: "es. Mistral UE", text: $profile.name)
+            }
+            LabeledContent("URL base") {
+                PasteableTextField(placeholder: "es. https://api.mistral.ai/v1", text: $profile.baseURL)
+            }
+            LabeledContent("Modello") {
+                PasteableTextField(placeholder: "es. mistral-medium-latest", text: $profile.model)
+            }
             TextField("Contesto massimo (token)", value: $profile.maxContextTokens, format: .number)
 
+            // L'unico punto in cui si inserisce la chiave: si salva nel Portachiavi appena incollata.
             LabeledContent("Chiave API") {
-                VStack(alignment: .trailing, spacing: 6) {
-                    Text(hasStoredKey ? "Salvata nel Portachiavi" : "Nessuna (va bene per i server locali)")
-                        .foregroundStyle(hasStoredKey ? .green : .secondary)
-                    HStack {
-                        // Le app nella barra dei menu non hanno il menu Composizione: ⌘V nei campi
-                        // non sempre funziona, questo pulsante legge direttamente dagli appunti.
-                        Button("Incolla e salva") { pasteKey() }
-                        if hasStoredKey {
-                            Button("Rimuovi", role: .destructive) {
-                                Keychain.deleteAPIKey(for: profile.id)
-                                hasStoredKey = false
-                                status = "Chiave rimossa."
-                            }
+                HStack {
+                    PasteableTextField(
+                        placeholder: hasStoredKey ? "Salvata nel Portachiavi · incolla qui per sostituirla" : "Incolla qui la chiave",
+                        text: $apiKey,
+                        isSecure: true
+                    )
+                    if hasStoredKey && apiKey.isEmpty {
+                        Button("Rimuovi", role: .destructive) {
+                            Keychain.deleteAPIKey(for: profile.id)
+                            hasStoredKey = false
+                            status = "Chiave rimossa."
                         }
                     }
                 }
             }
-            LabeledContent("Oppure scrivila") {
-                HStack {
-                    SecureField("", text: $apiKey, prompt: Text("chiave API"))
-                    Button("Salva") { save(apiKey) }
-                        .disabled(apiKey.isEmpty)
-                }
-            }
+            .onChange(of: apiKey) { saveKey() }
 
             HStack {
                 Button("Prova connessione") { Task { await test() } }
@@ -183,20 +182,10 @@ private struct ProfileEditor: View {
         .onAppear { hasStoredKey = Keychain.apiKey(for: profile.id) != nil }
     }
 
-    private func pasteKey() {
-        guard let key = NSPasteboard.general.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !key.isEmpty
-        else {
-            status = "Negli appunti non c'è testo: copia prima la chiave."
-            return
-        }
-        save(key)
-    }
-
-    private func save(_ key: String) {
+    private func saveKey() {
+        guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         do {
-            try Keychain.setAPIKey(key, for: profile.id)
-            apiKey = ""
+            try Keychain.setAPIKey(apiKey, for: profile.id)
             hasStoredKey = true
             status = "Chiave salvata nel Portachiavi."
         } catch {
