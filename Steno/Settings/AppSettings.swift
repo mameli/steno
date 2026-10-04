@@ -20,7 +20,7 @@ enum AppSettings {
             echoCancellationKey: true,
             languageKey: "auto",
             openInObsidianKey: true,
-            defaultTemplateKey: Template.genericName,
+            defaultTemplateKey: Template.defaultName,
             retentionDaysKey: Retention.days,
         ])
     }
@@ -87,7 +87,7 @@ enum AppSettings {
 
     /// Nome (senza `.md`) del Template proposto all'avvio di ogni Riunione.
     static var defaultTemplate: String {
-        get { UserDefaults.standard.string(forKey: defaultTemplateKey) ?? Template.genericName }
+        get { UserDefaults.standard.string(forKey: defaultTemplateKey) ?? Template.defaultName }
         set { UserDefaults.standard.set(newValue, forKey: defaultTemplateKey) }
     }
 }

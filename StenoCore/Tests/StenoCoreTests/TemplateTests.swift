@@ -37,30 +37,25 @@ struct TemplateTests {
         #expect(template.summaryLanguage == nil)
     }
 
-    @Test("il Template Generico creato da Steno ha le sezioni concordate")
-    func generic() {
-        let template = Template(fileName: "Generico", content: Template.genericFileContent)
+    @Test("il Template predefinito Appunti chiede argomenti nell'ordine della Riunione e Prossimi passi in fondo")
+    func defaultTemplate() {
+        let template = Template(fileName: "Appunti", content: Template.defaultFileContent)
 
-        #expect(template.name == "Generico")
+        #expect(template.name == "Appunti")
         #expect(template.summaryLanguage == nil)
-        #expect(template.body == """
-            Riassumi la riunione per chi c'era ma vuole ritrovare in fretta cosa conta.
-
-            ## Sintesi
-            ## Punti discussi
-            ## Decisioni
-            ## Azioni
-            ## Domande aperte
-            """)
+        #expect(template.body.contains("nell'ordine in cui sono stati discussi"))
+        #expect(template.body.contains("### Prossimi passi"))
+        #expect(template.body.contains("- [ ] Cosa fare (Chi)"))
+        #expect(!template.body.contains("## Sintesi"))
     }
 
-    @Test("un Template nuovo parte dal Generico con il nome scelto")
+    @Test("un Template nuovo parte dal predefinito con il nome scelto")
     func newTemplate() {
         let template = Template(fileName: "Retro sprint", content: Template.newFileContent(name: "Retro sprint"))
-        let generic = Template(fileName: Template.genericName, content: Template.genericFileContent)
+        let base = Template(fileName: Template.defaultName, content: Template.defaultFileContent)
 
         #expect(template.name == "Retro sprint")
         #expect(template.summaryLanguage == nil)
-        #expect(template.body == generic.body)
+        #expect(template.body == base.body)
     }
 }

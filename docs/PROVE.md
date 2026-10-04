@@ -14,6 +14,7 @@ Prima di iniziare: Steno avviato dal menu (icona a onda), vault e Profilo "OpenR
 
 ## 2. Elaborazione
 
+- [ ] **Template Appunti**: il Riepilogo ha gli argomenti nell'ordine della Riunione, con punti e sotto-punti, e in fondo *Prossimi passi* come checklist "Cosa fare (Chi)".
 - [ ] **Note personali**: scrivi qualche riga sotto `## Note personali` durante la call → dopo lo stop restano intatte e il Riepilogo dà precedenza a quei temi.
 - [ ] **Riepilogo**: dopo lo stop la clessidra nella barra, poi la notifica "Riepilogo pronto"; la nota ha Riepilogo, link alla Trascrizione e frontmatter (durata, lingua, template, provider).
 - [ ] **Titolo e rinomina**: la nota non si chiama più "… - Riunione" ma "… - <titolo>"; la Trascrizione in `Trascrizioni/` ha lo stesso nome con "(trascrizione)".
@@ -27,7 +28,7 @@ Prima di iniziare: Steno avviato dal menu (icona a onda), vault e Profilo "OpenR
 - [ ] **Riunioni recenti → Apri nota**: apre la nota giusta, anche se l'hai rinominata o spostata.
 - [ ] **Nuovo Template**: Impostazioni → *Template* → scrivi un nome → *Crea e apri* → si apre in Obsidian; cambia istruzioni e sezioni e salva.
 - [ ] **Template di default**: scegli il nuovo Template come default → la prossima Riunione parte con quello.
-- [ ] **Elimina Template**: *Elimina* → conferma → il file è nel Cestino del Mac; se era il default, torna il Generico.
+- [ ] **Elimina Template**: *Elimina* → conferma → il file è nel Cestino del Mac; se era il default, torna Appunti.
 - [ ] **Rigenera con Template**: *Riunioni recenti* → una Riunione → *Rigenera con Template* → il tuo Template → il Riepilogo cambia, durata e Trascrizione no.
 - [ ] **Riprova**: togli la connessione a internet, fai una Riunione breve → "Elaborazione non riuscita" e ⚠️ nella nota e nel menu; ricollegati e *Riprova* → Riepilogo generato.
 

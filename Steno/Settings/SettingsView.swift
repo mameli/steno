@@ -144,7 +144,7 @@ private struct TemplatesSection: View {
         } header: {
             Text("Template")
         } footer: {
-            Text("Un Template nuovo parte dal Generico: in Obsidian cambi istruzioni e sezioni. Sono in Meetings/_Template/ nel Vault.")
+            Text("Un Template nuovo parte da Appunti: in Obsidian cambi istruzioni e sezioni. Sono in Meetings/_Template/ nel Vault.")
                 .foregroundStyle(.secondary)
         }
         .onAppear(perform: reload)
@@ -157,7 +157,7 @@ private struct TemplatesSection: View {
                 if let name = pendingDeletion { delete(name) }
             }
         } message: {
-            Text("Le Riunioni che lo usavano passano al Template Generico.")
+            Text("Le Riunioni che lo usavano passano al Template Appunti.")
         }
     }
 
@@ -187,7 +187,7 @@ private struct TemplatesSection: View {
         guard let vault = Vault.configured else { return }
         do {
             try vault.trashTemplate(named: name)
-            if defaultTemplate == name { defaultTemplate = Template.genericName }
+            if defaultTemplate == name { defaultTemplate = Template.defaultName }
             try? vault.ensureDefaultTemplate()
             reload()
             status = "\"\(name)\" è nel Cestino."

@@ -40,6 +40,9 @@ struct SummaryPromptTests {
 
         #expect(system.contains("Scrivi in italiano."))
         #expect(system.contains("Non inventare"))
+        #expect(system.contains("Segui la struttura e le istruzioni del Template"))
+        // Il formato delle azioni lo decide il Template; questo vale solo se il Template non dice niente.
+        #expect(system.contains("nel formato indicato dal Template"))
         #expect(system.contains("- [ ] chi: cosa (quando)"))
         #expect(system.contains("\"Io\""))
         #expect(system.contains("Note personali"))

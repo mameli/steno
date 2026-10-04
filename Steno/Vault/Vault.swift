@@ -26,15 +26,19 @@ struct Vault {
             == meetingsFolder.resolvingSymlinksInPath().standardizedFileURL
     }
 
-    /// Crea il Template Generico se la cartella dei Template non ne contiene nessuno.
+    /// Crea il Template predefinito (Appunti) se la cartella dei Template non ne contiene nessuno,
+    /// o se il Template di default delle Impostazioni non esiste più (in quel caso diventa Appunti).
     func ensureDefaultTemplate() throws {
-        guard templateNames().isEmpty else { return }
+        let names = templateNames()
+        guard names.isEmpty || !names.contains(AppSettings.defaultTemplate) else { return }
         try FileManager.default.createDirectory(at: templatesFolder, withIntermediateDirectories: true)
-        let url = templatesFolder.appending(path: Template.genericName + ".md")
-        try Template.genericFileContent.write(to: url, atomically: true, encoding: .utf8)
+        if !names.contains(Template.defaultName) {
+            try Template.defaultFileContent.write(to: templateURL(Template.defaultName), atomically: true, encoding: .utf8)
+        }
+        AppSettings.defaultTemplate = Template.defaultName
     }
 
-    /// Crea un Template nuovo partendo dal Generico e restituisce il nome del file (senza `.md`).
+    /// Crea un Template nuovo partendo dal predefinito e restituisce il nome del file (senza `.md`).
     func createTemplate(named name: String) throws -> String {
         guard let safeName = VaultNaming.fileName(name) else { throw VaultError.invalidName(name) }
         try FileManager.default.createDirectory(at: templatesFolder, withIntermediateDirectories: true)
@@ -53,10 +57,10 @@ struct Vault {
         templatesFolder.appending(path: name + ".md")
     }
 
-    /// Il Template con quel nome di file; se non c'è più, il Generico.
+    /// Il Template con quel nome di file; se non c'è più, il predefinito.
     func template(named name: String) -> Template {
         guard let content = try? String(contentsOf: templateURL(name), encoding: .utf8) else {
-            return Template(fileName: Template.genericName, content: Template.genericFileContent)
+            return Template(fileName: Template.defaultName, content: Template.defaultFileContent)
         }
         return Template(fileName: name, content: content)
     }

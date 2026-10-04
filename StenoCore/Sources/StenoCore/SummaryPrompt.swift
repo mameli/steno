@@ -168,11 +168,11 @@ public struct SummaryPrompt: Sendable {
 
         Regole:
         - Scrivi in \(languageName).
-        - Segui il Template: usa le sue intestazioni, nello stesso ordine, e rispetta le sue istruzioni.
+        - Segui la struttura e le istruzioni del Template.
         - Non inventare: usa solo quello che c'è nella Trascrizione e nelle Note personali.
         - Nella Trascrizione "Io" è chi ha preso le Note personali, "Altri" sono gli altri partecipanti, senza distinguerli.
         - Le Note personali dicono cosa conta per chi le ha scritte: dai la precedenza a quei temi.
-        - Scrivi le azioni come `- [ ] chi: cosa (quando)`; se chi o quando non sono chiari, ometti quella parte.
+        - Scrivi le azioni come checklist `- [ ]`, nel formato indicato dal Template; se non ne indica uno, `- [ ] chi: cosa (quando)`. Se chi o quando non sono chiari, ometti quella parte.
         - Rispondi solo con il Riepilogo in Markdown, senza preamboli.
         """
     }

@@ -119,15 +119,15 @@ Regole:
 
 ## Template
 
-- Cartella `<Vault>/Meetings/_Template/`. Se è vuota, Steno crea `Generico.md` all'avvio dell'app e quando si sceglie il Vault.
+- Cartella `<Vault>/Meetings/_Template/`. Il Template predefinito è `Appunti.md`, in stile Granola: argomenti nell'ordine in cui sono stati discussi, ciascuno con un'intestazione `###` e punti con sotto-punti (motivi, persone, cifre, link), poi `### Prossimi passi` con `- [ ] Cosa fare (Chi)` e il contesto sotto. Niente sintesi iniziale né sezioni fisse. Steno lo crea all'avvio dell'app e quando si sceglie il Vault, se la cartella è vuota o se il Template di default non esiste più (e allora il default torna Appunti).
 - Formato: frontmatter con `nome` e `lingua_riepilogo` (`auto` | `it` | `en`, default `auto` = lingua della Riunione). Il corpo, cioè le istruzioni libere e la struttura di intestazioni, si passa al modello così com'è.
 - Il Template si sceglie all'avvio (default dalle impostazioni) e si può cambiare fino allo stop.
-- Nelle Impostazioni, sezione Template: elenco, Template di default, "Nuovo Template" (nome → file creato dal Generico e aperto in Obsidian), "Apri in Obsidian", "Elimina" (sposta il file nel Cestino; se era il default si torna al Generico). Il testo si scrive in Obsidian: Steno non ha un editor.
+- Nelle Impostazioni, sezione Template: elenco, Template di default, "Nuovo Template" (nome → file creato da Appunti e aperto in Obsidian), "Apri in Obsidian", "Elimina" (sposta il file nel Cestino; se era il default si torna ad Appunti). Il testo si scrive in Obsidian: Steno non ha un editor.
 
 ## Riepilogo
 
 - `POST {baseURL}/chat/completions` con:
-  - **prompt di sistema fisso**: non inventare, attribuisci a Io/Altri, azioni come `- [ ] chi: cosa (quando)`, rispondi nella lingua indicata, segui la struttura del Template, dai priorità ai temi presenti nelle Note personali;
+  - **prompt di sistema fisso**: non inventare, attribuisci a Io/Altri, azioni come checklist nel formato del Template (in mancanza `- [ ] chi: cosa (quando)`), rispondi nella lingua indicata, segui struttura e istruzioni del Template, dai priorità ai temi presenti nelle Note personali;
   - **messaggio utente**: Template, Note personali, Trascrizione.
 - **Titolo**: seconda chiamata breve sul Riepilogo ("massimo 6 parole, niente data"), ripulito da intestazioni, prefissi "Titolo:", virgolette, grassetto e punteggiatura finale. Se il titolo non arriva la nota resta con il nome provvisorio: non è un errore.
 - **Zona gestita**: il Riepilogo seguito da `Trascrizione completa: [[…]]`. Se il Riepilogo fallisce (nessun Profilo attivo, errore del Provider, Riunione senza parlato) mostra `⚠️ Riepilogo non generato: <motivo>` e il link alla Trascrizione, che resta utilizzabile. Eventuali marcatori della Zona gestita nella risposta del modello vengono tolti.
