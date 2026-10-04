@@ -152,7 +152,7 @@ Le cartelle sono fisse: `Meetings/`, `Meetings/Trascrizioni/`, `Meetings/_Templa
 ## Barra dei menu
 
 - **Inattiva**: Avvia riunione (scorciatoia) · Template ▸ · Profilo Riepilogo ▸ · Riunioni recenti ▸ (Apri nota · Rigenera con ▸ · Riprova) · Impostazioni… · Esci
-- **In registrazione**: icona rossa con timer · Ferma · Template ▸ · Impostazioni…
+- **In registrazione**: nella barra solo un pallino rosso; nel menu "In registrazione · durata" · Ferma · Template ▸ · Impostazioni…
 - **In Elaborazione**: icona di avanzamento e numero di Riunioni in coda
 
 ## Stato e conservazione

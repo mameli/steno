@@ -24,10 +24,11 @@ struct StenoApp: App {
 private struct MenuBarLabel: View {
     let controller: MeetingController
 
+    // Durante la registrazione solo il pallino rosso: stretto, non finisce dietro la tacca.
+    // La durata si legge aprendo il menu.
     var body: some View {
-        if let elapsedText = controller.elapsedText {
+        if controller.isInProgress {
             Image(nsImage: .recordingIndicator)
-            Text(elapsedText)
         } else {
             Image(systemName: "waveform")
         }
@@ -40,6 +41,7 @@ private struct MeetingMenu: View {
 
     var body: some View {
         if controller.isInProgress {
+            Text("In registrazione · \(controller.elapsedText ?? "")")
             Button("Ferma riunione") { controller.stop() }
         } else {
             Button("Avvia riunione") { Task { await controller.start() } }
