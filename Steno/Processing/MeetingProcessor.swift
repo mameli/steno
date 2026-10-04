@@ -37,7 +37,7 @@ final class MeetingProcessor {
     }
 
     static func directory(for stenoID: UUID) -> URL {
-        MeetingRecorder.meetingsDirectory.appending(path: stenoID.uuidString, directoryHint: .isDirectory)
+        MeetingRecorder.recordingsDirectory.appending(path: stenoID.uuidString, directoryHint: .isDirectory)
     }
 
     // MARK: - Meeting lifecycle
@@ -365,12 +365,12 @@ final class MeetingProcessor {
     // MARK: - State on disk
 
     private func record(_ stenoID: UUID) -> ProcessingRecord? {
-        try? ProcessingRecord.load(from: Self.directory(for: stenoID))
+        try? ProcessingRecord.load(fromFolder: Self.directory(for: stenoID))
     }
 
     private func save(_ record: ProcessingRecord) {
         do {
-            try record.save(in: Self.directory(for: record.stenoID))
+            try record.save(inFolder: Self.directory(for: record.stenoID))
         } catch {
             logger.error("Processing state not saved: \(error, privacy: .public)")
             lastError = String(localized: "Meeting state not saved to disk: a restart now would not resume it. \(error.localizedDescription)")
@@ -379,11 +379,11 @@ final class MeetingProcessor {
     }
 
     private func allRecords() -> [ProcessingRecord] {
-        recordingFolders().compactMap { try? ProcessingRecord.load(from: $0) }
+        recordingFolders().compactMap { try? ProcessingRecord.load(fromFolder: $0) }
     }
 
     private func recordingFolders() -> [URL] {
-        (try? FileManager.default.contentsOfDirectory(at: MeetingRecorder.meetingsDirectory, includingPropertiesForKeys: nil)) ?? []
+        (try? FileManager.default.contentsOfDirectory(at: MeetingRecorder.recordingsDirectory, includingPropertiesForKeys: nil)) ?? []
     }
 
     func refreshRecent() {
@@ -429,13 +429,11 @@ final class MeetingProcessor {
     func cleanUpExpiredRecordings() {
         let items = recordingFolders().compactMap { folder -> Retention.Item? in
             guard let stenoID = UUID(uuidString: folder.lastPathComponent) else { return nil }
-            let record = try? ProcessingRecord.load(from: folder)
+            let record = try? ProcessingRecord.load(fromFolder: folder)
             guard let startedAt = record?.startedAt ?? (try? Recording.load(fromFolder: folder))?.startedAt else { return nil }
             return Retention.Item(stenoID: stenoID, startedAt: startedAt, status: record?.status)
         }
-        let kept = Set([
-            Recording.fileName, Recording.legacyFileName, ProcessingRecord.fileName, ProcessingRecord.legacyFileName,
-        ] + Track.allCases.map(Segment.listFileName(for:)))
+        let kept = Set([Recording.fileName, ProcessingRecord.fileName] + Track.allCases.map(Segment.listFileName(for:)))
         for stenoID in Retention.expired(items, now: Date(), days: AppSettings.retentionDays) {
             let folder = Self.directory(for: stenoID)
             let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []

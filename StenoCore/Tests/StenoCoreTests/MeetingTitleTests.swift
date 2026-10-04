@@ -44,8 +44,6 @@ struct MeetingTitleTests {
 
         #expect(renamed("2026-10-04 1430 - Meeting") == "2026-10-04 1430 - Q4 budget")
         #expect(renamed("2026-10-04 1430 - Meeting (2)") == "2026-10-04 1430 - Q4 budget")
-        // Provisional name written before the English rewrite.
-        #expect(renamed("2026-10-04 1430 - Riunione") == "2026-10-04 1430 - Q4 budget")
         #expect(renamed("Budget with Mario") == nil)
         #expect(renamed("2026-10-04 1430 - Meeting with Mario") == nil)
         #expect(renamed("2026-10-03 1430 - Meeting") == nil)

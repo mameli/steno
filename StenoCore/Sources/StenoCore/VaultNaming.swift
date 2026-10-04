@@ -3,8 +3,6 @@ import Foundation
 /// Names of the files Steno writes in the Vault (without the `.md` extension).
 public enum VaultNaming {
     public static let defaultTitle = "Meeting"
-    /// Provisional title used before the English rewrite: such notes can still be renamed.
-    static let legacyDefaultTitle = "Riunione"
 
     /// Characters Obsidian does not accept in file names or that break `[[…]]` links.
     private static let forbidden = CharacterSet(charactersIn: "*\"\\/<>:|?#^[]")
@@ -16,11 +14,9 @@ public enum VaultNaming {
     /// The new name of the Meeting note with the generated title, or `nil` if the user already
     /// renamed it (it no longer has the provisional name, possibly with a " (n)" suffix).
     public static func renamedNoteName(current: String, startedAt: Date, title: String, timeZone: TimeZone = .current) -> String? {
-        let isProvisional = [defaultTitle, legacyDefaultTitle].contains { provisionalTitle in
-            let provisional = noteName(startedAt: startedAt, title: provisionalTitle, timeZone: timeZone)
-            return current == provisional || isSuffixed(current, of: provisional)
-        }
-        return isProvisional ? noteName(startedAt: startedAt, title: title, timeZone: timeZone) : nil
+        let provisional = noteName(startedAt: startedAt, title: defaultTitle, timeZone: timeZone)
+        guard current == provisional || isSuffixed(current, of: provisional) else { return nil }
+        return noteName(startedAt: startedAt, title: title, timeZone: timeZone)
     }
 
     private static func isSuffixed(_ name: String, of base: String) -> Bool {

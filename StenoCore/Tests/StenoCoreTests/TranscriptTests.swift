@@ -172,26 +172,4 @@ struct TranscriptTests {
             Paragraph(track: .me, start: 12, text: "Fine."),
         ])
     }
-
-    @Test("Transcripts written before the English rewrite (Io/Altri, lingua:) still read back")
-    func parseLegacyVaultFile() {
-        let file = """
-            ---
-            steno_id: 1
-            riunione: "[[2026-10-04 1430 - Riunione]]"
-            lingua: it
-            ---
-            **[00:00] Altri:** Buongiorno a tutti.
-
-            **[00:05] Io:** Sì.
-            """
-
-        let (parsed, language) = Transcript.parse(vaultFile: file)
-
-        #expect(language == "it")
-        #expect(parsed.paragraphs == [
-            Paragraph(track: .others, start: 0, text: "Buongiorno a tutti."),
-            Paragraph(track: .me, start: 5, text: "Sì."),
-        ])
-    }
 }

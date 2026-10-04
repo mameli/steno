@@ -13,38 +13,6 @@ struct Vault {
         AppSettings.vaultPath.map { Vault(root: URL(filePath: $0, directoryHint: .isDirectory)) }
     }
 
-    // MARK: - Layout written before the English rewrite
-
-    /// Moves the Italian layout of earlier versions to the English one: `Trascrizioni` →
-    /// `Transcripts`, `_Template` → `_Templates`, and the untouched Italian default Template
-    /// (`Appunti`) → the English one (`Notes`). Files are never overwritten.
-    func migrateLegacyLayout() {
-        moveContents(of: meetingsFolder.appending(path: "Trascrizioni", directoryHint: .isDirectory), to: transcriptsFolder)
-        moveContents(of: meetingsFolder.appending(path: "_Template", directoryHint: .isDirectory), to: templatesFolder)
-
-        let legacyDefault = templateURL(Template.legacyDefaultName)
-        if let content = try? String(contentsOf: legacyDefault, encoding: .utf8), Template.isLegacyDefault(content) {
-            try? FileManager.default.trashItem(at: legacyDefault, resultingItemURL: nil)
-            if AppSettings.defaultTemplate == Template.legacyDefaultName {
-                AppSettings.defaultTemplate = Template.defaultName
-            }
-        }
-    }
-
-    private func moveContents(of legacy: URL, to folder: URL) {
-        let files = (try? FileManager.default.contentsOfDirectory(at: legacy, includingPropertiesForKeys: nil)) ?? []
-        guard !files.isEmpty else { return }
-        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        for file in files {
-            let destination = folder.appending(path: file.lastPathComponent)
-            guard !FileManager.default.fileExists(atPath: destination.path(percentEncoded: false)) else { continue }
-            try? FileManager.default.moveItem(at: file, to: destination)
-        }
-        if (try? FileManager.default.contentsOfDirectory(atPath: legacy.path(percentEncoded: false)))?.isEmpty == true {
-            try? FileManager.default.removeItem(at: legacy)
-        }
-    }
-
     // MARK: - Templates
 
     /// The available Templates, by file name (without `.md`), in alphabetical order.

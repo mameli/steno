@@ -864,6 +864,17 @@
         }
       }
     },
+    "Untitled": {
+      "extractionState": "manual",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senza nome"
+          }
+        }
+      }
+    },
     "Use for Summaries": {
       "localizations": {
         "it": {

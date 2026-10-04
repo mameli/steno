@@ -35,9 +35,9 @@ struct ProcessingRecordTests {
         saved.summaryProfile = ProviderProfile(name: "Mistral UE", baseURL: "https://api.mistral.ai/v1", model: "m", maxContextTokens: 32_000)
         saved.noteURL = URL(filePath: "/Vault/Meetings/2026-10-04 1430 - Meeting.md")
 
-        try saved.save(in: directory)
+        try saved.save(inFolder: directory)
 
-        #expect(try ProcessingRecord.load(from: directory) == saved)
+        #expect(try ProcessingRecord.load(fromFolder: directory) == saved)
     }
 
     @Test("a Recording interrupted by a crash is rebuilt from the saved Segment lists")

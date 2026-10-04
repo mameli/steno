@@ -81,18 +81,17 @@ public struct Transcript: Sendable {
 
     /// Reads back the Transcript file written in the Vault (even if edited by hand): lines
     /// that do not start with `**[time] Me/Others:**` stay in the paragraph they are in.
-    /// Files written before the English rewrite (`Io`/`Altri`, `lingua:`) are read too.
     public static func parse(vaultFile: String) -> (transcript: Transcript, language: String?) {
         let markdown = MarkdownLines(vaultFile)
-        let language = markdown.value("language", "lingua")
+        let language = markdown.value("language")
 
-        let header = /^\*\*\[(\d+(?::\d{2}){1,2})\] (Me|Others|Io|Altri):\*\* ?(.*)$/
+        let header = /^\*\*\[(\d+(?::\d{2}){1,2})\] (Me|Others):\*\* ?(.*)$/
         var paragraphs: [Paragraph] = []
         for line in markdown.lines[markdown.bodyStart...] {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if let match = trimmed.wholeMatch(of: header) {
                 let seconds = match.1.split(separator: ":").reduce(0) { $0 * 60 + (Double($1) ?? 0) }
-                let track: Track = (match.2 == "Me" || match.2 == "Io") ? .me : .others
+                let track: Track = match.2 == "Me" ? .me : .others
                 paragraphs.append(Paragraph(track: track, start: seconds, text: String(match.3)))
             } else if !trimmed.isEmpty, let last = paragraphs.popLast() {
                 paragraphs.append(Paragraph(track: last.track, start: last.start, text: last.text + " " + trimmed))

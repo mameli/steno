@@ -87,19 +87,14 @@ public struct ProcessingRecord: Codable, Equatable, Sendable {
     }
 
     public static let fileName = "processing.json"
-    /// Name used before the English rewrite: still read, never written.
-    public static let legacyFileName = "elaborazione.json"
 
-    public static func load(from directory: URL) throws -> ProcessingRecord {
-        let current = directory.appending(path: fileName)
-        let url = FileManager.default.fileExists(atPath: current.path(percentEncoded: false))
-            ? current : directory.appending(path: legacyFileName)
+    public static func load(fromFolder folder: URL) throws -> ProcessingRecord {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(ProcessingRecord.self, from: Data(contentsOf: url))
+        return try decoder.decode(ProcessingRecord.self, from: Data(contentsOf: folder.appending(path: fileName)))
     }
 
-    public func save(in directory: URL) throws {
+    public func save(inFolder directory: URL) throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601

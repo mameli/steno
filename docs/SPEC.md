@@ -44,7 +44,7 @@ Personal use, one machine (M3 Pro, 18 GB, macOS 26). Meetings in Italian or Engl
    1. completes the Transcript (the last Segments);
    2. reads the Meeting note again and extracts the Personal notes;
    3. generates Summary and title with the Summary Profile;
-   4. renames the note with the title, if the user has not renamed or moved it;
+   4. renames the note with the title, if the user has not renamed or moved it (the Transcript is then named after the renamed note; an existing Transcript is never renamed);
    5. writes the Transcript file;
    6. rewrites the Managed section and Steno's frontmatter keys;
    7. notifies "Summary ready" (click → opens the note in Obsidian).
@@ -67,7 +67,7 @@ Personal use, one machine (M3 Pro, 18 GB, macOS 26). Meetings in Italian or Engl
 - A Transcript paragraph joins consecutive Utterances of the same Track, but breaks after a pause longer than 30 seconds or when an Utterance starts more than 60 seconds after the paragraph's start: a new timestamp about every minute (a Whisper Utterance is at most 30 seconds long).
 - The result of each Segment (language and Utterances) is saved next to the audio (`me-000.m4a.json`), so a new Processing does not transcribe again what is done.
 - **Local**: WhisperKit, model `openai_whisper-large-v3-v20240930_turbo_632MB` (646 MB), downloaded on first use to `~/Library/Application Support/Steno/Models` and prepared while the first Meeting is in progress.
-- **Language**: `auto` or forced `it`/`en` (`defaults write dev.mameli.steno language it`). Detection runs on up to 30 seconds of speech only (the voice ranges, no silence) of the first Segment that has any, from either Track, picking only between Italian and English, and holds for the whole Meeting. It is locked only when there are at least 10 seconds of speech: on a short "ok" Whisper can pick the wrong language and then *translate* instead of transcribing; with less speech the detected language applies to that Segment only and detection is tried again on the next one. Detecting on the first 30 seconds of audio is not enough: in the real phase 1 test the Me Track started with 80 seconds of near silence and Whisper classified it as Swedish. The language used is saved in every Segment's cache; if a different language is forced later, the Segment is transcribed again.
+- **Language**: `auto` or forced `it`/`en` (`defaults write dev.mameli.steno language it`). Detection runs on up to 30 seconds of speech only (the voice ranges, no silence) of the first Segment that has any, from either Track, picking only between Italian and English, and holds for the whole Meeting. It is locked only when there are at least 10 seconds of speech: on a short "ok" Whisper can pick the wrong language and then *translate* instead of transcribing. With less speech the detected language is provisional: it applies to that Segment only, detection is tried again on the next one, and at the end of Processing the Segments transcribed with a provisional language different from the locked one are transcribed again. If the language is never locked (very little speech in the whole Meeting) the provisional results stay. Detecting on the first 30 seconds of audio is not enough: in the real phase 1 test the Me Track started with 80 seconds of near silence and Whisper classified it as Swedish. The language used is saved in every Segment's cache; if a different language is forced later, the Segment is transcribed again.
 - **Remote** (after v1): `POST {baseURL}/audio/transcriptions` (multipart, one Segment per request) through the OpenAI-compatible adapter. Only at the stop: during the call the audio never leaves the Mac.
 
 File `<Vault>/Meetings/Transcripts/2026-10-04 1430 - <Title> (transcript).md` (a copy without frontmatter stays in `transcript.md` in the Recording folder while the audio is there). A new Processing of the same Meeting overwrites the existing file, found through `steno_id`:
@@ -119,12 +119,10 @@ Rules:
 - Without the calendar, `participants` is not written in v1.
 - Steno writes only once Processing is over, i.e. minutes after the stop, to avoid conflicts with edits still open in Obsidian.
 
-**Notes written before the English rewrite** (Italian format: `%% steno:inizio %%`/`%% steno:fine %%`, `## Note personali`, keys `durata`, `lingua`, `provider_trascrizione`, `provider_riepilogo`, `trascrizione`, labels `Io`/`Altri`, provisional title "Riunione") are still recognised. Steno writes them in the English format whenever it touches them: markers are replaced in place, and an Italian key is replaced by its English name when Steno sets it. The user's text, including the old `## Note personali` heading, is never changed.
-
 ## Template
 
 - Folder `<Vault>/Meetings/_Templates/`. The default Template is `Notes.md`, Granola style: topics in the order they were discussed, each with a `###` heading and bullets with sub-bullets (reasons, people, figures, links), then `### Next steps` with `- [ ] What to do (Who)` and the context below. No opening summary and no fixed sections. Steno creates it at app launch and when the Vault is chosen, if the folder is empty or if the default Template no longer exists (then the default goes back to Notes).
-- Format: frontmatter with `name` and `summary_language` (any language code such as `it`, `en`, `fr`, `de`; `auto` or missing = the Meeting's language). The body, i.e. free-form instructions and heading structure, is passed to the model as it is. Templates written before the English rewrite (`nome`, `lingua_riepilogo`) still work.
+- Format: frontmatter with `name` and `summary_language` (any language code such as `it`, `en`, `fr`, `de`; `auto` or missing = the Meeting's language). The body, i.e. free-form instructions and heading structure, is passed to the model as it is.
 - The Template is chosen at start (default from Settings) and can change until the stop.
 - In Settings, Templates section: list, default Template, "New Template" (name → file created from Notes and opened in Obsidian), "Open in Obsidian", "Delete" (moves the file to the Trash; if it was the default, Notes becomes the default again). The text is written in Obsidian: Steno has no editor.
 
@@ -133,7 +131,7 @@ Rules:
 - `POST {baseURL}/chat/completions` with:
   - **fixed system prompt** (in English): write the summary in the language stated explicitly ("Write the summary in Italian", whatever language the Template is written in), follow the Template's structure and instructions, do not invent, attribute to Me/Others, actions as a checklist in the Template's format (otherwise `- [ ] who: what (when)`), give priority to the topics of the Personal notes;
   - **user message**: Template, Personal notes, Transcript.
-- **Summary language**: the Template's `summary_language` (any language), otherwise the Meeting's detected language, otherwise Italian.
+- **Summary language**: the Template's `summary_language` (any language), otherwise the Meeting's detected language, otherwise (no speech, or detection failed) Italian.
 - **Title**: a second short call on the Summary ("at most 6 words, no date", in the Summary language), cleaned of headings, "Title:" prefixes, quotes, bold and final punctuation. If no title comes back the note keeps its provisional name: it is not an error.
 - **Managed section**: the Summary followed by `Full transcript: [[…]]`. If the Summary fails (no active Profile, Provider error, Meeting without speech) it shows `⚠️ Summary not generated: <reason>` and the Transcript link, which stays usable. Managed section markers in the model's reply are removed.
 - **Token estimate**: about 3 characters per token, with 4,096 tokens reserved for the reply; a block never splits a Transcript paragraph.
@@ -149,14 +147,14 @@ Rules:
 - Templates and default Template
 - Summary Profiles and active Profile (with "Test connection")
 
-For now from the terminal only (`defaults write dev.mameli.steno …`):
+For now from the terminal only (`defaults write dev.mameli.steno …`), to move into the Settings window when they are needed:
 - language (`auto` | `it` | `en`)
 - echo cancellation on/off
 - audio retention days (`retentionDays`, default 7)
 
 The global shortcut is fixed: ⌃⌥⌘R. If another app already uses it, the menu says so.
 
-The folders are fixed: `Meetings/`, `Meetings/Transcripts/`, `Meetings/_Templates/`. Folders of earlier versions (`Meetings/Trascrizioni/`, `Meetings/_Template/`) are moved to the new names at launch, without overwriting files; the untouched Italian default Template (`Appunti.md`) goes to the Trash and is replaced by `Notes.md`.
+The folders are fixed: `Meetings/`, `Meetings/Transcripts/`, `Meetings/_Templates/`. The Italian format of earlier development versions is not supported: those notes and Recordings were deleted.
 
 ## Menu bar
 
@@ -164,11 +162,11 @@ The folders are fixed: `Meetings/`, `Meetings/Transcripts/`, `Meetings/_Template
 - **Recording**: only a red dot in the bar; in the menu "Recording · duration" · Stop · Template ▸ · Settings…
 - **Processing**: hourglass in the bar; in the menu "Processing… (N more queued)"
 
-The interface is in English in the code and translated to Italian in `Steno/Localizable.xcstrings` and `Steno/InfoPlist.xcstrings`: macOS picks the language of the system. Error messages from `StenoCore` are looked up in the app's catalog too. What Steno writes into the Vault (headings, markers, keys) is always in English.
+The interface is in English in the code and translated to Italian in `Steno/Localizable.xcstrings` and `Steno/InfoPlist.xcstrings`: macOS picks the language of the system. Error messages from `StenoCore` are looked up in the app's catalog too. The structure Steno writes into the Vault (headings, markers, keys, labels, status lines such as "Summary not generated:") is always in English; the error detail after it follows the app language, like the menu.
 
 ## State and retention
 
-- `~/Library/Application Support/Steno/Recordings/<steno_id>/`: audio Segments, per-Segment transcription cache, `recording.json` (start, end, Segments) and `processing.json` (status: recording, queued, processing, regenerating, completed, failed with reason; Template; Profile fixed at start; note path). Folders of earlier versions (`Steno/Riunioni`, `Steno/Modelli`) are renamed at launch; after moving the model folder Core ML prepares the model again once (a few minutes).
+- `~/Library/Application Support/Steno/Recordings/<steno_id>/`: audio Segments, per-Segment transcription cache (language, whether it was reliable, Utterances), `recording.json` (start, end, Segments) and `processing.json` (status: recording, queued, processing, regenerating, completed, failed with reason; Template; Profile fixed at start; note path).
 - Persistent Processing queue, one Meeting at a time: at app restart queued or in-progress Processing resumes, oldest first. A Recording interrupted by a crash is rebuilt from the Segment lists and queued: only the Segment open at the crash is lost (an unclosed AAC file is unreadable).
 - An unreadable Segment is a warning ("Incomplete transcript"), not a failure: the Summary is generated with what there is.
 - At app launch and every day: deletion of the audio (and transcription caches) of Meetings older than 7 days that are processed or failed, never of those recording, queued, processing or regenerating. `recording.json` and `processing.json` stay: the Meeting stays among the recent ones and can be Regenerated.
@@ -179,8 +177,8 @@ The interface is in English in the code and translated to Italian in `Steno/Loca
 
 ## Project structure
 
-- **Xcode app** `Steno` (SwiftUI, `MenuBarExtra`, macOS 15 target, Personal Team signing): audio capture, WhisperKit, notifications, shortcut, Keychain, UI, migrations.
-- **Local Swift package** `StenoCore`, testable with `swift test` and without AppKit or AVFoundation: Segments → Transcript merging, reading and writing the Meeting note (Managed section, frontmatter, lookup by `steno_id`, pre-rewrite format), Template parsing, prompt building and chunking, OpenAI-compatible client, Meeting/queue state machine, retention rules.
+- **Xcode app** `Steno` (SwiftUI, `MenuBarExtra`, macOS 15 target, Personal Team signing): audio capture, WhisperKit, notifications, shortcut, Keychain, UI.
+- **Local Swift package** `StenoCore`, testable with `swift test` and without AppKit or AVFoundation: Segments → Transcript merging, reading and writing the Meeting note (Managed section, frontmatter, lookup by `steno_id`), Template parsing, prompt building and chunking, OpenAI-compatible client, Meeting/queue state machine, retention rules.
 
 Tests: Swift Testing on `StenoCore`, TDD. Capture and transcription are verified by hand with test Recordings saved as fixtures. Automated runs of the app (DEBUG builds) refuse to start unless isolated with `-vaultPath`, `-testSummaryBaseURL` and `-dataDirectory`.
 
@@ -206,5 +204,5 @@ Every phase closes with a concrete check.
 - **Gaps in the audio**: a Segment's offset is computed from the frames written since the start of the Track. If a source drops buffers (device change, voice processing reset) the later offsets of that Track drift relative to the other. Phase 2: in the real 12-minute call the two Tracks end less than 10 ms apart, no visible drift in the Transcript. If it shows up (e.g. headphones plugged in mid-call), realign every Segment with the host time of its first buffer.
 - **Words cut between Segments**: the 5-minute boundary can split a word. Phase 2: with 5-second Segments a sentence across two Segments comes back together correctly; in the real call no words were lost at the boundaries. If it matters, add a short overlap between Segments.
 - **Whisper non-deterministic on degraded audio**: with temperature fallback, the same range can give different texts in two Processings. In the phase 2 test (voice picked up by a phone in another room, through Meet and played by the speakers) the first sentence was lost in one run out of three. Disabling the fallback makes the result stable but worse; Whisper's "no speech" threshold is disabled because it dropped exactly these ranges. To reassess if it happens with normal call audio.
-- **Renaming with the note open in Obsidian**: Obsidian usually follows the rename. Fallback: do not rename (title only in the heading).
+- **Renaming with the note open in Obsidian**: not verified yet. Obsidian usually follows the rename; fallback: do not rename (title only in the heading).
 - **Whisper model download**: WhisperKit downloads the weights from Hugging Face. It is not Meeting data and does not affect ADR 0001, but it needs the network on first launch.

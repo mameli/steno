@@ -17,6 +17,8 @@ actor MeetingTranscription {
     private struct CachedSegment: Codable {
         /// `nil` if the Segment contains no speech.
         let language: String?
+        /// False when the language was detected on too little speech to trust it.
+        let isLanguageReliable: Bool
         let utterances: [Utterance]
     }
 
@@ -27,9 +29,11 @@ actor MeetingTranscription {
 
     private let transcriber: LocalTranscriber
     private let forcedLanguage: String?
+    /// The Meeting language, once detected on enough speech.
     private var languageDetection: Task<String, Error>?
-    /// Language detected on too little speech to lock it for the Meeting.
-    private var provisionalLanguage: String?
+    /// Segments transcribed with a language detected on too little speech, and that language:
+    /// at the end they are transcribed again if the Meeting language turns out different.
+    private var provisionalSegments: [String: (segment: Segment, language: String)] = [:]
     private var pending: [String: Task<[Utterance], Error>] = [:]
 
     /// `language` is `nil` to detect it automatically.
@@ -48,41 +52,57 @@ actor MeetingTranscription {
         for segment in recording.segments {
             startIfNeeded(segment, in: directory)
         }
-        var utterances: [Utterance] = []
+        var bySegment: [String: [Utterance]] = [:]
         var failed: [String] = []
         for segment in recording.segments {
             do {
-                utterances += try await pending[segment.fileName]!.value
+                bySegment[segment.fileName] = try await pending[segment.fileName]!.value
             } catch {
                 failed.append("\(segment.fileName): \(error.localizedDescription)")
                 pending[segment.fileName] = nil
             }
         }
+
+        // A short first utterance may have been transcribed (or translated) in the wrong
+        // language: once the Meeting language is known, those Segments are done again.
+        var locked = forcedLanguage
+        if locked == nil { locked = try? await languageDetection?.value }
+        if let locked {
+            for (fileName, provisional) in provisionalSegments where provisional.language != locked {
+                do {
+                    bySegment[fileName] = try await transcribe(provisional.segment, in: directory, language: locked)
+                } catch {
+                    failed.append("\(fileName): \(error.localizedDescription)")
+                }
+            }
+        }
+
+        let utterances = recording.segments.flatMap { bySegment[$0.fileName] ?? [] }
         let url = directory.appending(path: Transcript.recordingCopyFileName)
         let transcript = Transcript(utterances: utterances)
         try transcript.markdown.write(to: url, atomically: true, encoding: .utf8)
-        let language: String? = if let forcedLanguage {
-            forcedLanguage
-        } else if let locked = try? await languageDetection?.value {
-            locked
-        } else {
-            provisionalLanguage
-        }
+        let language = locked ?? provisionalSegments.values.first?.language
         return Finished(url: url, transcript: transcript, language: language, failedSegments: failed)
     }
 
     private func startIfNeeded(_ segment: Segment, in directory: URL) {
         guard pending[segment.fileName] == nil else { return }
-        pending[segment.fileName] = Task { try await self.transcribe(segment, in: directory) }
+        pending[segment.fileName] = Task { try await self.transcribe(segment, in: directory, language: nil) }
     }
 
-    private func transcribe(_ segment: Segment, in directory: URL) async throws -> [Utterance] {
+    /// `language` forces the language and ignores the cache; `nil` uses the cache or detects it.
+    private func transcribe(_ segment: Segment, in directory: URL, language forced: String?) async throws -> [Utterance] {
         let cacheURL = directory.appending(path: segment.transcriptionCacheFileName)
-        if let cached = try? JSONDecoder().decode(CachedSegment.self, from: Data(contentsOf: cacheURL)),
+        if forced == nil,
+           let cached = try? JSONDecoder().decode(CachedSegment.self, from: Data(contentsOf: cacheURL)),
            cached.language == nil || forcedLanguage == nil || cached.language == forcedLanguage {
-            if let language = cached.language, forcedLanguage == nil, languageDetection == nil {
-                // Same language for the whole Meeting, even if some Segments come from the cache.
-                languageDetection = Task { language }
+            if let language = cached.language, forcedLanguage == nil {
+                if cached.isLanguageReliable {
+                    // Same language for the whole Meeting, even if some Segments come from the cache.
+                    if languageDetection == nil { languageDetection = Task { language } }
+                } else {
+                    provisionalSegments[segment.fileName] = (segment, language)
+                }
             }
             return cached.utterances
         }
@@ -93,11 +113,22 @@ actor MeetingTranscription {
         // distant voices) it makes up sentences such as "Grazie.".
         let ranges = speechRanges(in: samples, sampleRate: sampleRate)
         guard !ranges.isEmpty else {
-            try JSONEncoder().encode(CachedSegment(language: nil, utterances: [])).write(to: cacheURL)
+            try JSONEncoder().encode(CachedSegment(language: nil, isLanguageReliable: true, utterances: []))
+                .write(to: cacheURL)
             return []
         }
 
-        let language = try await meetingLanguage(samples, speech: ranges)
+        let (language, isReliable) = if let forced {
+            (forced, true)
+        } else {
+            try await meetingLanguage(samples, speech: ranges)
+        }
+        if isReliable {
+            provisionalSegments[segment.fileName] = nil
+        } else {
+            provisionalSegments[segment.fileName] = (segment, language)
+        }
+
         var utterances: [Utterance] = []
         for range in ranges {
             let offset = segment.start + Double(range.lowerBound) / sampleRate
@@ -106,18 +137,20 @@ actor MeetingTranscription {
                 Utterance(track: segment.track, start: offset + $0.start, end: offset + $0.end, text: $0.text)
             }
         }
-        try JSONEncoder().encode(CachedSegment(language: language, utterances: utterances)).write(to: cacheURL)
+        try JSONEncoder().encode(CachedSegment(language: language, isLanguageReliable: isReliable, utterances: utterances))
+            .write(to: cacheURL)
         return utterances
     }
 
     /// One language per Meeting, detected once on up to 30 seconds of speech (silence
     /// confuses detection). It is locked only when there are at least 10 seconds of speech:
-    /// on a short "ok" Whisper can pick the wrong language and then translate instead of transcribing.
-    private func meetingLanguage(_ samples: [Float], speech ranges: [Range<Int>]) async throws -> String {
-        if let forcedLanguage { return forcedLanguage }
+    /// on a short "ok" Whisper can pick the wrong language and then translate instead of
+    /// transcribing. With less speech the language is returned as not reliable.
+    private func meetingLanguage(_ samples: [Float], speech ranges: [Range<Int>]) async throws -> (String, Bool) {
+        if let forcedLanguage { return (forcedLanguage, true) }
         if let languageDetection {
             do {
-                return try await languageDetection.value
+                return (try await languageDetection.value, true)
             } catch {
                 self.languageDetection = nil
                 throw error
@@ -132,9 +165,7 @@ actor MeetingTranscription {
         let isReliable = Double(speech.count) >= Self.minimumSpeechToLockLanguage * Recording.sampleRate
         if isReliable { languageDetection = detection }
         do {
-            let language = try await detection.value
-            if !isReliable { provisionalLanguage = language }
-            return language
+            return (try await detection.value, isReliable)
         } catch {
             if isReliable { languageDetection = nil }
             throw error

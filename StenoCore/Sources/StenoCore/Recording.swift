@@ -16,20 +16,15 @@ public struct Recording: Codable, Equatable, Sendable {
 
     /// The manifest in the Recording folder.
     public static let fileName = "recording.json"
-    /// Name used before the English rewrite: still read, never written.
-    public static let legacyFileName = "riunione.json"
 
     /// Segment sample rate: mono 16 kHz, what Whisper expects.
     public static let sampleRate: Double = 16_000
 
-    /// Reads the manifest of a Recording folder (also the pre-rewrite one).
+    /// Reads the manifest of a Recording folder.
     public static func load(fromFolder folder: URL) throws -> Recording {
-        let current = folder.appending(path: fileName)
-        let legacy = folder.appending(path: legacyFileName)
-        let url = FileManager.default.fileExists(atPath: current.path(percentEncoded: false)) ? current : legacy
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(Recording.self, from: Data(contentsOf: url))
+        return try decoder.decode(Recording.self, from: Data(contentsOf: folder.appending(path: fileName)))
     }
 
     public func save(inFolder folder: URL) throws {

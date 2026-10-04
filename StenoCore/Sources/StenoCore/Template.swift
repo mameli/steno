@@ -31,35 +31,6 @@ public struct Template: Equatable, Sendable {
 
         """
 
-    /// The Italian default Template created before the English rewrite: if a Vault still has it
-    /// untouched, Steno replaces it with the English one.
-    public static let legacyDefaultFileContent = """
-        ---
-        nome: Appunti
-        lingua_riepilogo: auto
-        ---
-        Scrivi gli appunti della riunione come li prenderebbe un collega attento, non un verbale.
-
-        - Dividi la riunione in argomenti, nell'ordine in cui sono stati discussi. Per ogni argomento \
-        un'intestazione `###` con un titolo breve e concreto.
-        - Sotto ogni argomento un elenco puntato: un punto per ogni idea, proposta, decisione o problema, \
-        con sotto-punti per motivi, dettagli, persone, cifre, date e link. Frasi brevi, niente premesse.
-        - Le decisioni stanno nell'argomento a cui appartengono, non in una sezione a parte.
-        - Niente sintesi iniziale e niente conclusioni generiche.
-
-        ### Prossimi passi
-        Un punto per ogni azione concordata, nella forma `- [ ] Cosa fare (Chi)`, con sotto un \
-        sotto-punto per contesto e scadenza quando ci sono.
-
-        """
-    public static let legacyDefaultName = "Appunti"
-
-    /// Whether a Template file is the untouched Italian default of earlier versions.
-    public static func isLegacyDefault(_ content: String) -> Bool {
-        MarkdownLines(content).text.trimmingCharacters(in: .whitespacesAndNewlines)
-            == legacyDefaultFileContent.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
     /// The content of a new Template created by the user: the default one with the chosen name.
     public static func newFileContent(name: String) -> String {
         defaultFileContent.replacingOccurrences(of: "name: \(defaultName)", with: "name: \(name)")
@@ -67,9 +38,8 @@ public struct Template: Equatable, Sendable {
 
     public init(fileName: String, content: String) {
         let markdown = MarkdownLines(content)
-        // Templates written before the English rewrite use `nome` and `lingua_riepilogo`.
-        name = markdown.value("name", "nome").flatMap { $0.isEmpty ? nil : $0 } ?? fileName
-        summaryLanguage = markdown.value("summary_language", "lingua_riepilogo").flatMap(Language.code)
+        name = markdown.value("name").flatMap { $0.isEmpty ? nil : $0 } ?? fileName
+        summaryLanguage = markdown.value("summary_language").flatMap(Language.code)
         body = markdown.lines[markdown.bodyStart...].joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

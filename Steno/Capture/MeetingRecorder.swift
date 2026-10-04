@@ -29,7 +29,8 @@ final class MeetingRecorder {
     private let systemAudio = SystemAudioCapture()
     private var active: Active?
 
-    static var meetingsDirectory: URL {
+    /// Where Recordings are kept, one folder per Meeting (named after its `steno_id`).
+    static var recordingsDirectory: URL {
         #if DEBUG
         // Automated tests: test Recordings stay outside the real folder.
         if let path = UserDefaults.standard.string(forKey: "dataDirectory") {
@@ -52,7 +53,7 @@ final class MeetingRecorder {
         at startedAt: Date, echoCancellation: Bool, onSegmentClosed: @escaping SegmentClosedHandler
     ) throws -> Started {
         let meetingID = UUID()
-        let directory = Self.meetingsDirectory.appending(path: meetingID.uuidString, directoryHint: .isDirectory)
+        let directory = Self.recordingsDirectory.appending(path: meetingID.uuidString, directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
 
         let hostTime = mach_absolute_time()

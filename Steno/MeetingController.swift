@@ -34,8 +34,6 @@ final class MeetingController {
 
     init() {
         AppSettings.registerDefaults()
-        StorageMigration.run()
-        Vault.configured?.migrateLegacyLayout()
         try? Vault.configured?.ensureDefaultTemplate()
         processor = MeetingProcessor(transcriber: transcriber)
         templateName = AppSettings.defaultTemplate
@@ -220,7 +218,7 @@ final class MeetingController {
     private func writeSmokeTestOutcome(_ url: URL?) {
         let outcome = lastError.map { "error: \($0)" } ?? "ok: \(url?.path ?? "-")"
         try? outcome.write(
-            to: MeetingRecorder.meetingsDirectory.deletingLastPathComponent().appending(path: "smoke-test.txt"),
+            to: MeetingRecorder.recordingsDirectory.deletingLastPathComponent().appending(path: "smoke-test.txt"),
             atomically: true, encoding: .utf8
         )
     }

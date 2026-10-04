@@ -20,8 +20,9 @@ public struct ProviderProfile: Codable, Identifiable, Equatable, Hashable, Senda
         self.maxContextTokens = maxContextTokens
     }
 
-    /// The name shown in menus, even when the user did not type one.
+    /// The name shown in menus, even when the user did not type one. "Untitled" is looked up
+    /// in the app's string catalog (Bundle.main), so the app can translate it.
     public var displayName: String {
-        name.trimmingCharacters(in: .whitespaces).isEmpty ? "Untitled" : name
+        name.trimmingCharacters(in: .whitespaces).isEmpty ? String(localized: "Untitled") : name
     }
 }

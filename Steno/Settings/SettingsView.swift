@@ -77,7 +77,6 @@ struct SettingsView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         vaultPath = url.path(percentEncoded: false)
         AppSettings.vaultPath = vaultPath
-        Vault.configured?.migrateLegacyLayout()
         try? Vault.configured?.ensureDefaultTemplate()
     }
 

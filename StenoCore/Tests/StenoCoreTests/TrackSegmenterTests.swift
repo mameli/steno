@@ -46,13 +46,4 @@ struct TrackSegmenterTests {
 
         #expect(segmenter.segments.isEmpty)
     }
-
-    @Test("Segment lists saved before the English rewrite still decode (io/altri)")
-    func legacyTrackNames() throws {
-        let json = #"[{"track":"io","index":0,"start":0.5},{"track":"altri","index":1,"start":300}]"#
-
-        let segments = try JSONDecoder().decode([Segment].self, from: Data(json.utf8))
-
-        #expect(segments.map(\.track) == [.me, .others])
-    }
 }

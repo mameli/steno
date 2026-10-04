@@ -21,6 +21,7 @@ Before starting: Steno running from the menu bar (waveform icon), Vault and a Su
 - [ ] **Notification click**: opens the note in Obsidian.
 - [ ] **Note renamed by you**: rename the note during the call → Steno finds it and does not rename it.
 - [ ] **English meeting**: a test with an English video → Transcript and Summary in English.
+- [ ] **Short first sentence**: say only "ok" or "sì" at the start, then talk for a minute → the first sentence is transcribed in the Meeting language, not translated.
 - [ ] **Other Summary language**: a Template with `summary_language: fr` → Summary in French from an Italian meeting.
 
 ## 3. Queue and recent meetings
@@ -39,13 +40,7 @@ Before starting: Steno running from the menu bar (waveform icon), Vault and a Su
 - [ ] **Quit during Processing**: stop a Meeting and quit Steno right away → at the next launch Processing resumes by itself.
 - [ ] **Wrong key**: in Settings replace the key with a random one → *Test connection* shows the provider's error; then put the right one back.
 
-## 5. Migration from the Italian version
-
-- [ ] **Folders**: `Meetings/Trascrizioni/` and `Meetings/_Template/` became `Meetings/Transcripts/` and `Meetings/_Templates/`.
-- [ ] **Default Template**: the untouched `Appunti.md` is in the Trash and `Notes.md` is the default.
-- [ ] **Old notes**: *Regenerate* on a Meeting recorded before the rewrite → the markers become `%% steno:start %%`/`%% steno:end %%`, your notes are untouched.
-
-## 6. When you set them up
+## 5. When you set them up
 
 - [ ] **EU Provider** (e.g. Mistral): new Profile with key → *Test connection* → a test Meeting → *Regenerate with Profile* on an older Meeting to compare the Summaries.
 - [ ] **Local server** (llama.cpp): new Profile without key, `http://localhost:8080/v1`, max context equal to the server's (`llama-server -c 32768`).

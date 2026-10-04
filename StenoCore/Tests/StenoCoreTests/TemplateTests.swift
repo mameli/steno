@@ -44,14 +44,6 @@ struct TemplateTests {
         #expect(template.summaryLanguage == expected)
     }
 
-    @Test("Templates written before the English rewrite (nome, lingua_riepilogo) still work")
-    func legacyKeys() {
-        let template = Template(fileName: "Vecchio", content: "---\nnome: Settimanale\nlingua_riepilogo: en\n---\nCorpo")
-
-        #expect(template.name == "Settimanale")
-        #expect(template.summaryLanguage == "en")
-    }
-
     @Test("the default Notes Template asks for topics in Meeting order and Next steps at the end")
     func defaultTemplate() {
         let template = Template(fileName: "Notes", content: Template.defaultFileContent)
@@ -73,38 +65,8 @@ struct TemplateTests {
         #expect(template.body == base.body)
     }
 
-    @Test("the Italian default Template of earlier versions is recognised, so it can be replaced")
-    func legacyDefault() {
-        #expect(Template.isLegacyDefault(Template.legacyDefaultFileContent))
-        #expect(!Template.isLegacyDefault(Template.defaultFileContent))
-        #expect(!Template.isLegacyDefault(Template.legacyDefaultFileContent + "\nMy own extra rule."))
-    }
-
-    @Test("the Italian default exactly as the previous version wrote it to the Vault is recognised")
-    func legacyDefaultAsWritten() {
-        let writtenByPreviousVersion = """
-            ---
-            nome: Appunti
-            lingua_riepilogo: auto
-            ---
-            Scrivi gli appunti della riunione come li prenderebbe un collega attento, non un verbale.
-
-            - Dividi la riunione in argomenti, nell'ordine in cui sono stati discussi. Per ogni argomento un'intestazione `###` con un titolo breve e concreto.
-            - Sotto ogni argomento un elenco puntato: un punto per ogni idea, proposta, decisione o problema, con sotto-punti per motivi, dettagli, persone, cifre, date e link. Frasi brevi, niente premesse.
-            - Le decisioni stanno nell'argomento a cui appartengono, non in una sezione a parte.
-            - Niente sintesi iniziale e niente conclusioni generiche.
-
-            ### Prossimi passi
-            Un punto per ogni azione concordata, nella forma `- [ ] Cosa fare (Chi)`, con sotto un sotto-punto per contesto e scadenza quando ci sono.
-
-            """
-
-        #expect(Template.isLegacyDefault(writtenByPreviousVersion))
-    }
-
-    @Test("the default Templates contain no stray backslashes from line continuations")
+    @Test("the default Template contains no stray backslashes from line continuations")
     func noStrayBackslashes() {
         #expect(!Template.defaultFileContent.contains("\\"))
-        #expect(!Template.legacyDefaultFileContent.contains("\\"))
     }
 }

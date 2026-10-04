@@ -24,16 +24,13 @@ struct MarkdownLines {
         frontmatterClose.map { $0 + 1 } ?? 0
     }
 
-    /// Value of a top-level `key: value` line of the frontmatter, trying the keys in order.
-    func value(_ keys: String...) -> String? {
-        guard let close = frontmatterClose else { return nil }
-        for key in keys {
-            if let line = lines[1..<close].first(where: { $0.hasPrefix("\(key):") }) {
-                return line.dropFirst(key.count + 1).trimmingCharacters(in: .whitespaces)
-                    .trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
-            }
-        }
-        return nil
+    /// Value of a top-level `key: value` line of the frontmatter.
+    func value(_ key: String) -> String? {
+        guard let close = frontmatterClose,
+              let line = lines[1..<close].first(where: { $0.hasPrefix("\(key):") })
+        else { return nil }
+        return line.dropFirst(key.count + 1).trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
     }
 
     static func isLine(_ line: String, _ text: String) -> Bool {
