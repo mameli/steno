@@ -1,8 +1,8 @@
 import Foundation
 import StenoCore
 
-/// Impostazioni di Steno, modificabili dalla finestra Impostazioni. Alcune solo da terminale, per esempio:
-/// `defaults write dev.mameli.steno language it` (oppure `en`, `auto`)
+/// Steno's settings, editable in the Settings window. Some only from the terminal, for example:
+/// `defaults write dev.mameli.steno language it` (or `en`, `auto`)
 /// `defaults write dev.mameli.steno echoCancellation -bool false`
 enum AppSettings {
     private static let vaultPathKey = "vaultPath"
@@ -10,10 +10,10 @@ enum AppSettings {
     private static let echoCancellationKey = "echoCancellation"
     private static let openInObsidianKey = "openInObsidian"
     private static let summaryProfilesKey = "summaryProfiles"
-    /// Usata anche da `@AppStorage` nel menu e nelle Impostazioni, che così restano allineati.
-    static let activeProviderProfileKey = "activeProviderProfile"
     private static let defaultTemplateKey = "defaultTemplate"
     private static let retentionDaysKey = "retentionDays"
+    /// Also used by `@AppStorage` in the menu and in Settings, so the two stay in sync.
+    static let activeProviderProfileKey = "activeProviderProfile"
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -30,24 +30,24 @@ enum AppSettings {
         set { UserDefaults.standard.set(newValue, forKey: vaultPathKey) }
     }
 
-    /// Giorni di conservazione dell'audio: `defaults write dev.mameli.steno retentionDays -int 14`.
+    /// Days the audio is kept: `defaults write dev.mameli.steno retentionDays -int 14`.
     static var retentionDays: Int {
         max(1, UserDefaults.standard.integer(forKey: retentionDaysKey))
     }
 
     #if DEBUG
-    /// Nelle prove automatiche ogni Riepilogo va al server finto, anche per Riunioni salvate con un altro Profilo.
+    /// In automated tests every Summary goes to the fake server, even for Meetings saved with another Profile.
     static var testSummaryProfile: ProviderProfile? {
         UserDefaults.standard.string(forKey: "testSummaryBaseURL").map {
             ProviderProfile(
-                name: "Server di prova", baseURL: $0, model: "prova",
+                name: "Test server", baseURL: $0, model: "test",
                 maxContextTokens: ProviderProfile.defaultMaxContextTokens
             )
         }
     }
     #endif
 
-    /// `nil` per rilevare la lingua in automatico.
+    /// `nil` to detect the language automatically.
     static var forcedLanguage: String? {
         UserDefaults.standard.string(forKey: languageKey).flatMap {
             LocalTranscriber.supportedLanguages.contains($0) ? $0 : nil
@@ -58,7 +58,7 @@ enum AppSettings {
         UserDefaults.standard.bool(forKey: echoCancellationKey)
     }
 
-    /// Spento solo nelle prove automatiche, che scrivono in un Vault di test sconosciuto a Obsidian.
+    /// Off only in automated tests, which write to a test Vault Obsidian does not know.
     static var openInObsidian: Bool {
         UserDefaults.standard.bool(forKey: openInObsidianKey)
     }
@@ -78,14 +78,14 @@ enum AppSettings {
 
     static var activeProviderProfile: ProviderProfile? {
         #if DEBUG
-        // Prove automatiche: `--args -testSummaryBaseURL http://localhost:8765/v1` usa un server finto
-        // senza toccare i Profili dell'utente.
+        // Automated tests: `--args -testSummaryBaseURL http://localhost:8765/v1` uses a fake server
+        // without touching the user's Profiles.
         if let testSummaryProfile { return testSummaryProfile }
         #endif
         return summaryProfiles.first { $0.id == activeProviderProfileID }
     }
 
-    /// Nome (senza `.md`) del Template proposto all'avvio di ogni Riunione.
+    /// Name (without `.md`) of the Template proposed when every Meeting starts.
     static var defaultTemplate: String {
         get { UserDefaults.standard.string(forKey: defaultTemplateKey) ?? Template.defaultName }
         set { UserDefaults.standard.set(newValue, forKey: defaultTemplateKey) }

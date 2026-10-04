@@ -1,7 +1,7 @@
 import Foundation
 
-/// Una configurazione con nome di un Provider per il Riepilogo. La chiave API non sta qui:
-/// è nel Portachiavi, sotto l'identificativo del Profilo.
+/// A named configuration of a Provider for the Summary. The API key is not stored here:
+/// it lives in the Keychain, under the Profile's identifier.
 public struct ProviderProfile: Codable, Identifiable, Equatable, Hashable, Sendable {
     public static let defaultMaxContextTokens = 32_000
 
@@ -9,7 +9,7 @@ public struct ProviderProfile: Codable, Identifiable, Equatable, Hashable, Senda
     public var name: String
     public var baseURL: String
     public var model: String
-    /// Token che il modello accetta in una richiesta: oltre, la Trascrizione si divide in blocchi.
+    /// Tokens the model accepts in one request: beyond that the Transcript is split into blocks.
     public var maxContextTokens: Int
 
     public init(id: UUID = UUID(), name: String, baseURL: String, model: String, maxContextTokens: Int) {
@@ -20,8 +20,8 @@ public struct ProviderProfile: Codable, Identifiable, Equatable, Hashable, Senda
         self.maxContextTokens = maxContextTokens
     }
 
-    /// Il nome da mostrare nei menu, anche se l'utente non ne ha scritto uno.
+    /// The name shown in menus, even when the user did not type one.
     public var displayName: String {
-        name.trimmingCharacters(in: .whitespaces).isEmpty ? "Senza nome" : name
+        name.trimmingCharacters(in: .whitespaces).isEmpty ? "Untitled" : name
     }
 }

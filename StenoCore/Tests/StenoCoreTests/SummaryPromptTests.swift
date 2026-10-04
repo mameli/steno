@@ -1,15 +1,15 @@
 import Testing
 import StenoCore
 
-@Suite("Prompt del Riepilogo")
+@Suite("Summary prompt")
 struct SummaryPromptTests {
-    let template = Template(fileName: "Generico", content: "Sii breve.\n\n## Sintesi\n## Azioni")
+    let template = Template(fileName: "Notes", content: "Be brief.\n\n### Topics\n### Next steps")
     let transcript = Transcript(utterances: [
-        Utterance(track: .others, start: 0, end: 4, text: "Il budget è approvato."),
-        Utterance(track: .me, start: 5, end: 8, text: "Mando io l'offerta venerdì."),
+        Utterance(track: .others, start: 0, end: 4, text: "The budget is approved."),
+        Utterance(track: .me, start: 5, end: 8, text: "I'll send the offer on Friday."),
     ])
 
-    @Test("il messaggio utente contiene Template, Note personali e Trascrizione, in quest'ordine")
+    @Test("the user message holds Template, personal notes and Transcript, in this order")
     func userMessage() {
         let prompt = SummaryPrompt(template: template, personalNotes: "- budget!", transcript: transcript, meetingLanguage: "it")
 
@@ -18,46 +18,47 @@ struct SummaryPromptTests {
         #expect(messages.map(\.role) == [.system, .user])
         #expect(messages[1].content == """
             # Template
-            Sii breve.
+            Be brief.
 
-            ## Sintesi
-            ## Azioni
+            ### Topics
+            ### Next steps
 
-            # Note personali
+            # Personal notes
             - budget!
 
-            # Trascrizione
-            **[00:00] Altri:** Il budget è approvato.
+            # Transcript
+            **[00:00] Others:** The budget is approved.
 
-            **[00:05] Io:** Mando io l'offerta venerdì.
+            **[00:05] Me:** I'll send the offer on Friday.
             """)
     }
 
-    @Test("le regole stanno nel messaggio di sistema")
+    @Test("the rules live in the system message")
     func systemRules() {
         let system = SummaryPrompt(template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it")
             .singleRequest()[0].content
 
-        #expect(system.contains("Scrivi in italiano."))
-        #expect(system.contains("Non inventare"))
-        #expect(system.contains("Segui la struttura e le istruzioni del Template"))
-        // Il formato delle azioni lo decide il Template; questo vale solo se il Template non dice niente.
-        #expect(system.contains("nel formato indicato dal Template"))
-        #expect(system.contains("- [ ] chi: cosa (quando)"))
-        #expect(system.contains("\"Io\""))
-        #expect(system.contains("Note personali"))
+        #expect(system.contains("Write the summary in Italian"))
+        #expect(system.contains("Do not invent"))
+        #expect(system.contains("Follow the structure and instructions of the Template"))
+        // The action format is the Template's; this one applies only when the Template says nothing.
+        #expect(system.contains("in the format the Template asks for"))
+        #expect(system.contains("- [ ] who: what (when)"))
+        #expect(system.contains("\"Me\""))
+        #expect(system.contains("personal notes"))
     }
 
-    @Test("lingua del Riepilogo: quella del Template, altrimenti della Riunione, altrimenti italiano", arguments: [
-        ("en", "it", "Scrivi in inglese."),
-        (nil, "en", "Scrivi in inglese."),
-        (nil, "it", "Scrivi in italiano."),
-        (nil, nil, "Scrivi in italiano."),
-        ("it", "en", "Scrivi in italiano."),
+    @Test("Summary language: the Template's, else the Meeting's, else Italian; any language can be named", arguments: [
+        ("en", "it", "Write the summary in English"),
+        (nil, "en", "Write the summary in English"),
+        (nil, "it", "Write the summary in Italian"),
+        (nil, nil, "Write the summary in Italian"),
+        ("fr", "en", "Write the summary in French"),
+        ("de", nil, "Write the summary in German"),
     ] as [(String?, String?, String)])
     func language(templateLanguage: String?, meetingLanguage: String?, rule: String) {
-        let header = templateLanguage.map { "---\nlingua_riepilogo: \($0)\n---\n" } ?? ""
-        let template = Template(fileName: "T", content: header + "## Sintesi")
+        let header = templateLanguage.map { "---\nsummary_language: \($0)\n---\n" } ?? ""
+        let template = Template(fileName: "T", content: header + "### Topics")
 
         let system = SummaryPrompt(template: template, personalNotes: "", transcript: transcript, meetingLanguage: meetingLanguage)
             .singleRequest()[0].content
@@ -65,11 +66,11 @@ struct SummaryPromptTests {
         #expect(system.contains(rule))
     }
 
-    @Test("senza Note personali il modello lo sa esplicitamente")
+    @Test("without personal notes the model is told so explicitly")
     func noPersonalNotes() {
         let user = SummaryPrompt(template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it")
             .singleRequest()[1].content
 
-        #expect(user.contains("# Note personali\n(nessuna)\n"))
+        #expect(user.contains("# Personal notes\n(none)\n"))
     }
 }

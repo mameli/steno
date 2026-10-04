@@ -1,12 +1,12 @@
 import Foundation
 
-/// Scrive il Riepilogo con un Provider: in una richiesta se la Trascrizione entra nel contesto
-/// del modello, altrimenti riassumendo a blocchi e unendo i riassunti parziali.
+/// Writes the Summary with a Provider: in one request if the Transcript fits in the model's
+/// context, otherwise summarising in blocks and merging the partial summaries.
 public struct Summarizer: Sendable {
     private let client: ChatClient
     private let maxContextTokens: Int
 
-    /// Sotto questo contesto non resta spazio utile per la Trascrizione dopo regole e risposta.
+    /// Below this context there is no useful room left for the Transcript after rules and reply.
     public static let minimumContextTokens = 8_192
 
     public init(client: ChatClient, maxContextTokens: Int) {
@@ -19,7 +19,7 @@ public struct Summarizer: Sendable {
             return try await client.complete(prompt.singleRequest())
         }
         var partials = try await complete(prompt.partialRequests(maxContextTokens: maxContextTokens))
-        // Riunioni molto lunghe: si uniscono i riassunti a gruppi finché l'unione finale entra nel contesto.
+        // Very long Meetings: summaries are merged in groups until the final merge fits in the context.
         while !prompt.mergeFits(partials: partials, maxContextTokens: maxContextTokens) {
             let groups = prompt.groupRequests(partials: partials, maxContextTokens: maxContextTokens)
             guard groups.count < partials.count else { break }

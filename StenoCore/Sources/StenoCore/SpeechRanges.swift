@@ -1,21 +1,21 @@
 import Foundation
 
-/// Parametri della ricerca del parlato. Le soglie vengono dalle misure della fase 1:
-/// silenzio ed eco residuo sotto 0,002 di RMS, la voce nel microfono oltre 0,05,
-/// un video riprodotto a volume basso intorno a 0,008.
+/// Speech detection parameters. The thresholds come from the phase 1 measurements:
+/// silence and echo residue below 0.002 RMS, a voice into the microphone above 0.05,
+/// a video played at low volume around 0.008.
 public enum SpeechDetection {
     public static let threshold: Float = 0.004
     public static let frameDuration: TimeInterval = 0.5
     public static let padding: TimeInterval = 0.25
-    /// Le pause più brevi di così restano dentro il tratto: chi parla prende fiato.
+    /// Pauses shorter than this stay inside the range: speakers take a breath.
     public static let maxPause: TimeInterval = 2
 }
 
-/// I tratti di `samples` che contengono parlato, come intervalli di indici.
+/// The ranges of `samples` that contain speech, as index ranges.
 ///
-/// L'audio si divide in finestre da mezzo secondo: quelle con RMS sopra soglia
-/// sono parlato, le pause brevi vengono assorbite e ogni tratto si allarga di
-/// un margine per non tagliare le parole.
+/// Audio is split into half-second windows: those with RMS above the threshold are
+/// speech, short pauses are absorbed and every range is widened by a margin so no
+/// word is cut.
 public func speechRanges(in samples: [Float], sampleRate: Double) -> [Range<Int>] {
     let frame = Int(SpeechDetection.frameDuration * sampleRate)
     let padding = Int(SpeechDetection.padding * sampleRate)

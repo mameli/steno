@@ -1,6 +1,6 @@
 import Foundation
 
-/// Etichetta del timer mostrata nella barra dei menu durante la registrazione.
+/// Timer label shown in the menu while a Meeting is in progress.
 public func elapsedLabel(_ elapsed: TimeInterval) -> String {
     let total = Int(elapsed)
     let hours = total / 3600

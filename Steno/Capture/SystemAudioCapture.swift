@@ -1,10 +1,10 @@
 import AVFoundation
 import CoreAudio
 
-/// Cattura la Traccia Altri: tutto l'audio di sistema, tramite un Core Audio process tap.
-/// Steno non riproduce audio, quindi non serve escluderlo dal tap.
+/// Captures the Others Track: all system audio, through a Core Audio process tap.
+/// Steno plays no audio, so there is no need to exclude it from the tap.
 ///
-/// La prima volta macOS chiede il permesso "Registrazione solo audio di sistema".
+/// The first time, macOS asks for the "System Audio Recording Only" permission.
 @MainActor
 final class SystemAudioCapture {
     private let queue = DispatchQueue(label: "dev.mameli.steno.system-audio", qos: .userInitiated)
@@ -27,7 +27,7 @@ final class SystemAudioCapture {
             AudioDeviceDestroyIOProcID(aggregateDeviceID, ioProcID)
         }
         ioProcID = nil
-        // Aspetta che gli ultimi buffer in coda siano stati scritti.
+        // Wait until the last queued buffers have been written.
         queue.sync {}
         if aggregateDeviceID != kAudioObjectUnknown {
             AudioHardwareDestroyAggregateDevice(aggregateDeviceID)
@@ -45,16 +45,16 @@ final class SystemAudioCapture {
         tapDescription.name = "Steno"
         tapDescription.isPrivate = true
         tapDescription.muteBehavior = .unmuted
-        try checkCoreAudio(AudioHardwareCreateProcessTap(tapDescription, &tapID), "creazione del tap audio")
+        try checkCoreAudio(AudioHardwareCreateProcessTap(tapDescription, &tapID), "create the audio tap")
 
         var streamDescription = try readTapFormat()
         guard let format = AVAudioFormat(streamDescription: &streamDescription) else {
-            throw CaptureError.unsupportedFormat("tap audio di sistema")
+            throw CaptureError.unsupportedFormat("system audio tap")
         }
 
-        // Solo il tap, senza gli altoparlanti come dispositivo principale: con
-        // il voice processing del microfono attivo, un aggregato che include
-        // il dispositivo di uscita non riceve più audio.
+        // The tap only, without the speakers as main device: with voice processing
+        // active on the microphone, an aggregate that includes the output device
+        // stops receiving audio.
         let configuration: [String: Any] = [
             kAudioAggregateDeviceNameKey: "Steno",
             kAudioAggregateDeviceUIDKey: "dev.mameli.steno.aggregate.\(UUID().uuidString)",
@@ -68,15 +68,15 @@ final class SystemAudioCapture {
         ]
         try checkCoreAudio(
             AudioHardwareCreateAggregateDevice(configuration as CFDictionary, &aggregateDeviceID),
-            "creazione del dispositivo aggregato"
+            "create the aggregate device"
         )
         try checkCoreAudio(
             AudioDeviceCreateIOProcIDWithBlock(
                 &ioProcID, aggregateDeviceID, queue, Self.ioBlock(format: format, onBuffer: onBuffer)
             ),
-            "registrazione della callback audio"
+            "register the audio callback"
         )
-        try checkCoreAudio(AudioDeviceStart(aggregateDeviceID, ioProcID), "avvio della cattura di sistema")
+        try checkCoreAudio(AudioDeviceStart(aggregateDeviceID, ioProcID), "start the system capture")
     }
 
     private func readTapFormat() throws -> AudioStreamBasicDescription {
@@ -89,18 +89,18 @@ final class SystemAudioCapture {
         var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
         try checkCoreAudio(
             AudioObjectGetPropertyData(tapID, &address, 0, nil, &size, &description),
-            "lettura del formato del tap"
+            "read the tap format"
         )
         return description
     }
 
-    /// Costruito fuori dal main actor: la callback gira sulla coda audio.
+    /// Built outside the main actor: the callback runs on the audio queue.
     private nonisolated static func ioBlock(
         format: AVAudioFormat,
         onBuffer: @escaping AudioBufferHandler
     ) -> AudioDeviceIOBlock {
         { _, inputData, inputTime, _, _ in
-            // Il buffer punta alla memoria di Core Audio: va usato solo dentro la callback.
+            // The buffer points to Core Audio's memory: use it only inside the callback.
             guard let buffer = AVAudioPCMBuffer(pcmFormat: format, bufferListNoCopy: inputData, deallocator: nil) else {
                 return
             }

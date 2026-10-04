@@ -4,10 +4,10 @@ import Observation
 import StenoCore
 import os
 
-private let logger = Logger(subsystem: "dev.mameli.steno", category: "riunione")
+private let logger = Logger(subsystem: "dev.mameli.steno", category: "meeting")
 
-/// Avvio e stop della Riunione: permessi, registrazione, Nota della Riunione, scorciatoia globale.
-/// Allo stop passa la Riunione a `MeetingProcessor`, che la elabora.
+/// Starting and stopping the Meeting: permissions, recording, Meeting note, global shortcut.
+/// At the stop the Meeting goes to `MeetingProcessor`, which processes it.
 @MainActor
 @Observable
 final class MeetingController {
@@ -20,12 +20,12 @@ final class MeetingController {
     private var isRequestingPermission = false
     private var ticker: Task<Void, Never>?
     private var hotKey: GlobalHotKey?
-    /// Falso se un'altra app usa già ⌃⌥⌘R.
+    /// False if another app already uses ⌃⌥⌘R.
     var isHotKeyAvailable: Bool { hotKey?.isRegistered ?? false }
     private(set) var microphoneDenied = false
     private(set) var recordingError: String?
     private(set) var lastRecordingDirectory: URL?
-    /// Template per la Riunione in corso o per la prossima; si può cambiare fino allo stop.
+    /// Template for the Meeting in progress or the next one; it can change until the stop.
     var templateName = AppSettings.defaultTemplate {
         didSet {
             if let currentStenoID { processor.templateChanged(stenoID: currentStenoID, to: templateName) }
@@ -34,9 +34,11 @@ final class MeetingController {
 
     init() {
         AppSettings.registerDefaults()
+        StorageMigration.run()
+        Vault.configured?.migrateLegacyLayout()
+        try? Vault.configured?.ensureDefaultTemplate()
         processor = MeetingProcessor(transcriber: transcriber)
         templateName = AppSettings.defaultTemplate
-        try? Vault.configured?.ensureDefaultTemplate()
         Notifications.shared.configure()
         hotKey = GlobalHotKey { [weak self] in self?.toggle() }
         processor.resumeAfterLaunch()
@@ -45,16 +47,16 @@ final class MeetingController {
 
     var isInProgress: Bool { machine.state != .idle }
 
-    /// L'errore da mostrare nel menu: quello della registrazione o dell'ultima Elaborazione.
+    /// The error to show in the menu: the recording's or the last Processing's.
     var lastError: String? { recordingError ?? processor.lastError }
 
-    /// Timer della Riunione in corso, `nil` se non ce n'è una.
+    /// Timer of the Meeting in progress, `nil` if there is none.
     var elapsedText: String? {
         guard case .inProgress(let startedAt) = machine.state else { return nil }
         return elapsedLabel(max(0, now.timeIntervalSince(startedAt)))
     }
 
-    /// ⌃⌥⌘R: avvia o ferma la Riunione da qualsiasi app.
+    /// ⌃⌥⌘R: starts or stops the Meeting from any app.
     func toggle() {
         if isInProgress {
             stop()
@@ -64,7 +66,7 @@ final class MeetingController {
     }
 
     func start() async {
-        // Il menu resta cliccabile mentre il popup del permesso è aperto.
+        // The menu stays clickable while the permission prompt is open.
         guard !isInProgress, !isRequestingPermission else { return }
         isRequestingPermission = true
         let granted = await AVCaptureDevice.requestAccess(for: .audio)
@@ -81,14 +83,14 @@ final class MeetingController {
                 Task { await transcription.segmentClosed(segment, in: directory) }
             }
         } catch {
-            logger.error("Avvio della registrazione fallito: \(error, privacy: .public)")
+            logger.error("Starting the recording failed: \(error, privacy: .public)")
             recordingError = error.localizedDescription
             return
         }
         do {
             try machine.start(at: now)
         } catch {
-            assertionFailure("Avvio con una Riunione già in corso: \(error)")
+            assertionFailure("Start with a Meeting already in progress: \(error)")
             _ = try? recorder.stop(at: now)
             return
         }
@@ -104,12 +106,12 @@ final class MeetingController {
         )
         startTicker()
 
-        // Al primo uso scarica il modello: meglio farlo mentre la Riunione è in corso.
+        // On first use this downloads the model: better while the Meeting is in progress.
         Task { [transcriber] in
             do {
                 try await transcriber.prepare()
             } catch {
-                logger.error("Preparazione del modello fallita: \(error, privacy: .public)")
+                logger.error("Preparing the model failed: \(error, privacy: .public)")
             }
         }
     }
@@ -119,7 +121,7 @@ final class MeetingController {
         do {
             interval = try machine.stop(at: Date())
         } catch {
-            assertionFailure("Stop senza una Riunione in corso: \(error)")
+            assertionFailure("Stop without a Meeting in progress: \(error)")
             return
         }
         ticker?.cancel()
@@ -129,11 +131,11 @@ final class MeetingController {
             let stopped = try recorder.stop(at: interval.end)
             lastRecordingDirectory = stopped.directory
             if !stopped.errors.isEmpty {
-                recordingError = "Registrazione incompleta: " + stopped.errors.joined(separator: "; ")
+                recordingError = String(localized: "Incomplete recording: \(stopped.errors.joined(separator: "; "))")
                 logger.error("\(self.recordingError!, privacy: .public)")
             }
         } catch {
-            logger.error("Chiusura della registrazione fallita: \(error, privacy: .public)")
+            logger.error("Closing the recording failed: \(error, privacy: .public)")
             recordingError = error.localizedDescription
         }
         if let currentStenoID {
@@ -143,28 +145,28 @@ final class MeetingController {
         templateName = AppSettings.defaultTemplate
     }
 
-    /// Crea la Nota della Riunione nel Vault e la apre in Obsidian. Se non riesce la Riunione
-    /// prosegue lo stesso: la nota verrà creata a fine Elaborazione.
+    /// Creates the Meeting note in the Vault and opens it in Obsidian. If that fails the Meeting
+    /// goes on anyway: the note will be created at the end of Processing.
     private func createMeetingNote(stenoID: UUID, startedAt: Date) -> URL? {
         guard let vault = Vault.configured else { return nil }
         do {
             let url = try vault.createMeetingNote(stenoID: stenoID, startedAt: startedAt)
             if AppSettings.openInObsidian {
                 Task {
-                    // Obsidian deve prima accorgersi del file nuovo.
+                    // Obsidian must notice the new file first.
                     try? await Task.sleep(for: .milliseconds(500))
                     Vault.openInObsidian(url)
                 }
             }
             return url
         } catch {
-            logger.error("Nota della Riunione non creata: \(error, privacy: .public)")
-            recordingError = "\(error.localizedDescription) La nota verrà creata a fine Elaborazione."
+            logger.error("Meeting note not created: \(error, privacy: .public)")
+            recordingError = String(localized: "\(error.localizedDescription) The note will be created at the end of Processing.")
             return nil
         }
     }
 
-    /// L'audio scaduto si cancella all'avvio e poi una volta al giorno.
+    /// Expired audio is deleted at launch and then once a day.
     private func startDailyCleanUp() {
         Task { [weak self] in
             while true {
@@ -176,19 +178,20 @@ final class MeetingController {
     }
 
     #if DEBUG
-    /// Prove senza toccare il menu (l'esito finisce in `smoke-test.txt` accanto alla cartella dati, perché `log show` non è sempre leggibile):
-    /// - `open Steno.app --args -smokeTestSeconds 20` registra per N secondi;
-    /// - `open Steno.app --args -transcribeRecording <cartella>` rielabora una Registrazione della cartella dati;
-    /// - `open Steno.app --args -regenerateMeeting <steno_id> -regenerateTemplate <nome>` rigenera il Riepilogo;
-    /// - sempre insieme a `-vaultPath <cartella>`, `-testSummaryBaseURL <url>` e `-dataDirectory <cartella>`,
-    ///   altrimenti la prova si rifiuta di partire; `-openInObsidian NO` non apre Obsidian.
+    /// Tests without touching the menu (the outcome goes to `smoke-test.txt` next to the data
+    /// folder, because `log show` is not always readable):
+    /// - `open Steno.app --args -smokeTestSeconds 20` records for N seconds;
+    /// - `open Steno.app --args -transcribeRecording <folder>` reprocesses a Recording of the data folder;
+    /// - `open Steno.app --args -regenerateMeeting <steno_id> -regenerateTemplate <name>` regenerates the Summary;
+    /// - always together with `-vaultPath <folder>`, `-testSummaryBaseURL <url>` and `-dataDirectory <folder>`,
+    ///   otherwise the test refuses to start; `-openInObsidian NO` does not open Obsidian.
     func runSmokeTestIfRequested() async {
         let arguments = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
         let isTest = ["smokeTestSeconds", "transcribeRecording", "regenerateMeeting"].contains { arguments[$0] != nil }
         let isIsolated = ["vaultPath", "testSummaryBaseURL", "dataDirectory"].allSatisfy { arguments[$0] != nil }
         guard !isTest || isIsolated else {
-            // Una prova automatica senza isolamento scriverebbe nel Vault vero con il Provider vero.
-            recordingError = "Prova automatica rifiutata: servono -vaultPath, -testSummaryBaseURL e -dataDirectory."
+            // An automated test without isolation would write to the real Vault with the real Provider.
+            recordingError = "Automated test refused: -vaultPath, -testSummaryBaseURL and -dataDirectory are required."
             writeSmokeTestOutcome(nil)
             return
         }
@@ -215,7 +218,7 @@ final class MeetingController {
     }
 
     private func writeSmokeTestOutcome(_ url: URL?) {
-        let outcome = lastError.map { "errore: \($0)" } ?? "ok: \(url?.path ?? "-")"
+        let outcome = lastError.map { "error: \($0)" } ?? "ok: \(url?.path ?? "-")"
         try? outcome.write(
             to: MeetingRecorder.meetingsDirectory.deletingLastPathComponent().appending(path: "smoke-test.txt"),
             atomically: true, encoding: .utf8

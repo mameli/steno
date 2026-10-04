@@ -1,19 +1,19 @@
 import Foundation
 
-/// Lo stato dell'Elaborazione di una Riunione, salvato nella cartella della Registrazione
-/// (`elaborazione.json`) così che sopravviva a un riavvio o a un crash dell'app.
+/// The Processing state of a Meeting, saved in the Recording folder (`processing.json`)
+/// so it survives an app restart or crash.
 public struct ProcessingRecord: Codable, Equatable, Sendable {
     public enum Status: Codable, Equatable, Sendable {
-        /// La Riunione è in registrazione (se l'app si riavvia in questo stato, c'è stato un crash).
+        /// The Meeting is being recorded (if the app restarts in this state, it crashed).
         case recording
         case queued
         case processing
-        /// Nuovo Riepilogo dalla Trascrizione nel Vault; non riguarda l'audio.
+        /// New Summary from the Transcript in the Vault; does not involve the audio.
         case regenerating
         case completed
         case failed(reason: String)
 
-        /// Non ancora conclusa: non si cancella l'audio e non si offre Riprova né Rigenera.
+        /// Not concluded yet: its audio is not deleted and Retry and Regenerate are not offered.
         public var isPending: Bool {
             switch self {
             case .recording, .queued, .processing, .regenerating: true
@@ -21,7 +21,7 @@ public struct ProcessingRecord: Codable, Equatable, Sendable {
             }
         }
 
-        /// Riprova e Rigenera hanno senso solo per una Riunione già conclusa.
+        /// Retry and Regenerate only make sense for a concluded Meeting.
         public var canRetry: Bool { !isPending }
     }
 
@@ -29,11 +29,11 @@ public struct ProcessingRecord: Codable, Equatable, Sendable {
         public let from: Status
     }
 
-    /// Che cosa fare dopo un riavvio dell'app.
+    /// What to do after the app restarts.
     public struct RestartPlan: Sendable {
-        /// Elaborazioni da (ri)fare, dalla Riunione più vecchia.
+        /// Processing to (re)do, oldest Meeting first.
         public let toProcess: [ProcessingRecord]
-        /// Stati da correggere su disco senza rielaborare.
+        /// States to fix on disk without processing again.
         public let toSave: [ProcessingRecord]
     }
 
@@ -41,9 +41,9 @@ public struct ProcessingRecord: Codable, Equatable, Sendable {
     public let startedAt: Date
     public var status: Status
     public var templateName: String
-    /// Fissato all'avvio della Riunione (ADR 0001).
+    /// Fixed when the Meeting starts (ADR 0001).
     public var summaryProfile: ProviderProfile?
-    /// Percorso della Nota della Riunione, se è stata creata.
+    /// Path of the Meeting note, if it was created.
     public var noteURL: URL?
 
     public init(
@@ -58,9 +58,9 @@ public struct ProcessingRecord: Codable, Equatable, Sendable {
         self.noteURL = noteURL
     }
 
-    /// Dopo un riavvio: si riprendono le Riunioni in coda, in corso o interrotte durante la
-    /// registrazione. Una Rigenerazione interrotta non va rifatta come Elaborazione completa
-    /// (l'audio potrebbe non esserci più): la Riunione torna semplicemente completata.
+    /// After a restart: Meetings queued, in progress or interrupted while recording resume.
+    /// An interrupted Regeneration is not redone as full Processing (the audio may be gone):
+    /// the Meeting simply goes back to completed.
     public static func afterRestart(_ records: [ProcessingRecord]) -> RestartPlan {
         let toProcess = records
             .filter { [.recording, .queued, .processing].contains($0.status) }
@@ -75,7 +75,7 @@ public struct ProcessingRecord: Codable, Equatable, Sendable {
         return RestartPlan(toProcess: toProcess, toSave: toSave)
     }
 
-    /// Rimette in coda una Riunione conclusa per rifare tutta l'Elaborazione.
+    /// Queues a concluded Meeting again to redo the whole Processing.
     public mutating func queueForRetry() throws {
         guard status.canRetry else { throw InvalidTransition(from: status) }
         status = .queued
@@ -86,12 +86,17 @@ public struct ProcessingRecord: Codable, Equatable, Sendable {
         status = .regenerating
     }
 
-    public static let fileName = "elaborazione.json"
+    public static let fileName = "processing.json"
+    /// Name used before the English rewrite: still read, never written.
+    public static let legacyFileName = "elaborazione.json"
 
     public static func load(from directory: URL) throws -> ProcessingRecord {
+        let current = directory.appending(path: fileName)
+        let url = FileManager.default.fileExists(atPath: current.path(percentEncoded: false))
+            ? current : directory.appending(path: legacyFileName)
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(ProcessingRecord.self, from: Data(contentsOf: directory.appending(path: fileName)))
+        return try decoder.decode(ProcessingRecord.self, from: Data(contentsOf: url))
     }
 
     public func save(in directory: URL) throws {

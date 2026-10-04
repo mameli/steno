@@ -1,6 +1,6 @@
 import AVFoundation
 
-/// Cattura la Traccia Io dal microfono di default.
+/// Captures the Me Track from the default microphone.
 @MainActor
 final class MicrophoneCapture {
     private let engine = AVAudioEngine()
@@ -10,16 +10,16 @@ final class MicrophoneCapture {
         onBuffer: @escaping AudioBufferHandler
     ) throws {
         let input = engine.inputNode
-        // Il motore viene riusato tra una Riunione e l'altra: l'impostazione va applicata ogni volta.
+        // The engine is reused across Meetings: the setting must be applied every time.
         try input.setVoiceProcessingEnabled(echoCancellation)
         if echoCancellation {
-            // Riduce al minimo l'abbassamento del volume delle altre app, call compresa.
+            // Keeps to a minimum the volume ducking of other apps, the call included.
             input.voiceProcessingOtherAudioDuckingConfiguration = .init(
                 enableAdvancedDucking: false, duckingLevel: .min
             )
         }
-        // Non toccare `mainMixerNode`: collegare il ramo d'uscita fa fallire
-        // l'avvio con il voice processing attivo (errore -10875).
+        // Do not touch `mainMixerNode`: connecting the output branch makes the start
+        // fail with voice processing active (error -10875).
         let format = input.outputFormat(forBus: 0)
         input.installTap(onBus: 0, bufferSize: 4096, format: format, block: Self.tapBlock(onBuffer))
         engine.prepare()
@@ -35,7 +35,7 @@ final class MicrophoneCapture {
         engine.stop()
     }
 
-    /// Costruito fuori dal main actor: il tap viene chiamato da un thread audio.
+    /// Built outside the main actor: the tap is called from an audio thread.
     private nonisolated static func tapBlock(
         _ onBuffer: @escaping AudioBufferHandler
     ) -> AVAudioNodeTapBlock {

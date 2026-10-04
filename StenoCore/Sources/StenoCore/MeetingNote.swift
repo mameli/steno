@@ -1,44 +1,64 @@
 import Foundation
 
-/// Il file nel Vault con frontmatter, Zona gestita e Note personali di una Riunione.
+/// The file in the Vault with the frontmatter, the managed section and the personal notes of a Meeting.
 ///
-/// Steno riscrive solo la Zona gestita e le proprie chiavi del frontmatter:
-/// tutto il resto appartiene all'utente.
+/// Steno only rewrites the managed section and its own frontmatter keys: everything else
+/// belongs to the user. Notes written before the English rewrite (Italian markers, keys and
+/// heading) are recognised and moved to the English format whenever Steno writes them.
 public struct MeetingNote: Equatable, Sendable {
-    /// Le chiavi del frontmatter che appartengono a Steno. `data` e `tags` si scrivono
-    /// solo alla creazione e poi sono dell'utente, quindi qui non compaiono.
-    public enum StenoKey: String, Sendable {
+    /// The frontmatter keys that belong to Steno. `date` and `tags` are written only at
+    /// creation and belong to the user afterwards, so they are not listed here.
+    public enum StenoKey: String, Sendable, CaseIterable {
         case stenoID = "steno_id"
-        case duration = "durata"
-        case language = "lingua"
-        case transcriptionProvider = "provider_trascrizione"
-        case summaryProvider = "provider_riepilogo"
+        case duration
+        case language
+        case transcriptionProvider = "transcription_provider"
+        case summaryProvider = "summary_provider"
         case template
-        case transcript = "trascrizione"
+        case transcript
+
+        /// The key's name before the English rewrite.
+        var legacyName: String? {
+            switch self {
+            case .duration: "durata"
+            case .language: "lingua"
+            case .transcriptionProvider: "provider_trascrizione"
+            case .summaryProvider: "provider_riepilogo"
+            case .transcript: "trascrizione"
+            case .stenoID, .template: nil
+            }
+        }
     }
 
-    public static let managedStart = "%% steno:inizio %%"
-    public static let managedEnd = "%% steno:fine %%"
-    public static let personalNotesHeading = "## Note personali"
+    /// How the Summary of a Meeting went.
+    public enum SummaryOutcome: Equatable, Sendable {
+        case written(text: String, template: String, provider: String)
+        case failed(reason: String)
+    }
+
+    public static let managedStart = "%% steno:start %%"
+    public static let managedEnd = "%% steno:end %%"
+    public static let personalNotesHeading = "## Personal notes"
+    private static let legacyManagedStart = "%% steno:inizio %%"
+    private static let legacyManagedEnd = "%% steno:fine %%"
+    private static let legacyPersonalNotesHeading = "## Note personali"
 
     public private(set) var content: String
 
-    /// Il contenuto viene normalizzato: niente BOM, a capo `\n`.
+    /// The content is normalised: no BOM, `\n` line endings.
     public init(content: String) {
-        var normalized = content.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
-        if normalized.hasPrefix("\u{FEFF}") { normalized.removeFirst() }
-        self.content = normalized
+        self.content = MarkdownLines(content).text
     }
 
     public static func initial(stenoID: UUID, startedAt: Date, timeZone: TimeZone = .current) -> MeetingNote {
         MeetingNote(content: """
             ---
             steno_id: \(stenoID.uuidString)
-            data: \(DateFormatter.posix("yyyy-MM-dd'T'HH:mm", timeZone: timeZone).string(from: startedAt))
-            tags: [riunione]
+            date: \(DateFormatter.posix("yyyy-MM-dd'T'HH:mm", timeZone: timeZone).string(from: startedAt))
+            tags: [meeting]
             ---
             \(managedStart)
-            ⏺ Registrazione in corso: il Riepilogo comparirà qui dopo lo stop.
+            ⏺ Recording in progress: the summary will appear here after you stop.
             \(managedEnd)
 
             \(personalNotesHeading)
@@ -47,48 +67,42 @@ public struct MeetingNote: Equatable, Sendable {
             """)
     }
 
-    /// Lo `steno_id` del frontmatter, `nil` se manca (un testo uguale nel corpo non conta).
+    /// The frontmatter `steno_id`, `nil` if missing (the same text in the body does not count).
     public var stenoID: UUID? {
-        let lines = content.components(separatedBy: "\n")
-        guard let close = Self.frontmatterClose(in: lines) else { return nil }
-        return lines[1..<close]
-            .first { $0.hasPrefix("steno_id:") }
-            .flatMap { UUID(uuidString: $0.dropFirst("steno_id:".count).trimmingCharacters(in: .whitespaces)) }
+        MarkdownLines(content).value(StenoKey.stenoID.rawValue).flatMap(UUID.init(uuidString:))
     }
 
-    /// Sostituisce il testo tra i marcatori della Zona gestita con `body`.
+    /// Replaces the text between the managed section markers with `body`.
     ///
-    /// Se l'utente ha cancellato uno o entrambi i marcatori, quelli rimasti vengono tolti
-    /// e la Zona gestita viene ricreata in cima al corpo, senza cancellare altro testo.
-    /// I marcatori dentro i blocchi di codice non contano.
+    /// If the user deleted one or both markers, the leftover ones are removed and the managed
+    /// section is recreated at the top of the body, without deleting any other text. Markers
+    /// inside code blocks do not count.
     public mutating func replaceManagedSection(with body: String) {
-        var lines = content.components(separatedBy: "\n")
-        // Un marcatore nel testo (es. nella risposta del modello) chiuderebbe la Zona gestita al giro dopo.
-        let bodyLines = body.components(separatedBy: "\n")
-            .filter { !Self.isLine($0, Self.managedStart) && !Self.isLine($0, Self.managedEnd) }
+        var markdown = MarkdownLines(content)
+        // A marker inside the text (e.g. in the model's reply) would close the managed section next time.
+        let bodyLines = body.components(separatedBy: "\n").filter { Self.markerKind($0) == nil }
+        let section = [Self.managedStart] + bodyLines + [Self.managedEnd]
 
-        if let managed = Self.managedRange(in: lines) {
-            lines.replaceSubrange((managed.lowerBound + 1)..<managed.upperBound, with: bodyLines)
+        if let managed = Self.managedRange(in: markdown) {
+            markdown.lines.replaceSubrange(managed, with: section)
         } else {
-            let strayMarkers = Self.markerLines(in: lines).map(\.index)
-            for index in strayMarkers.reversed() {
-                lines.remove(at: index)
+            for index in Self.markerLines(in: markdown).map(\.index).reversed() {
+                markdown.lines.remove(at: index)
             }
-            let section = [Self.managedStart] + bodyLines + [Self.managedEnd, ""]
-            lines.insert(contentsOf: section, at: Self.bodyStart(in: lines))
+            markdown.lines.insert(contentsOf: section + [""], at: markdown.bodyStart)
         }
-        content = lines.joined(separator: "\n")
+        content = markdown.text
     }
 
-    /// Tutto il corpo fuori dalla Zona gestita, senza l'intestazione delle Note personali
-    /// e senza righe vuote doppie. Vuoto se l'utente non ha scritto niente.
+    /// The whole body outside the managed section, without the personal notes heading and
+    /// without double blank lines. Empty if the user wrote nothing.
     public var personalNotes: String {
-        var lines = content.components(separatedBy: "\n")
-        if let managed = Self.managedRange(in: lines) {
-            lines.removeSubrange(managed)
+        var markdown = MarkdownLines(content)
+        if let managed = Self.managedRange(in: markdown) {
+            markdown.lines.removeSubrange(managed)
         }
-        lines.removeFirst(Self.bodyStart(in: lines))
-        lines.removeAll { $0.trimmingCharacters(in: .whitespaces) == Self.personalNotesHeading }
+        var lines = Array(markdown.lines.dropFirst(markdown.bodyStart))
+        lines.removeAll { [Self.personalNotesHeading, Self.legacyPersonalNotesHeading].contains($0.trimmingCharacters(in: .whitespaces)) }
 
         var kept: [String] = []
         for line in lines {
@@ -100,15 +114,9 @@ public struct MeetingNote: Equatable, Sendable {
         return kept.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Com'è andato il Riepilogo di una Riunione.
-    public enum SummaryOutcome: Equatable, Sendable {
-        case written(text: String, template: String, provider: String)
-        case failed(reason: String)
-    }
-
-    /// Registra l'esito dell'Elaborazione: chiavi di Steno nel frontmatter (ripristinando lo
-    /// `steno_id` se l'utente l'ha cancellato), Riepilogo o motivo del fallimento e link alla
-    /// Trascrizione nella Zona gestita.
+    /// Records the outcome of Processing: Steno's frontmatter keys (restoring `steno_id` if the
+    /// user deleted it), the Summary or the failure reason, and the Transcript link in the
+    /// managed section.
     public mutating func recordProcessing(
         stenoID: UUID, duration: TimeInterval, language: String?, transcriptionProvider: String,
         transcriptName: String, summary: SummaryOutcome
@@ -124,11 +132,53 @@ public struct MeetingNote: Equatable, Sendable {
         recordSummary(stenoID: stenoID, transcriptName: transcriptName, summary: summary)
     }
 
-    /// Registra un nuovo Riepilogo di una Riunione già elaborata: cambiano Riepilogo, Template e
-    /// provider, mentre durata, lingua e Trascrizione restano quelli dell'Elaborazione.
+    /// Records a new Summary of a Meeting already processed: Summary, Template and provider
+    /// change, while duration, language and Transcript stay those of the Processing.
     public mutating func recordRegeneration(stenoID: UUID, transcriptName: String, summary: SummaryOutcome) {
         recordSummary(stenoID: stenoID, transcriptName: transcriptName, summary: summary)
     }
+
+    /// Records a failed Processing: the reason appears in the managed section.
+    public mutating func recordFailure(stenoID: UUID, reason: String) {
+        setFrontmatter([(.stenoID, stenoID.uuidString)])
+        replaceManagedSection(with: "⚠️ \(reason)")
+    }
+
+    /// Obsidian link as a YAML value (quoted, otherwise `[[` would be a list).
+    public static func wikiLink(_ name: String) -> String {
+        "\"[[\(name)]]\""
+    }
+
+    /// Sets the given keys (values already in YAML): replaces existing ones, including any
+    /// continuation lines and their pre-rewrite Italian name, and appends missing ones at the end.
+    /// Other keys stay.
+    public mutating func setFrontmatter(_ values: [(key: StenoKey, value: String)]) {
+        var markdown = MarkdownLines(content)
+        if markdown.frontmatterClose == nil {
+            markdown.lines.insert(contentsOf: ["---", "---"], at: 0)
+        }
+        for (key, value) in values {
+            let names = [key.rawValue] + (key.legacyName.map { [$0] } ?? [])
+            let entry = "\(key.rawValue): \(value)"
+            var replaced = false
+            for name in names {
+                let close = markdown.frontmatterClose!
+                guard let line = markdown.lines[1..<close].firstIndex(where: { $0.hasPrefix("\(name):") }) else { continue }
+                var next = line + 1
+                while next < close, markdown.lines[next].first.map({ $0 == " " || $0 == "\t" || $0 == "-" }) == true {
+                    next += 1
+                }
+                markdown.lines.replaceSubrange(line..<next, with: replaced ? [] : [entry])
+                replaced = true
+            }
+            if !replaced {
+                markdown.lines.insert(entry, at: markdown.frontmatterClose!)
+            }
+        }
+        content = markdown.text
+    }
+
+    // MARK: - Private
 
     private mutating func recordSummary(stenoID: UUID, transcriptName: String, summary: SummaryOutcome) {
         var values: [(key: StenoKey, value: String)] = [(.stenoID, stenoID.uuidString)]
@@ -138,97 +188,54 @@ public struct MeetingNote: Equatable, Sendable {
             values += [(.template, template), (.summaryProvider, provider)]
             summaryText = text
         case .failed(let reason):
-            summaryText = "⚠️ Riepilogo non generato: \(reason)"
+            summaryText = "⚠️ Summary not generated: \(reason)"
         }
         setFrontmatter(values)
-        replaceManagedSection(with: "\(summaryText)\n\nTrascrizione completa: [[\(transcriptName)]]")
+        replaceManagedSection(with: "\(summaryText)\n\nFull transcript: [[\(transcriptName)]]")
     }
 
-    /// Registra un'Elaborazione fallita: il motivo compare nella Zona gestita.
-    public mutating func recordFailure(stenoID: UUID, reason: String) {
-        setFrontmatter([(.stenoID, stenoID.uuidString)])
-        replaceManagedSection(with: "⚠️ \(reason)")
-    }
-
-    /// Link Obsidian come valore YAML (tra virgolette, altrimenti `[[` sarebbe una lista).
-    public static func wikiLink(_ name: String) -> String {
-        "\"[[\(name)]]\""
-    }
-
-    /// `47m`, oppure `1h 05m` oltre l'ora. Mai meno di un minuto.
+    /// `47m`, or `1h 05m` past the hour. Never less than a minute.
     private static func durationValue(_ seconds: TimeInterval) -> String {
         let minutes = max(1, Int((seconds / 60).rounded()))
         return minutes < 60 ? "\(minutes)m" : String(format: "%dh %02dm", minutes / 60, minutes % 60)
     }
 
-    /// Imposta le chiavi indicate (valori già in YAML): sostituisce quelle esistenti, comprese
-    /// le eventuali righe di continuazione, e aggiunge le mancanti in fondo. Le altre chiavi restano.
-    public mutating func setFrontmatter(_ values: [(key: StenoKey, value: String)]) {
-        var lines = content.components(separatedBy: "\n")
-        if Self.frontmatterClose(in: lines) == nil {
-            lines.insert(contentsOf: ["---", "---"], at: 0)
+    /// Whether a line is a start or end marker of the managed section (also the Italian ones).
+    private static func markerKind(_ line: String) -> Bool? {
+        switch line.trimmingCharacters(in: .whitespaces) {
+        case managedStart, legacyManagedStart: true
+        case managedEnd, legacyManagedEnd: false
+        default: nil
         }
-        for (stenoKey, value) in values {
-            let key = stenoKey.rawValue
-            let close = Self.frontmatterClose(in: lines)!
-            let entry = "\(key): \(value)"
-            guard let line = lines[1..<close].firstIndex(where: { $0.hasPrefix("\(key):") }) else {
-                lines.insert(entry, at: close)
-                continue
-            }
-            var next = line + 1
-            while next < close, lines[next].first.map({ $0 == " " || $0 == "\t" || $0 == "-" }) == true {
-                next += 1
-            }
-            lines.replaceSubrange(line..<next, with: [entry])
-        }
-        content = lines.joined(separator: "\n")
     }
 
-    // MARK: - Struttura del file
-
-    /// Indice della riga che chiude il frontmatter, `nil` se il file non ne ha uno.
-    private static func frontmatterClose(in lines: [String]) -> Int? {
-        guard let first = lines.first, isLine(first, "---") else { return nil }
-        return lines.indices.dropFirst().first { isLine(lines[$0], "---") }
-    }
-
-    /// Indice della prima riga dopo il frontmatter (0 se non c'è frontmatter).
-    private static func bodyStart(in lines: [String]) -> Int {
-        frontmatterClose(in: lines).map { $0 + 1 } ?? 0
-    }
-
-    /// Righe del corpo che sono marcatori della Zona gestita, esclusi quelli nei blocchi di codice.
-    private static func markerLines(in lines: [String]) -> [(index: Int, isStart: Bool)] {
+    /// Body lines that are managed section markers, except those inside code blocks.
+    private static func markerLines(in markdown: MarkdownLines) -> [(index: Int, isStart: Bool)] {
         var markers: [(index: Int, isStart: Bool)] = []
         var inCodeBlock = false
-        for index in bodyStart(in: lines)..<lines.count {
-            let line = lines[index].trimmingCharacters(in: .whitespaces)
+        for index in markdown.bodyStart..<markdown.lines.count {
+            let line = markdown.lines[index].trimmingCharacters(in: .whitespaces)
             if line.hasPrefix("```") || line.hasPrefix("~~~") {
                 inCodeBlock.toggle()
-            } else if !inCodeBlock, line == managedStart || line == managedEnd {
-                markers.append((index, line == managedStart))
+            } else if !inCodeBlock, let isStart = markerKind(line) {
+                markers.append((index, isStart))
             }
         }
         return markers
     }
 
-    /// Righe dal marcatore d'inizio a quello di fine compresi, se ci sono entrambi e in ordine.
-    private static func managedRange(in lines: [String]) -> ClosedRange<Int>? {
-        let markers = markerLines(in: lines)
+    /// Lines from the start marker to the end marker included, if both are there and in order.
+    private static func managedRange(in markdown: MarkdownLines) -> ClosedRange<Int>? {
+        let markers = markerLines(in: markdown)
         guard let start = markers.firstIndex(where: \.isStart),
               let end = markers[(start + 1)...].first(where: { !$0.isStart })
         else { return nil }
         return markers[start].index...end.index
     }
-
-    private static func isLine(_ line: String, _ marker: String) -> Bool {
-        line.trimmingCharacters(in: .whitespaces) == marker
-    }
 }
 
 extension DateFormatter {
-    /// Formattazione fissa, indipendente dalle impostazioni internazionali dell'utente.
+    /// Fixed formatting, independent of the user's regional settings.
     static func posix(_ format: String, timeZone: TimeZone) -> DateFormatter {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")

@@ -2,11 +2,11 @@ import Foundation
 import StenoCore
 import os
 
-private let logger = Logger(subsystem: "dev.mameli.steno", category: "elaborazione")
+private let logger = Logger(subsystem: "dev.mameli.steno", category: "processing")
 
-/// L'Elaborazione delle Riunioni: una alla volta, in ordine d'arrivo, con lo stato salvato nella
-/// cartella della Registrazione (`elaborazione.json`) così che riprenda dopo un riavvio o un crash.
-/// Si occupa anche di Riprova, Rigenerazione, notifiche e conservazione dell'audio.
+/// Meeting Processing: one at a time, in arrival order, with the state saved in the Recording
+/// folder (`processing.json`) so it resumes after a restart or a crash. Also handles Retry,
+/// Regeneration, notifications and audio retention.
 @MainActor
 @Observable
 final class MeetingProcessor {
@@ -14,17 +14,17 @@ final class MeetingProcessor {
         let id: UUID
         let title: String
         let status: ProcessingRecord.Status
-        /// L'audio c'è ancora: si può Riprovare l'Elaborazione completa.
+        /// The audio is still there: the full Processing can be retried.
         let hasAudio: Bool
     }
 
     private let transcriber: LocalTranscriber
-    /// Le Trascrizioni avviate durante la registrazione, da completare allo stop.
+    /// Transcriptions started while recording, to be completed at the stop.
     private var liveTranscriptions: [UUID: MeetingTranscription] = [:]
-    /// Copia in memoria dello stato delle Riunioni in registrazione: se il salvataggio su disco
-    /// fallisce, allo stop la Riunione va comunque in coda.
+    /// In-memory copy of the state of Meetings being recorded: if saving to disk fails,
+    /// the Meeting is still queued at the stop.
     private var recordingRecords: [UUID: ProcessingRecord] = [:]
-    /// L'ultima Elaborazione in coda: la prossima parte quando questa finisce.
+    /// The last Processing in the queue: the next one starts when this one ends.
     private var queueTail: Task<Void, Never>?
     private(set) var pendingCount = 0
     private(set) var lastError: String?
@@ -40,7 +40,7 @@ final class MeetingProcessor {
         MeetingRecorder.meetingsDirectory.appending(path: stenoID.uuidString, directoryHint: .isDirectory)
     }
 
-    // MARK: - Ciclo di vita di una Riunione
+    // MARK: - Meeting lifecycle
 
     func meetingStarted(
         stenoID: UUID, startedAt: Date, templateName: String, summaryProfile: ProviderProfile?,
@@ -69,8 +69,8 @@ final class MeetingProcessor {
         enqueueProcessing(record)
     }
 
-    /// Dopo un riavvio: riprende le Elaborazioni rimaste a metà e recupera le Registrazioni
-    /// interrotte da un crash, poi cancella l'audio scaduto.
+    /// After a restart: resumes Processing left halfway and recovers Recordings interrupted
+    /// by a crash, then deletes expired audio.
     func resumeAfterLaunch() {
         let plan = ProcessingRecord.afterRestart(allRecords())
         plan.toSave.forEach(save)
@@ -79,7 +79,7 @@ final class MeetingProcessor {
                 do {
                     try recoverRecording(record, in: Self.directory(for: record.stenoID))
                 } catch {
-                    record.status = .failed(reason: "Registrazione interrotta e non recuperabile: \(error.localizedDescription)")
+                    record.status = .failed(reason: String(localized: "Recording interrupted and not recoverable: \(error.localizedDescription)"))
                     save(record)
                     continue
                 }
@@ -91,29 +91,29 @@ final class MeetingProcessor {
         cleanUpExpiredRecordings()
     }
 
-    // MARK: - Azioni dal menu Riunioni recenti
+    // MARK: - Actions from the Recent meetings menu
 
     func openNote(_ stenoID: UUID) {
         guard let vault = Vault.configured,
               let note = vault.findMeetingNote(stenoID: stenoID, expected: record(stenoID)?.noteURL)
         else {
-            lastError = "Nota della Riunione non trovata nel Vault."
+            lastError = String(localized: "Meeting note not found in the Vault.")
             return
         }
         Vault.openInObsidian(note)
     }
 
-    /// Ripete l'Elaborazione completa (i segmenti già trascritti vengono dalla cache).
-    /// Solo per Riunioni concluse: una in registrazione o già in coda non si tocca.
+    /// Redoes the whole Processing (Segments already transcribed come from the cache).
+    /// Only for concluded Meetings: one being recorded or already queued is left alone.
     func retry(_ stenoID: UUID) {
         guard var record = record(stenoID), (try? record.queueForRetry()) != nil else { return }
         save(record)
         enqueueProcessing(record)
     }
 
-    /// Nuovo Riepilogo con un altro Template o Profilo, a partire dalla Trascrizione nel Vault:
-    /// funziona anche dopo che l'audio è stato cancellato. Template e Profilo scelti all'avvio
-    /// restano quelli della Riunione (li usa Riprova).
+    /// New Summary with another Template or Profile, from the Transcript in the Vault:
+    /// works even after the audio has been deleted. The Template and Profile chosen at the
+    /// start remain the Meeting's (Retry uses them).
     func regenerate(_ stenoID: UUID, templateName: String? = nil, profile: ProviderProfile? = nil) {
         guard var record = record(stenoID), (try? record.beginRegeneration()) != nil else { return }
         save(record)
@@ -121,12 +121,12 @@ final class MeetingProcessor {
     }
 
     #if DEBUG
-    /// Rielabora una Registrazione della cartella dati (prove automatiche) e aspetta la fine.
+    /// Reprocesses a Recording of the data folder (automated tests) and waits for the end.
     func reprocess(_ directory: URL) async -> URL? {
-        guard let recording = try? Recording.load(from: directory.appending(path: Recording.fileName)),
+        guard let recording = try? Recording.load(fromFolder: directory),
               Self.directory(for: recording.meetingID).standardizedFileURL == directory.standardizedFileURL
         else {
-            lastError = "Rielaborazione rifiutata: la cartella non è nella cartella dati di Steno."
+            lastError = "Reprocessing refused: the folder is not in Steno's data folder."
             return nil
         }
         if record(recording.meetingID) == nil {
@@ -145,7 +145,7 @@ final class MeetingProcessor {
     }
     #endif
 
-    // MARK: - Coda
+    // MARK: - Queue
 
     private func enqueueProcessing(_ record: ProcessingRecord) {
         enqueue { await self.process(record) }
@@ -162,7 +162,7 @@ final class MeetingProcessor {
     }
 
     private func process(_ queued: ProcessingRecord) async {
-        // Lo stato su disco può essere più recente (es. Template cambiato), altrimenti vale quello in coda.
+        // The state on disk may be newer (e.g. Template changed), otherwise the queued one applies.
         var record = record(queued.stenoID) ?? queued
         record.status = .processing
         save(record)
@@ -172,26 +172,26 @@ final class MeetingProcessor {
 
         let recording: Recording
         do {
-            recording = try Recording.load(from: directory.appending(path: Recording.fileName))
+            recording = try Recording.load(fromFolder: directory)
         } catch {
-            finish(&record, problems: ["Registrazione illeggibile: \(error.localizedDescription)"], warnings: [])
+            finish(&record, problems: [String(localized: "Recording unreadable: \(error.localizedDescription)")], warnings: [])
             return
         }
 
         var problems: [String] = []
-        // Un segmento illeggibile (es. quello aperto durante un crash) lascia un buco nella
-        // Trascrizione ma non impedisce il Riepilogo: è un avviso, non un fallimento.
+        // An unreadable Segment (e.g. the one open during a crash) leaves a gap in the
+        // Transcript but does not prevent the Summary: it is a warning, not a failure.
         var warnings: [String] = []
         let finished: MeetingTranscription.Finished?
         do {
             finished = try await transcription.finish(recording, in: directory)
             if let failedSegments = finished?.failedSegments, !failedSegments.isEmpty {
-                warnings.append("Trascrizione incompleta: " + failedSegments.joined(separator: "; "))
+                warnings.append(String(localized: "Incomplete transcript: \(failedSegments.joined(separator: "; "))"))
             }
             lastTranscriptURL = finished?.url
         } catch {
             finished = nil
-            problems.append("Trascrizione non riuscita: \(error.localizedDescription)")
+            problems.append(String(localized: "Transcription failed: \(error.localizedDescription)"))
         }
 
         if let vault = Vault.configured {
@@ -201,10 +201,10 @@ final class MeetingProcessor {
                 lastNoteURL = noteURL
                 if let summaryProblem { problems.append(summaryProblem) }
             } catch {
-                problems.append("Scrittura nel Vault non riuscita: \(error.localizedDescription)")
+                problems.append(String(localized: "Writing to the Vault failed: \(error.localizedDescription)"))
             }
         } else {
-            warnings.append("Nessun Vault configurato: niente Riepilogo, la Trascrizione è solo nella cartella della Registrazione.")
+            warnings.append(String(localized: "No Vault configured: no Summary, the Transcript is only in the Recording folder."))
         }
         finish(&record, problems: problems, warnings: warnings)
     }
@@ -217,7 +217,7 @@ final class MeetingProcessor {
               let transcriptURL = vault.findTranscript(stenoID: stenoID),
               let transcriptFile = try? String(contentsOf: transcriptURL, encoding: .utf8)
         else {
-            finish(&record, problems: ["Rigenerazione non possibile: Nota della Riunione o Trascrizione non trovate nel Vault."], warnings: [])
+            finish(&record, problems: [String(localized: "Regeneration not possible: Meeting note or Transcript not found in the Vault.")], warnings: [])
             return
         }
 
@@ -236,40 +236,45 @@ final class MeetingProcessor {
                     stenoID: stenoID, transcriptName: transcriptURL.deletingPathExtension().lastPathComponent, summary: summary
                 )
             }
-            if case .failed(let reason) = summary { problems.append("Riepilogo non generato: \(reason)") }
+            if case .failed(let reason) = summary { problems.append(String(localized: "Summary not generated: \(reason)")) }
             record.noteURL = noteURL
             lastNoteURL = noteURL
         } catch {
-            problems.append("Rigenerazione non riuscita: \(error.localizedDescription)")
+            problems.append(String(localized: "Regeneration failed: \(error.localizedDescription)"))
         }
         finish(&record, problems: problems, warnings: [])
     }
 
     private func finish(_ record: inout ProcessingRecord, problems: [String], warnings: [String]) {
-        let noteName = record.noteURL?.deletingPathExtension().lastPathComponent ?? "Riunione"
+        let noteName = record.noteURL?.deletingPathExtension().lastPathComponent ?? String(localized: "Meeting")
         if problems.isEmpty {
             record.status = .completed
             lastError = warnings.isEmpty ? nil : warnings.joined(separator: " ")
             if Vault.configured == nil {
-                Notifications.shared.notify(title: "Trascrizione pronta", body: "Configura il Vault per avere il Riepilogo.", note: nil)
+                Notifications.shared.notify(
+                    title: String(localized: "Transcript ready"),
+                    body: String(localized: "Set up the Vault to get the Summary."), note: nil
+                )
             } else {
                 let body = warnings.isEmpty ? noteName : "\(noteName) (\(warnings.joined(separator: " ")))"
-                Notifications.shared.notify(title: "Riepilogo pronto", body: body, note: record.noteURL)
+                Notifications.shared.notify(title: String(localized: "Summary ready"), body: body, note: record.noteURL)
             }
         } else {
             let reason = problems.joined(separator: " ")
             record.status = .failed(reason: reason)
             lastError = reason
             logger.error("\(reason, privacy: .public)")
-            Notifications.shared.notify(title: "Elaborazione non riuscita", body: "\(noteName): \(reason)", note: record.noteURL)
+            Notifications.shared.notify(
+                title: String(localized: "Processing failed"), body: "\(noteName): \(reason)", note: record.noteURL
+            )
         }
         save(record)
     }
 
-    // MARK: - Vault e Riepilogo
+    // MARK: - Vault and Summary
 
-    /// Scrive l'esito dell'Elaborazione nel Vault: Riepilogo, titolo e rinomina, Trascrizione,
-    /// Nota della Riunione. Restituisce la nota e, se c'è stato, il problema del Riepilogo.
+    /// Writes the outcome of Processing into the Vault: Summary, title and rename, Transcript,
+    /// Meeting note. Returns the note and, if there was one, the Summary problem.
     private func writeToVault(
         _ vault: Vault, _ finished: MeetingTranscription.Finished?, recording: Recording, record: ProcessingRecord
     ) async throws -> (URL, String?) {
@@ -277,7 +282,10 @@ final class MeetingProcessor {
             ?? vault.createMeetingNote(stenoID: record.stenoID, startedAt: record.startedAt)
         guard let finished else {
             try vault.update(noteURL) {
-                $0.recordFailure(stenoID: record.stenoID, reason: "Trascrizione non riuscita: la Registrazione è salvata, si potrà riprovare.")
+                $0.recordFailure(
+                    stenoID: record.stenoID,
+                    reason: String(localized: "Transcription failed: the Recording is saved, you can retry.")
+                )
             }
             return (noteURL, nil)
         }
@@ -288,8 +296,8 @@ final class MeetingProcessor {
             template: vault.template(named: record.templateName), profile: record.summaryProfile,
             wantsTitle: true
         )
-        // Si rinomina solo una nota ancora al suo posto e col nome provvisorio. Se la rinomina
-        // fallisce la nota resta com'è: il Riepilogo non deve andare perso per un nome.
+        // Only a note still in place and with its provisional name is renamed. If the rename
+        // fails the note stays as it is: the Summary must not be lost over a name.
         if let title, vault.isInMeetingsFolder(noteURL),
            let newName = VaultNaming.renamedNoteName(
                current: noteURL.deletingPathExtension().lastPathComponent, startedAt: record.startedAt, title: title
@@ -297,7 +305,7 @@ final class MeetingProcessor {
             do {
                 noteURL = try vault.rename(noteURL, to: newName)
             } catch {
-                logger.error("Rinomina della nota non riuscita: \(error, privacy: .public)")
+                logger.error("Renaming the note failed: \(error, privacy: .public)")
             }
         }
 
@@ -312,19 +320,19 @@ final class MeetingProcessor {
                 stenoID: record.stenoID,
                 duration: recording.endedAt.timeIntervalSince(recording.startedAt),
                 language: finished.language,
-                transcriptionProvider: "Locale",
+                transcriptionProvider: "Local",
                 transcriptName: transcriptURL.deletingPathExtension().lastPathComponent,
                 summary: summary
             )
         }
         if case .failed(let reason) = summary {
-            return (noteURL, "Riepilogo non generato: \(reason)")
+            return (noteURL, String(localized: "Summary not generated: \(reason)"))
         }
         return (noteURL, nil)
     }
 
-    /// Riepilogo e, se serve per la rinomina, titolo. Un titolo mancante non è un errore:
-    /// la nota resta col nome provvisorio.
+    /// Summary and, when needed for the rename, title. A missing title is not an error:
+    /// the note keeps its provisional name.
     private func summarize(
         _ transcript: Transcript, language: String?, personalNotes: String, template: Template,
         profile: ProviderProfile?, wantsTitle: Bool
@@ -336,7 +344,7 @@ final class MeetingProcessor {
             return (.failed(reason: ProfileError.noActiveProfile.localizedDescription), nil)
         }
         guard !transcript.paragraphs.isEmpty else {
-            return (.failed(reason: "nella Registrazione non c'è parlato."), nil)
+            return (.failed(reason: String(localized: "there is no speech in the Recording.")), nil)
         }
         do {
             let client = try ChatClient(profile: profile)
@@ -349,12 +357,12 @@ final class MeetingProcessor {
                 : nil
             return (.written(text: text, template: template.name, provider: profile.displayName), reply.flatMap(MeetingTitle.clean))
         } catch {
-            logger.error("Riepilogo non generato: \(error, privacy: .public)")
+            logger.error("Summary not generated: \(error, privacy: .public)")
             return (.failed(reason: error.localizedDescription), nil)
         }
     }
 
-    // MARK: - Stato su disco
+    // MARK: - State on disk
 
     private func record(_ stenoID: UUID) -> ProcessingRecord? {
         try? ProcessingRecord.load(from: Self.directory(for: stenoID))
@@ -364,17 +372,18 @@ final class MeetingProcessor {
         do {
             try record.save(in: Self.directory(for: record.stenoID))
         } catch {
-            logger.error("Stato dell'Elaborazione non salvato: \(error, privacy: .public)")
-            lastError = "Stato della Riunione non salvato su disco: un riavvio ora non la riprenderebbe. \(error.localizedDescription)"
+            logger.error("Processing state not saved: \(error, privacy: .public)")
+            lastError = String(localized: "Meeting state not saved to disk: a restart now would not resume it. \(error.localizedDescription)")
         }
         refreshRecent()
     }
 
     private func allRecords() -> [ProcessingRecord] {
-        let folders = (try? FileManager.default.contentsOfDirectory(
-            at: MeetingRecorder.meetingsDirectory, includingPropertiesForKeys: nil
-        )) ?? []
-        return folders.compactMap { try? ProcessingRecord.load(from: $0) }
+        recordingFolders().compactMap { try? ProcessingRecord.load(from: $0) }
+    }
+
+    private func recordingFolders() -> [URL] {
+        (try? FileManager.default.contentsOfDirectory(at: MeetingRecorder.meetingsDirectory, includingPropertiesForKeys: nil)) ?? []
     }
 
     func refreshRecent() {
@@ -396,8 +405,8 @@ final class MeetingProcessor {
         return files.contains { $0.pathExtension == "m4a" }
     }
 
-    /// Ricostruisce `riunione.json` di una Registrazione interrotta da un crash dagli elenchi
-    /// dei segmenti; la fine è l'ultima scrittura di un segmento.
+    /// Rebuilds `recording.json` of a Recording interrupted by a crash from the Segment
+    /// lists; the end is the last write of a Segment.
     private func recoverRecording(_ record: ProcessingRecord, in directory: URL) throws {
         let segments = Track.allCases.flatMap { track -> [Segment] in
             let url = directory.appending(path: Segment.listFileName(for: track))
@@ -411,30 +420,26 @@ final class MeetingProcessor {
             .compactMap { try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate }
             .max() ?? record.startedAt
         try Recording.recovered(stenoID: record.stenoID, startedAt: record.startedAt, segments: segments, lastWrite: lastWrite)
-            .save(to: directory.appending(path: Recording.fileName))
+            .save(inFolder: directory)
     }
 
-    /// Cancella i file audio delle Registrazioni scadute, con le cache della trascrizione e la
-    /// copia `trascrizione.md`. Restano `riunione.json` ed `elaborazione.json`: la Riunione resta
-    /// tra le recenti e si può Rigenerare dalla Trascrizione nel Vault.
+    /// Deletes the audio files of expired Recordings, with the transcription caches and the
+    /// `transcript.md` copy. The manifests stay: the Meeting stays among the recent ones and
+    /// can be Regenerated from the Transcript in the Vault.
     func cleanUpExpiredRecordings() {
-        let folders = (try? FileManager.default.contentsOfDirectory(
-            at: MeetingRecorder.meetingsDirectory, includingPropertiesForKeys: nil
-        )) ?? []
-        let items = folders.compactMap { folder -> Retention.Item? in
+        let items = recordingFolders().compactMap { folder -> Retention.Item? in
             guard let stenoID = UUID(uuidString: folder.lastPathComponent) else { return nil }
             let record = try? ProcessingRecord.load(from: folder)
-            let startedAt = record?.startedAt
-                ?? (try? Recording.load(from: folder.appending(path: Recording.fileName)))?.startedAt
-            guard let startedAt else { return nil }
+            guard let startedAt = record?.startedAt ?? (try? Recording.load(fromFolder: folder))?.startedAt else { return nil }
             return Retention.Item(stenoID: stenoID, startedAt: startedAt, status: record?.status)
         }
-        let kept: Set<String> = [Recording.fileName, ProcessingRecord.fileName]
+        let kept = Set([
+            Recording.fileName, Recording.legacyFileName, ProcessingRecord.fileName, ProcessingRecord.legacyFileName,
+        ] + Track.allCases.map(Segment.listFileName(for:)))
         for stenoID in Retention.expired(items, now: Date(), days: AppSettings.retentionDays) {
             let folder = Self.directory(for: stenoID)
             let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
-            for file in files where !kept.contains(file.lastPathComponent)
-                && !Track.allCases.map(Segment.listFileName(for:)).contains(file.lastPathComponent) {
+            for file in files where !kept.contains(file.lastPathComponent) {
                 try? FileManager.default.removeItem(at: file)
             }
         }

@@ -1,6 +1,6 @@
 import Foundation
 
-/// L'audio di una Riunione: quando è iniziata e i segmenti in cui è salvata ogni Traccia.
+/// The audio of a Meeting: when it started and the Segments each Track is saved in.
 public struct Recording: Codable, Equatable, Sendable {
     public let meetingID: UUID
     public let startedAt: Date
@@ -14,27 +14,33 @@ public struct Recording: Codable, Equatable, Sendable {
         self.segments = segments
     }
 
-    /// Il manifesto nella cartella della Registrazione.
-    public static let fileName = "riunione.json"
+    /// The manifest in the Recording folder.
+    public static let fileName = "recording.json"
+    /// Name used before the English rewrite: still read, never written.
+    public static let legacyFileName = "riunione.json"
 
-    /// Frequenza di campionamento dei segmenti: mono 16 kHz, quella che si aspetta Whisper.
+    /// Segment sample rate: mono 16 kHz, what Whisper expects.
     public static let sampleRate: Double = 16_000
 
-    public static func load(from url: URL) throws -> Recording {
+    /// Reads the manifest of a Recording folder (also the pre-rewrite one).
+    public static func load(fromFolder folder: URL) throws -> Recording {
+        let current = folder.appending(path: fileName)
+        let legacy = folder.appending(path: legacyFileName)
+        let url = FileManager.default.fileExists(atPath: current.path(percentEncoded: false)) ? current : legacy
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return try decoder.decode(Recording.self, from: Data(contentsOf: url))
     }
 
-    public func save(to url: URL) throws {
+    public func save(inFolder folder: URL) throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         encoder.dateEncodingStrategy = .iso8601
-        try encoder.encode(self).write(to: url, options: .atomic)
+        try encoder.encode(self).write(to: folder.appending(path: Self.fileName), options: .atomic)
     }
 
-    /// Una Registrazione interrotta da un crash, ricostruita dagli elenchi dei segmenti che ogni
-    /// Traccia salva a ogni apertura. La fine è l'ultima scrittura su disco.
+    /// A Recording interrupted by a crash, rebuilt from the Segment lists each Track saves
+    /// whenever a Segment opens. The end is the last write to disk.
     public static func recovered(stenoID: UUID, startedAt: Date, segments: [Segment], lastWrite: Date) -> Recording {
         let ordered = Track.allCases.flatMap { track in
             segments.filter { $0.track == track }.sorted { $0.index < $1.index }

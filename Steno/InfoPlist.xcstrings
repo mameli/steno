@@ -1,0 +1,26 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSAudioCaptureUsageDescription": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steno registra l'audio degli altri partecipanti alle riunioni per trascriverlo."
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steno registra la tua voce durante le riunioni per trascriverla."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

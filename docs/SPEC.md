@@ -1,203 +1,210 @@
-# Steno: specifica v1
+# Steno: v1 specification
 
-Termini in **grassetto** come definiti in [CONTEXT.md](../CONTEXT.md). Decisioni architetturali in [docs/adr](adr/).
+Terms in **bold** are defined in [CONTEXT.md](../CONTEXT.md). Architecture decisions are in [docs/adr](adr/).
 
-## Obiettivo
+## Goal
 
-Registrare una **Riunione** dal Mac, produrne **Trascrizione** e **Riepilogo** con **Provider** scelti dall'utente (locali o in UE) e scrivere tutto nel **Vault** Obsidian, senza che i dati escano dall'UE ([ADR 0001](adr/0001-dati-solo-in-ue.md)).
+Record a **Meeting** on the Mac, produce its **Transcript** and **Summary** with **Providers** chosen by the user (local or in the EU) and write everything into the Obsidian **Vault**, without data leaving the EU ([ADR 0001](adr/0001-data-stays-in-the-eu.md)).
 
-Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in inglese, una lingua per Riunione.
+Personal use, one machine (M3 Pro, 18 GB, macOS 26). Meetings in Italian or English, one language per Meeting.
 
-## Perimetro
+## Scope
 
-**Dentro la v1**
-- App nella barra dei menu: avvio/stop, scorciatoia globale, scelta del **Template**
-- Cattura in Modalità Call: **Tracce** Io (microfono, con cancellazione d'eco) e Altri (audio di sistema)
-- Trascrizione locale WhisperKit a blocchi durante la call
-- Lingua rilevata in automatico o forzata
-- **Profili** per il Riepilogo, adattatore compatibile OpenAI, chiavi nel Keychain, finestra Impostazioni essenziale
-- **Nota della Riunione** creata all'avvio e aperta in Obsidian; **Zona gestita**; Trascrizione in un file separato
-- Template letti dal Vault, **Rigenerazione**, "Riprova"
-- Registrazione conservata 7 giorni, coda di **Elaborazione**
+**In v1**
+- Menu bar app: start/stop, global shortcut, **Template** choice
+- Capture in Call mode: **Tracks** Me (microphone, with echo cancellation) and Others (system audio)
+- Local WhisperKit transcription in Segments during the call
+- Language detected automatically or forced
+- **Provider profiles** for the Summary, OpenAI-compatible adapter, keys in the Keychain, minimal Settings window
+- **Meeting note** created at start and opened in Obsidian; **Managed section**; Transcript in a separate file
+- Templates read from the Vault, **Regeneration**, Retry
+- Recording kept for 7 days, **Processing** queue
+- English user interface with Italian translation (string catalogs); English Vault format
 
-**Fuori dalla v1** (in ordine di probabilità)
-1. Calendario (titolo e partecipanti da EventKit)
-2. Trascrizione remota (la locale basta: 12 minuti in 50 secondi su M3 Pro); i Profili avranno allora anche il Ruolo trascrizione
-3. Modalità Sala (solo microfono, per riunioni in presenza)
-4. Notifica "sembra una call" quando un'app prende il microfono
-5. Diarizzazione vera (Persona 1, 2…)
-6. Preset dei Provider già pronti
-7. Distribuzione ad altri (firma Developer ID, notarizzazione)
-8. Stop automatico per silenzio a fine call (era la fase 6)
+**Out of v1** (most likely first)
+1. Calendar (title and participants from EventKit)
+2. Remote transcription (local is enough: 12 minutes in 50 seconds on an M3 Pro); Profiles will then also get the transcription Role
+3. Room capture mode (microphone only, for in-person meetings)
+4. "Looks like a call" notification when an app grabs the microphone
+5. Real diarization (Person 1, 2…)
+6. Ready-made Provider presets
+7. Distribution to others (Developer ID signing, notarization)
+8. Automatic stop on silence at the end of the call (was phase 6)
 
-## Flusso principale
+## Main flow
 
-1. **Avvio** (clic o scorciatoia). Steno:
-   - crea l'identificativo della Riunione e la cartella della Registrazione;
-   - crea la Nota della Riunione `<Vault>/Meetings/2026-10-04 1430 - Riunione.md` (vedi [struttura](#nota-della-riunione));
-   - la apre in Obsidian con `obsidian://open?path=<percorso assoluto>`;
-   - avvia la cattura delle due Tracce.
-2. **Durante la call**: l'utente scrive le **Note personali** nella nota. I segmenti audio già chiusi vengono trascritti in background. Il Template si può cambiare dalla barra dei menu; il Profilo per il Riepilogo è quello attivo all'avvio.
-3. **Stop** (clic o scorciatoia). La Riunione entra nella coda di Elaborazione e si può subito avviare un'altra Riunione.
-4. **Elaborazione** (una alla volta, in ordine di arrivo):
-   1. completa la Trascrizione (gli ultimi segmenti);
-   2. scrive il file della Trascrizione;
-   3. rilegge la Nota della Riunione ed estrae le Note personali;
-   4. genera Riepilogo e titolo con il Profilo di riepilogo;
-   5. riscrive la Zona gestita e le chiavi di Steno nel frontmatter;
-   6. rinomina la nota e la Trascrizione con il titolo, se l'utente non l'ha già rinominata (dalla fase 4, quando il titolo esiste);
-   7. notifica "Riepilogo pronto" (clic → apre la nota in Obsidian).
-5. Se un passo fallisce: la Zona gestita mostra `⚠️ Riepilogo non generato: <motivo>`. La Riunione resta in "Riunioni recenti" con **Riprova**. Nessun ripiego su un altro Provider.
+1. **Start** (click or shortcut). Steno:
+   - creates the Meeting identifier and the Recording folder;
+   - creates the Meeting note `<Vault>/Meetings/2026-10-04 1430 - Meeting.md` (see [structure](#meeting-note));
+   - opens it in Obsidian with `obsidian://open?path=<absolute path>`;
+   - starts capturing the two Tracks.
+2. **During the call**: the user writes **Personal notes** in the note. Segments already closed are transcribed in the background. The Template can be changed from the menu bar; the Summary Profile is the one active at the start.
+3. **Stop** (click or shortcut). The Meeting enters the Processing queue and another Meeting can start right away.
+4. **Processing** (one at a time, in arrival order):
+   1. completes the Transcript (the last Segments);
+   2. reads the Meeting note again and extracts the Personal notes;
+   3. generates Summary and title with the Summary Profile;
+   4. renames the note with the title, if the user has not renamed or moved it;
+   5. writes the Transcript file;
+   6. rewrites the Managed section and Steno's frontmatter keys;
+   7. notifies "Summary ready" (click → opens the note in Obsidian).
+5. If a step fails: the Managed section shows `⚠️ Summary not generated: <reason>`. The Meeting stays in "Recent meetings" with **Retry**. No fallback to another Provider.
 
-## Cattura audio
+## Audio capture
 
-- **Altri**: Core Audio process tap globale (`CATapDescription`, tutti i processi: Steno non riproduce audio, quindi non serve escluderlo) + aggregate device che contiene **solo il tap**. Un aggregato con gli altoparlanti come dispositivo principale smette di ricevere audio quando il voice processing del microfono è attivo. Si avvia prima del microfono. Richiede `NSAudioCaptureUsageDescription`: la prima volta macOS mostra il popup "Registrazione solo audio di sistema" e l'avvio resta in attesa della risposta.
-- **Io**: `AVAudioEngine` sul microfono di default con `setVoiceProcessingEnabled(true)` per la cancellazione d'eco. Con il voice processing il microfono arriva a 9 canali: si tiene solo il canale 0, già ripulito. Il ramo d'uscita del motore non va collegato, altrimenti l'avvio fallisce (-10875). Disattivabile con `defaults write dev.mameli.steno echoCancellation -bool false` finché non ci sono le impostazioni. Richiede `NSMicrophoneUsageDescription`.
-- Ogni Traccia viene scritta in **segmenti di 5 minuti** (`io-000.m4a`, `altri-000.m4a`, …), AAC mono 16 kHz. Motivi: un crash perde al massimo un segmento; i segmenti chiusi si trascrivono durante la call; i file restano sotto i limiti di upload dei Provider remoti.
-- Le due Tracce condividono l'orologio d'avvio: ogni segmento registra il proprio offset dall'inizio della Riunione. L'elenco dei segmenti di ogni Traccia (`io-segmenti.json`, `altri-segmenti.json`) si aggiorna a ogni apertura, così gli offset sopravvivono a un crash; allo stop confluisce in `riunione.json`, che viene scritto anche se una Traccia si è interrotta.
+- **Others**: global Core Audio process tap (`CATapDescription`, all processes: Steno plays no audio, so there is no need to exclude it) + aggregate device containing **only the tap**. An aggregate with the speakers as main device stops receiving audio when the microphone's voice processing is active. It starts before the microphone. Requires `NSAudioCaptureUsageDescription`: the first time macOS shows the "System Audio Recording Only" prompt and the start waits for the answer.
+- **Me**: `AVAudioEngine` on the default microphone with `setVoiceProcessingEnabled(true)` for echo cancellation. With voice processing the microphone delivers 9 channels: only channel 0, already cleaned, is kept. The engine's output branch must not be connected, otherwise the start fails (-10875). Can be disabled with `defaults write dev.mameli.steno echoCancellation -bool false`. Requires `NSMicrophoneUsageDescription`.
+- Each Track is written in **5-minute Segments** (`me-000.m4a`, `others-000.m4a`, …), AAC mono 16 kHz. Reasons: a crash loses at most one Segment; closed Segments are transcribed during the call; files stay under remote Providers' upload limits.
+- The two Tracks share the start clock: every Segment records its offset from the start of the Meeting. Each Track's Segment list (`me-segments.json`, `others-segments.json`) is updated whenever a Segment opens, so offsets survive a crash; at the stop it goes into `recording.json`, which is written even if a Track was interrupted.
 
-**Stop per silenzio**: fuori dalla v1 per scelta dell'utente (la Riunione si ferma sempre a mano, dal menu o con ⌃⌥⌘R).
+**Stop on silence**: out of v1 by the user's choice (the Meeting is always stopped by hand, from the menu or with ⌃⌥⌘R).
 
-## Trascrizione
+## Transcription
 
-- Ogni Traccia si trascrive separatamente. Le Battute delle due Tracce si ordinano per tempo d'inizio e si fondono in paragrafi (regole sotto).
-- Un segmento che non si riesce a trascrivere non blocca gli altri: la Trascrizione viene scritta con un buco e l'errore viene segnalato.
-- A Whisper arrivano solo i **tratti con parlato** di ogni segmento: finestre da mezzo secondo con RMS sopra 0,004, pause sotto i 2 secondi assorbite, un quarto di secondo di margine per lato. Sul silenzio, sull'eco residuo e sulle voci lontane Whisper inventa frasi ("Grazie.", decine di volte nella prova della fase 1). Le annotazioni come `[BLANK_AUDIO]` o le frasi tra parentesi vengono comunque scartate.
-- Un paragrafo della Trascrizione riunisce le Battute consecutive della stessa Traccia, ma si spezza dopo una pausa di oltre 30 secondi o quando una Battuta inizia più di 60 secondi dopo l'inizio del paragrafo: c'è un nuovo timestamp circa ogni minuto (una Battuta di Whisper dura al massimo 30 secondi).
-- Il risultato di ogni segmento (lingua e Battute) viene salvato accanto all'audio (`io-000.m4a.json`), così una nuova Elaborazione non ritrascrive quello che è già fatto.
-- **Locale**: WhisperKit, modello `openai_whisper-large-v3-v20240930_turbo_632MB` (646 MB), scaricato al primo uso in `~/Library/Application Support/Steno/Modelli` e preparato mentre la prima Riunione è in corso. Lingua `auto` oppure forzata `it`/`en`. La lingua si rileva una sola volta, su 30 secondi di solo parlato (i tratti con voce, senza silenzi) del primo segmento che ne contiene, di qualsiasi Traccia, scegliendo solo tra italiano e inglese, e vale per tutta la Riunione. Non si preferisce più Altri (era la difesa contro lo "svedese" della fase 1, nato dal silenzio): rilevando solo sul parlato il problema sparisce, e nella call reale l'eco residuo in Io resta sotto la soglia del parlato. La lingua usata viene salvata nella cache di ogni segmento; se poi si forza una lingua diversa, il segmento viene ritrascritto. Si può forzare con `defaults write dev.mameli.steno language it` (o `en`, `auto`) finché non ci sono le impostazioni. Rilevarla sui primi 30 secondi non basta: nella prova reale della fase 1 la Traccia Io iniziava con 80 secondi di quasi silenzio e Whisper l'ha classificata come svedese.
-- **Remota** (dopo la v1): `POST {baseURL}/audio/transcriptions` (multipart, un segmento per richiesta) tramite l'adattatore compatibile OpenAI. Verrà usata solo allo stop: durante la call l'audio non lascia mai il Mac.
+- Each Track is transcribed separately. The Utterances of the two Tracks are sorted by start time and merged into paragraphs (rules below).
+- A Segment that cannot be transcribed does not block the others: the Transcript is written with a gap and the error is reported.
+- Whisper only gets the **speech ranges** of each Segment: half-second windows with RMS above 0.004, pauses under 2 seconds absorbed, a quarter of a second of margin on each side. On silence, echo residue and distant voices Whisper makes up sentences ("Grazie.", dozens of times in the phase 1 test). Annotations such as `[BLANK_AUDIO]` or sentences in parentheses are dropped anyway.
+- A Transcript paragraph joins consecutive Utterances of the same Track, but breaks after a pause longer than 30 seconds or when an Utterance starts more than 60 seconds after the paragraph's start: a new timestamp about every minute (a Whisper Utterance is at most 30 seconds long).
+- The result of each Segment (language and Utterances) is saved next to the audio (`me-000.m4a.json`), so a new Processing does not transcribe again what is done.
+- **Local**: WhisperKit, model `openai_whisper-large-v3-v20240930_turbo_632MB` (646 MB), downloaded on first use to `~/Library/Application Support/Steno/Models` and prepared while the first Meeting is in progress.
+- **Language**: `auto` or forced `it`/`en` (`defaults write dev.mameli.steno language it`). Detection runs on up to 30 seconds of speech only (the voice ranges, no silence) of the first Segment that has any, from either Track, picking only between Italian and English, and holds for the whole Meeting. It is locked only when there are at least 10 seconds of speech: on a short "ok" Whisper can pick the wrong language and then *translate* instead of transcribing; with less speech the detected language applies to that Segment only and detection is tried again on the next one. Detecting on the first 30 seconds of audio is not enough: in the real phase 1 test the Me Track started with 80 seconds of near silence and Whisper classified it as Swedish. The language used is saved in every Segment's cache; if a different language is forced later, the Segment is transcribed again.
+- **Remote** (after v1): `POST {baseURL}/audio/transcriptions` (multipart, one Segment per request) through the OpenAI-compatible adapter. Only at the stop: during the call the audio never leaves the Mac.
 
-File `<Vault>/Meetings/Trascrizioni/2026-10-04 1430 - <Titolo> (trascrizione).md` (una copia senza frontmatter resta in `trascrizione.md` nella cartella della Registrazione, finché c'è l'audio). Una nuova Elaborazione della stessa Riunione sovrascrive il file esistente, ritrovato tramite `steno_id`:
-
-```markdown
----
-steno_id: 6F1C…
-riunione: "[[2026-10-04 1430 - Titolo]]"
-lingua: it
----
-**[00:00] Altri:** Buongiorno a tutti, partiamo dal…
-
-**[00:42] Io:** Sì, sul primo punto…
-```
-
-## Nota della Riunione
+File `<Vault>/Meetings/Transcripts/2026-10-04 1430 - <Title> (transcript).md` (a copy without frontmatter stays in `transcript.md` in the Recording folder while the audio is there). A new Processing of the same Meeting overwrites the existing file, found through `steno_id`:
 
 ```markdown
 ---
 steno_id: 6F1C…
-data: 2026-10-04T14:30
-durata: 47m
-template: 1:1 settimanale
-lingua: it
-provider_trascrizione: Locale
-provider_riepilogo: Mistral EU
-trascrizione: "[[2026-10-04 1430 - Titolo (trascrizione)]]"
-tags: [riunione]
+meeting: "[[2026-10-04 1430 - Title]]"
+language: it
 ---
-%% steno:inizio %%
-⏺ Registrazione in corso: il Riepilogo comparirà qui dopo lo stop.   ← poi il Riepilogo
-%% steno:fine %%
+**[00:00] Others:** Buongiorno a tutti, partiamo dal…
 
-## Note personali
+**[00:42] Me:** Sì, sul primo punto…
+```
+
+## Meeting note
+
+```markdown
+---
+steno_id: 6F1C…
+date: 2026-10-04T14:30
+duration: 47m
+template: Notes
+language: it
+transcription_provider: Local
+summary_provider: Mistral EU
+transcript: "[[2026-10-04 1430 - Title (transcript)]]"
+tags: [meeting]
+---
+%% steno:start %%
+⏺ Recording in progress: the summary will appear here after you stop.   ← then the Summary
+%% steno:end %%
+
+## Personal notes
 
 ```
 
-Regole:
-- Steno riscrive **solo** il testo tra `%% steno:inizio %%` e `%% steno:fine %%` e le **proprie** chiavi del frontmatter (`durata`, `lingua`, `provider_trascrizione`, `provider_riepilogo`, `template`, `trascrizione`). Le chiavi aggiunte dall'utente restano. `data` e `tags` si scrivono solo alla creazione: da quel momento appartengono all'utente. `steno_id` viene ripristinato a ogni aggiornamento se l'utente l'ha cancellato, altrimenti la nota non si ritroverebbe più.
-- Lo `steno_id` conta solo nel frontmatter (un testo uguale nel corpo non identifica la nota). I marcatori della Zona gestita dentro i blocchi di codice non contano. Le note con a capo Windows o BOM vengono lette correttamente e riscritte con a capo `\n`.
-- Steno aggiorna la nota sul file stesso (non lo sostituisce), controllando che non sia cambiata tra lettura e scrittura: se Obsidian l'ha salvata nel frattempo, la rilegge e riapplica la modifica.
-- Se l'Elaborazione fallisce, la Zona gestita mostra `⚠️ <motivo>` invece di restare su "Registrazione in corso".
-- Tra la creazione e la fine dell'Elaborazione Steno non scrive nella nota (niente stato intermedio "Elaborazione in corso"): il progresso si vede nella barra dei menu.
-- Se all'avvio il Vault non è raggiungibile (volume non montato, cartella spostata) la Riunione si registra lo stesso e la nota viene creata a fine Elaborazione. Lo stesso succede se l'utente cancella la nota durante la Riunione.
-- **Note personali** = tutto il corpo fuori dalla Zona gestita, senza l'intestazione `## Note personali`. Se è vuoto, il Riepilogo si basa solo sulla Trascrizione.
-- Se i marcatori sono stati cancellati, Steno li ricrea in testa al corpo, senza cancellare niente.
-- La nota si ritrova tramite `steno_id`: prima al percorso noto, altrimenti cercando nella cartella Meetings. Se l'utente l'ha rinominata o spostata, Steno non la rinomina.
-- In caso di nome già esistente si aggiunge un suffisso ` (2)`.
-- Senza calendario, `partecipanti` non viene scritto nella v1.
-- Steno scrive solo a Elaborazione finita, quindi minuti dopo lo stop, per evitare conflitti con le modifiche ancora aperte in Obsidian.
+Rules:
+- Steno rewrites **only** the text between `%% steno:start %%` and `%% steno:end %%` and **its own** frontmatter keys (`duration`, `language`, `transcription_provider`, `summary_provider`, `template`, `transcript`). Keys added by the user stay. `date` and `tags` are written only at creation: from then on they belong to the user. `steno_id` is restored at every update if the user deleted it, otherwise the note could not be found again.
+- `steno_id` counts only in the frontmatter (the same text in the body does not identify the note). Managed section markers inside code blocks do not count. Notes with Windows line endings or a BOM are read correctly and rewritten with `\n` line endings.
+- Steno updates the note in place (it does not replace the file), checking that it did not change between read and write: if Obsidian saved it meanwhile, Steno reads it again and reapplies the change.
+- If Processing fails, the Managed section shows `⚠️ <reason>` instead of staying on "Recording in progress".
+- Between creation and the end of Processing Steno does not write to the note (no intermediate "Processing" state): progress shows in the menu bar.
+- If the Vault is not reachable at start (volume not mounted, folder moved) the Meeting is recorded anyway and the note is created at the end of Processing. The same happens if the user deletes the note during the Meeting.
+- **Personal notes** = the whole body outside the Managed section, without the `## Personal notes` heading. If empty, the Summary relies on the Transcript only.
+- If the markers were deleted, Steno recreates them at the top of the body, without deleting anything.
+- The note is found through `steno_id`: first at the known path, otherwise by searching the Meetings folder. If the user renamed or moved it, Steno does not rename it.
+- When a name already exists a ` (2)` suffix is added.
+- Without the calendar, `participants` is not written in v1.
+- Steno writes only once Processing is over, i.e. minutes after the stop, to avoid conflicts with edits still open in Obsidian.
+
+**Notes written before the English rewrite** (Italian format: `%% steno:inizio %%`/`%% steno:fine %%`, `## Note personali`, keys `durata`, `lingua`, `provider_trascrizione`, `provider_riepilogo`, `trascrizione`, labels `Io`/`Altri`, provisional title "Riunione") are still recognised. Steno writes them in the English format whenever it touches them: markers are replaced in place, and an Italian key is replaced by its English name when Steno sets it. The user's text, including the old `## Note personali` heading, is never changed.
 
 ## Template
 
-- Cartella `<Vault>/Meetings/_Template/`. Il Template predefinito è `Appunti.md`, in stile Granola: argomenti nell'ordine in cui sono stati discussi, ciascuno con un'intestazione `###` e punti con sotto-punti (motivi, persone, cifre, link), poi `### Prossimi passi` con `- [ ] Cosa fare (Chi)` e il contesto sotto. Niente sintesi iniziale né sezioni fisse. Steno lo crea all'avvio dell'app e quando si sceglie il Vault, se la cartella è vuota o se il Template di default non esiste più (e allora il default torna Appunti).
-- Formato: frontmatter con `nome` e `lingua_riepilogo` (`auto` | `it` | `en`, default `auto` = lingua della Riunione). Il corpo, cioè le istruzioni libere e la struttura di intestazioni, si passa al modello così com'è.
-- Il Template si sceglie all'avvio (default dalle impostazioni) e si può cambiare fino allo stop.
-- Nelle Impostazioni, sezione Template: elenco, Template di default, "Nuovo Template" (nome → file creato da Appunti e aperto in Obsidian), "Apri in Obsidian", "Elimina" (sposta il file nel Cestino; se era il default si torna ad Appunti). Il testo si scrive in Obsidian: Steno non ha un editor.
+- Folder `<Vault>/Meetings/_Templates/`. The default Template is `Notes.md`, Granola style: topics in the order they were discussed, each with a `###` heading and bullets with sub-bullets (reasons, people, figures, links), then `### Next steps` with `- [ ] What to do (Who)` and the context below. No opening summary and no fixed sections. Steno creates it at app launch and when the Vault is chosen, if the folder is empty or if the default Template no longer exists (then the default goes back to Notes).
+- Format: frontmatter with `name` and `summary_language` (any language code such as `it`, `en`, `fr`, `de`; `auto` or missing = the Meeting's language). The body, i.e. free-form instructions and heading structure, is passed to the model as it is. Templates written before the English rewrite (`nome`, `lingua_riepilogo`) still work.
+- The Template is chosen at start (default from Settings) and can change until the stop.
+- In Settings, Templates section: list, default Template, "New Template" (name → file created from Notes and opened in Obsidian), "Open in Obsidian", "Delete" (moves the file to the Trash; if it was the default, Notes becomes the default again). The text is written in Obsidian: Steno has no editor.
 
-## Riepilogo
+## Summary
 
-- `POST {baseURL}/chat/completions` con:
-  - **prompt di sistema fisso**: non inventare, attribuisci a Io/Altri, azioni come checklist nel formato del Template (in mancanza `- [ ] chi: cosa (quando)`), rispondi nella lingua indicata, segui struttura e istruzioni del Template, dai priorità ai temi presenti nelle Note personali;
-  - **messaggio utente**: Template, Note personali, Trascrizione.
-- **Titolo**: seconda chiamata breve sul Riepilogo ("massimo 6 parole, niente data"), ripulito da intestazioni, prefissi "Titolo:", virgolette, grassetto e punteggiatura finale. Se il titolo non arriva la nota resta con il nome provvisorio: non è un errore.
-- **Zona gestita**: il Riepilogo seguito da `Trascrizione completa: [[…]]`. Se il Riepilogo fallisce (nessun Profilo attivo, errore del Provider, Riunione senza parlato) mostra `⚠️ Riepilogo non generato: <motivo>` e il link alla Trascrizione, che resta utilizzabile. Eventuali marcatori della Zona gestita nella risposta del modello vengono tolti.
-- **Stima dei token**: circa 3 caratteri per token, con 4.096 token riservati alla risposta; un blocco non spezza mai un paragrafo della Trascrizione.
-- **Riunioni lunghe**: ogni Profilo di riepilogo ha un campo *contesto massimo*. Se Trascrizione + Note + Template lo superano, la Trascrizione si divide in blocchi, si riassume ogni blocco e i riassunti parziali si uniscono con il Template.
-- **Rigenerazione**: da "Riunioni recenti" → *Rigenera con* ▸ Template / Profilo. Rilegge Trascrizione e Note personali correnti e riscrive solo la Zona gestita. È disponibile anche dopo i 7 giorni, perché la Trascrizione è nel Vault.
+- `POST {baseURL}/chat/completions` with:
+  - **fixed system prompt** (in English): write the summary in the language stated explicitly ("Write the summary in Italian", whatever language the Template is written in), follow the Template's structure and instructions, do not invent, attribute to Me/Others, actions as a checklist in the Template's format (otherwise `- [ ] who: what (when)`), give priority to the topics of the Personal notes;
+  - **user message**: Template, Personal notes, Transcript.
+- **Summary language**: the Template's `summary_language` (any language), otherwise the Meeting's detected language, otherwise Italian.
+- **Title**: a second short call on the Summary ("at most 6 words, no date", in the Summary language), cleaned of headings, "Title:" prefixes, quotes, bold and final punctuation. If no title comes back the note keeps its provisional name: it is not an error.
+- **Managed section**: the Summary followed by `Full transcript: [[…]]`. If the Summary fails (no active Profile, Provider error, Meeting without speech) it shows `⚠️ Summary not generated: <reason>` and the Transcript link, which stays usable. Managed section markers in the model's reply are removed.
+- **Token estimate**: about 3 characters per token, with 4,096 tokens reserved for the reply; a block never splits a Transcript paragraph.
+- **Long Meetings**: every Summary Profile has a *max context* field. If Transcript + notes + Template exceed it, the Transcript is split into blocks, every block is summarised and the partial summaries are merged with the Template (in groups, if even the merge does not fit).
+- **Regeneration**: from "Recent meetings" → *Regenerate with* ▸ Template / Profile. Reads the current Transcript and Personal notes again and rewrites only the Managed section. It is available even after 7 days, because the Transcript is in the Vault.
 
-## Profili e impostazioni
+## Profiles and settings
 
-**Profilo** (v1: solo per il Riepilogo): nome, base URL, chiave API (nel Keychain, facoltativa per i server locali), modello, contesto massimo. Esempi: "llama.cpp locale" (`http://localhost:8080/v1`), "Mistral EU" (`https://api.mistral.ai/v1`). La trascrizione è sempre locale (WhisperKit). Un Profilo fuori UE (es. OpenRouter) è ammesso solo per lo sviluppo con registrazioni di prova: Steno non lo impedisce, la scelta resta dell'utente (eccezione registrata nell'ADR 0001). Il Profilo si fissa all'avvio della Riunione. L'URL deve essere `https://`; `http://` è ammesso solo per server su questo Mac (`localhost`, `127.0.0.1`, `*.local`).
+**Profile** (v1: Summary only): name, base URL, API key (in the Keychain, optional for local servers), model, max context. Examples: "Local llama.cpp" (`http://localhost:8080/v1`), "Mistral EU" (`https://api.mistral.ai/v1`). Transcription is always local (WhisperKit). A Profile outside the EU (e.g. OpenRouter) is allowed only for development with test recordings: Steno does not prevent it, the choice stays with the user (exception recorded in ADR 0001). The Profile is fixed when the Meeting starts. The URL must be `https://`; `http://` is allowed only for servers on this Mac (`localhost`, `127.0.0.1`, `*.local`).
 
-**Impostazioni** (UserDefaults; i segreti nel Keychain). Nella finestra Impostazioni della v1:
-- percorso del Vault
-- Template di default
-- Profili per il Riepilogo e Profilo attivo (con "Prova connessione")
+**Settings** (UserDefaults; secrets in the Keychain). In the v1 Settings window:
+- Vault path
+- Templates and default Template
+- Summary Profiles and active Profile (with "Test connection")
 
-Per ora solo da terminale (`defaults write dev.mameli.steno …`), da portare nella finestra quando serviranno:
-- lingua (`auto` | `it` | `en`)
-- cancellazione d'eco on/off
-- giorni di conservazione dell'audio (`retentionDays`, default 7)
+For now from the terminal only (`defaults write dev.mameli.steno …`):
+- language (`auto` | `it` | `en`)
+- echo cancellation on/off
+- audio retention days (`retentionDays`, default 7)
 
-La scorciatoia globale è fissa: ⌃⌥⌘R. Se un'altra app la usa già, il menu lo segnala.
+The global shortcut is fixed: ⌃⌥⌘R. If another app already uses it, the menu says so.
 
-Le cartelle sono fisse: `Meetings/`, `Meetings/Trascrizioni/`, `Meetings/_Template/`.
+The folders are fixed: `Meetings/`, `Meetings/Transcripts/`, `Meetings/_Templates/`. Folders of earlier versions (`Meetings/Trascrizioni/`, `Meetings/_Template/`) are moved to the new names at launch, without overwriting files; the untouched Italian default Template (`Appunti.md`) goes to the Trash and is replaced by `Notes.md`.
 
-## Barra dei menu
+## Menu bar
 
-- **Inattiva**: Avvia riunione (scorciatoia) · Template ▸ · Profilo Riepilogo ▸ · Riunioni recenti ▸ (Apri nota · Rigenera con ▸ · Riprova) · Impostazioni… · Esci
-- **In registrazione**: nella barra solo un pallino rosso; nel menu "In registrazione · durata" · Ferma · Template ▸ · Impostazioni…
-- **In Elaborazione**: clessidra nella barra; nel menu "Elaborazione in corso… (altre N in coda)"
+- **Idle**: Start meeting (shortcut) · Template ▸ · Summary Profile ▸ · Recent meetings ▸ (Open note · Regenerate with ▸ · Retry) · Settings… · Quit
+- **Recording**: only a red dot in the bar; in the menu "Recording · duration" · Stop · Template ▸ · Settings…
+- **Processing**: hourglass in the bar; in the menu "Processing… (N more queued)"
 
-## Stato e conservazione
+The interface is in English in the code and translated to Italian in `Steno/Localizable.xcstrings` and `Steno/InfoPlist.xcstrings`: macOS picks the language of the system. Error messages from `StenoCore` are looked up in the app's catalog too. What Steno writes into the Vault (headings, markers, keys) is always in English.
 
-- `~/Library/Application Support/Steno/Riunioni/<steno_id>/`: segmenti audio, cache della trascrizione per segmento, `riunione.json` (inizio, fine, segmenti) ed `elaborazione.json` (stato: in registrazione, in coda, in corso, completata, fallita con motivo; Template; Profilo fissato all'avvio; percorso della nota).
-- Coda di Elaborazione persistente, una Riunione alla volta: al riavvio dell'app le Elaborazioni in coda o in corso ripartono, dalla più vecchia. Una Registrazione interrotta da un crash viene ricostruita dagli elenchi dei segmenti e messa in coda: si perde solo il segmento aperto al momento del crash (un file AAC non chiuso è illeggibile).
-- Un segmento illeggibile è un avviso ("Trascrizione incompleta"), non un fallimento: il Riepilogo si genera con quello che c'è.
-- All'avvio dell'app e ogni giorno: cancellazione dell'audio (e delle cache della trascrizione) delle Riunioni più vecchie di 7 giorni già elaborate o fallite, mai di quelle in registrazione, in coda o in corso. `riunione.json` ed `elaborazione.json` restano: la Riunione resta tra le recenti e si può Rigenerare.
-- **Notifiche**: "Riepilogo pronto" (clic → nota in Obsidian) o "Elaborazione non riuscita" con il motivo.
-- **Scorciatoia globale** ⌃⌥⌘R: avvia o ferma la Riunione da qualsiasi app.
-- **Riunioni recenti** (le ultime 5): Apri nota · Riprova (finché c'è l'audio: rifà tutta l'Elaborazione, i segmenti già trascritti vengono dalla cache) · Rigenera con Template ▸ / con Profilo ▸ (solo il Riepilogo, dalla Trascrizione nel Vault; non rinomina la nota e non cambia Template e Profilo salvati della Riunione, che Riprova continua a usare). Riprova e Rigenera compaiono solo per Riunioni concluse (completate o fallite), mai per una in registrazione o in coda. Una Rigenerazione interrotta da un riavvio non si ripete: la Riunione torna completata con il Riepilogo precedente.
-- Senza Vault configurato l'Elaborazione si ferma alla Trascrizione e la notifica dice "Trascrizione pronta", non "Riepilogo pronto".
+## State and retention
 
-## Struttura del progetto
+- `~/Library/Application Support/Steno/Recordings/<steno_id>/`: audio Segments, per-Segment transcription cache, `recording.json` (start, end, Segments) and `processing.json` (status: recording, queued, processing, regenerating, completed, failed with reason; Template; Profile fixed at start; note path). Folders of earlier versions (`Steno/Riunioni`, `Steno/Modelli`) are renamed at launch; after moving the model folder Core ML prepares the model again once (a few minutes).
+- Persistent Processing queue, one Meeting at a time: at app restart queued or in-progress Processing resumes, oldest first. A Recording interrupted by a crash is rebuilt from the Segment lists and queued: only the Segment open at the crash is lost (an unclosed AAC file is unreadable).
+- An unreadable Segment is a warning ("Incomplete transcript"), not a failure: the Summary is generated with what there is.
+- At app launch and every day: deletion of the audio (and transcription caches) of Meetings older than 7 days that are processed or failed, never of those recording, queued, processing or regenerating. `recording.json` and `processing.json` stay: the Meeting stays among the recent ones and can be Regenerated.
+- **Notifications**: "Summary ready" (click → note in Obsidian) or "Processing failed" with the reason.
+- **Global shortcut** ⌃⌥⌘R: starts or stops the Meeting from any app.
+- **Recent meetings** (the last 5): Open note · Retry (while the audio is there: redoes the whole Processing, Segments already transcribed come from the cache) · Regenerate with Template ▸ / with Profile ▸ (Summary only, from the Transcript in the Vault; does not rename the note and does not change the Meeting's saved Template and Profile, which Retry keeps using). Retry and Regenerate appear only for concluded Meetings (completed or failed), never for one recording or queued. A Regeneration interrupted by a restart is not repeated: the Meeting goes back to completed with the previous Summary.
+- Without a configured Vault Processing stops at the Transcript and the notification says "Transcript ready", not "Summary ready".
 
-- **App Xcode** `Steno` (SwiftUI, `MenuBarExtra`, target macOS 15, firma Personal Team): cattura audio, WhisperKit, notifiche, scorciatoia, Keychain, UI.
-- **Pacchetto Swift locale** `StenoCore`, testabile con `swift test` e senza dipendenze da AppKit o AVFoundation: fusione dei segmenti → Trascrizione, lettura e scrittura della Nota della Riunione (Zona gestita, frontmatter, ricerca per `steno_id`), parsing dei Template, costruzione dei prompt e suddivisione in blocchi, client compatibile OpenAI, macchina a stati Riunione/coda, regole di conservazione.
+## Project structure
 
-Test: Swift Testing su `StenoCore`, in TDD. Cattura e trascrizione si verificano a mano con Registrazioni di prova salvate come fixture.
+- **Xcode app** `Steno` (SwiftUI, `MenuBarExtra`, macOS 15 target, Personal Team signing): audio capture, WhisperKit, notifications, shortcut, Keychain, UI, migrations.
+- **Local Swift package** `StenoCore`, testable with `swift test` and without AppKit or AVFoundation: Segments → Transcript merging, reading and writing the Meeting note (Managed section, frontmatter, lookup by `steno_id`, pre-rewrite format), Template parsing, prompt building and chunking, OpenAI-compatible client, Meeting/queue state machine, retention rules.
 
-## Piano a fasi
+Tests: Swift Testing on `StenoCore`, TDD. Capture and transcription are verified by hand with test Recordings saved as fixtures. Automated runs of the app (DEBUG builds) refuse to start unless isolated with `-vaultPath`, `-testSummaryBaseURL` and `-dataDirectory`.
 
-Ogni fase si chiude con una verifica concreta.
+## Phases
 
-| # | Fase | Fatto quando |
+Every phase closes with a concrete check.
+
+| # | Phase | Done when |
 |---|---|---|
-| 0 | Progetto Xcode + `StenoCore`, firma, Info.plist, `MenuBarExtra` con Avvia/Ferma | L'app parte nella barra dei menu e chiede i permessi una volta sola |
-| 1 | **Cattura** delle due Tracce a segmenti, cancellazione d'eco | Una call Meet/Teams di 12 minuti produce 3+3 segmenti udibili, con Io senza eco degli altri |
-| 2 | **Trascrizione locale** a blocchi + fusione Io/Altri | Il file Trascrizione della call di prova è leggibile, ordinato e attribuito |
-| 3 | **Vault**: Nota della Riunione, Zona gestita, frontmatter, `steno_id` (la rinomina passa alla fase 4, insieme al titolo) | Test verdi; la nota appare in Obsidian all'avvio e le Note personali restano intatte dopo l'Elaborazione |
-| 4 | **Riepilogo**: finestra Impostazioni, Profili, Keychain, client compatibile OpenAI, Template, suddivisione in blocchi, titolo e rinomina | Riepilogo corretto della call di prova con un Provider remoto (in sviluppo OpenRouter, solo registrazioni di prova). Restano da provare, quando l'utente li configura: un server locale (llama.cpp) e un Provider UE |
-| 5 | **Flusso completo**: coda persistente, Rigenerazione, Riprova, notifiche, scorciatoia, conservazione | Due Riunioni consecutive elaborate in coda; Riprova dopo aver spento il server locale |
-| ~~6~~ | ~~Stop per silenzio~~ | Tolta: l'utente preferisce fermare sempre a mano |
+| 0 | Xcode project + `StenoCore`, signing, Info.plist, `MenuBarExtra` with Start/Stop | The app starts in the menu bar and asks for permissions only once |
+| 1 | **Capture** of the two Tracks in Segments, echo cancellation | A 12-minute Meet/Teams call produces 3+3 audible Segments, with Me free of the others' echo |
+| 2 | **Local transcription** in Segments + Me/Others merge | The test call's Transcript file is readable, ordered and attributed |
+| 3 | **Vault**: Meeting note, Managed section, frontmatter, `steno_id` (renaming moved to phase 4, with the title) | Tests green; the note appears in Obsidian at start and Personal notes stay intact after Processing |
+| 4 | **Summary**: Settings window, Profiles, Keychain, OpenAI-compatible client, Templates, chunking, title and rename | Correct Summary of the test call with a remote Provider (in development OpenRouter, test recordings only). Still to try when the user sets them up: a local server (llama.cpp) and an EU Provider |
+| 5 | **Full flow**: persistent queue, Regeneration, Retry, notifications, shortcut, retention | Two consecutive Meetings processed in the queue; Retry after stopping the local server |
+| ~~6~~ | ~~Stop on silence~~ | Dropped: the user prefers to always stop by hand |
 
-## Rischi noti
+## Known risks
 
-- **Ducking**: con il voice processing attivo e `voiceProcessingOtherAudioDuckingConfiguration` al minimo, la Traccia Altri registra circa metà del volume. In una call Meet reale (fase 1) l'utente non ha percepito abbassamenti di ciò che sente, quindi riguarda solo il segnale registrato. Se un giorno desse fastidio: cancellazione d'eco disattivata e cuffie.
-- **Contesto del server locale**: llama.cpp (`llama-server -c`), Ollama (`OLLAMA_CONTEXT_LENGTH`) e LM Studio hanno un contesto di default piccolo che tramite l'endpoint compatibile OpenAI non si cambia per richiesta: va impostato all'avvio del server, coerente con il *contesto massimo* del Profilo (minimo 8.192 token, Steno non scende sotto).
-- **Risposte troncate**: se il modello si ferma per limite di lunghezza (`finish_reason: length`) il Riepilogo è considerato fallito, non salvato a metà. Le Riunioni molto lunghe uniscono i riassunti parziali a gruppi finché l'unione finale entra nel contesto.
-- **Buchi nell'audio**: l'offset di un segmento si calcola dai frame scritti dall'inizio della Traccia. Se una sorgente perde buffer (cambio di dispositivo, reset del voice processing) gli offset successivi di quella Traccia slittano rispetto all'altra. Fase 2: nella call reale di 12 minuti le due Tracce finiscono a meno di 10 ms l'una dall'altra, nessuno slittamento visibile nella Trascrizione. Se comparisse (es. cuffie collegate a metà call), si riallinea ogni segmento con l'host time del suo primo buffer.
-- **Parole tagliate tra i segmenti**: il confine dei 5 minuti può spezzare una parola. Fase 2: con segmenti da 5 secondi una frase a cavallo di due segmenti si ricompone correttamente; nella call reale nessuna parola persa ai confini. Se dovesse pesare, si aggiunge una breve sovrapposizione tra segmenti.
-- **Whisper non deterministico sull'audio degradato**: con il fallback di temperatura, lo stesso tratto può dare testi diversi tra due Elaborazioni. Nella prova della fase 2 (voce ripresa da un telefono in un'altra stanza, passata per Meet e riprodotta dagli altoparlanti) la prima frase si è persa in un giro su tre. Disattivare il fallback rende il risultato stabile ma peggiore; la soglia "nessun parlato" di Whisper è disattivata perché scartava proprio questi tratti. Da rivalutare se succede con l'audio di call normali.
-- **Rinomina con la nota aperta in Obsidian**: Obsidian di solito segue il cambio di nome, ma va verificato nella fase 3. Il ripiego è non rinominare (titolo solo nell'intestazione).
-- **Download del modello Whisper**: WhisperKit scarica i pesi da Hugging Face. Non è un dato di Riunione e non tocca l'ADR 0001, ma richiede rete al primo avvio.
+- **Ducking**: with voice processing active and `voiceProcessingOtherAudioDuckingConfiguration` at minimum, the Others Track records at about half volume. In a real Meet call (phase 1) the user did not notice any lowering of what they hear, so it only affects the recorded signal. If it ever bothers: echo cancellation off and headphones.
+- **Local server context**: llama.cpp (`llama-server -c`), Ollama (`OLLAMA_CONTEXT_LENGTH`) and LM Studio have a small default context that cannot be changed per request through the OpenAI-compatible endpoint: it must be set when the server starts, consistent with the Profile's *max context* (minimum 8,192 tokens, Steno does not go below).
+- **Truncated replies**: if the model stops at the length limit (`finish_reason: length`) the Summary counts as failed, not saved halfway. Very long Meetings merge partial summaries in groups until the final merge fits in the context.
+- **Gaps in the audio**: a Segment's offset is computed from the frames written since the start of the Track. If a source drops buffers (device change, voice processing reset) the later offsets of that Track drift relative to the other. Phase 2: in the real 12-minute call the two Tracks end less than 10 ms apart, no visible drift in the Transcript. If it shows up (e.g. headphones plugged in mid-call), realign every Segment with the host time of its first buffer.
+- **Words cut between Segments**: the 5-minute boundary can split a word. Phase 2: with 5-second Segments a sentence across two Segments comes back together correctly; in the real call no words were lost at the boundaries. If it matters, add a short overlap between Segments.
+- **Whisper non-deterministic on degraded audio**: with temperature fallback, the same range can give different texts in two Processings. In the phase 2 test (voice picked up by a phone in another room, through Meet and played by the speakers) the first sentence was lost in one run out of three. Disabling the fallback makes the result stable but worse; Whisper's "no speech" threshold is disabled because it dropped exactly these ranges. To reassess if it happens with normal call audio.
+- **Renaming with the note open in Obsidian**: Obsidian usually follows the rename. Fallback: do not rename (title only in the heading).
+- **Whisper model download**: WhisperKit downloads the weights from Hugging Face. It is not Meeting data and does not affect ADR 0001, but it needs the network on first launch.

@@ -2,7 +2,7 @@ import Foundation
 import Testing
 import StenoCore
 
-@Suite("Conservazione delle Registrazioni")
+@Suite("Recording retention")
 struct RetentionTests {
     let now = Date(timeIntervalSince1970: 1_791_117_000)
     let day: TimeInterval = 86_400
@@ -11,7 +11,7 @@ struct RetentionTests {
         Retention.Item(stenoID: UUID(), startedAt: now.addingTimeInterval(-daysAgo * day), status: status)
     }
 
-    @Test("dopo 7 giorni si cancellano le Registrazioni elaborate o fallite, mai quelle ancora da elaborare")
+    @Test("after 7 days Recordings that are processed or failed are deleted, never the ones still pending")
     func expired() {
         let oldCompleted = item(8, .completed)
         let oldFailed = item(10, .failed(reason: "401"))
@@ -30,7 +30,7 @@ struct RetentionTests {
         #expect(Set(expired) == [oldCompleted.stenoID, oldFailed.stenoID, oldWithoutRecord.stenoID])
     }
 
-    @Test("i giorni di conservazione si possono cambiare")
+    @Test("the number of retention days can be changed")
     func customDays() {
         let twoDaysOld = item(2, .completed)
 

@@ -2,182 +2,196 @@ import Foundation
 import Testing
 import StenoCore
 
-@Suite("Fusione delle Tracce nella Trascrizione")
+@Suite("Merging Tracks into the Transcript")
 struct TranscriptTests {
-    @Test("le battute delle due Tracce si alternano in ordine di tempo")
+    let stenoID = UUID(uuidString: "6F1C2A00-0000-4000-8000-000000000001")!
+
+    @Test("Utterances from the two Tracks interleave in time order")
     func interleavesByStart() {
         let transcript = Transcript(utterances: [
-            Utterance(track: .me, start: 12, end: 15, text: "Sì, sul primo punto."),
-            Utterance(track: .others, start: 0, end: 10, text: "Buongiorno a tutti."),
-            Utterance(track: .others, start: 20, end: 25, text: "Perfetto, andiamo avanti."),
+            Utterance(track: .me, start: 12, end: 15, text: "Yes, on the first point."),
+            Utterance(track: .others, start: 0, end: 10, text: "Good morning everyone."),
+            Utterance(track: .others, start: 20, end: 25, text: "Great, let's move on."),
         ])
 
         #expect(transcript.paragraphs == [
-            Paragraph(track: .others, start: 0, text: "Buongiorno a tutti."),
-            Paragraph(track: .me, start: 12, text: "Sì, sul primo punto."),
-            Paragraph(track: .others, start: 20, text: "Perfetto, andiamo avanti."),
+            Paragraph(track: .others, start: 0, text: "Good morning everyone."),
+            Paragraph(track: .me, start: 12, text: "Yes, on the first point."),
+            Paragraph(track: .others, start: 20, text: "Great, let's move on."),
         ])
     }
 
-    @Test("battute consecutive della stessa Traccia diventano un paragrafo con l'inizio della prima")
+    @Test("consecutive Utterances of the same Track become one paragraph with the first one's start")
     func mergesConsecutiveSameTrack() {
         let transcript = Transcript(utterances: [
-            Utterance(track: .others, start: 0, end: 4, text: "Buongiorno a tutti."),
-            Utterance(track: .others, start: 5, end: 9, text: "Partiamo dal budget."),
-            Utterance(track: .me, start: 10, end: 12, text: "Va bene."),
+            Utterance(track: .others, start: 0, end: 4, text: "Good morning everyone."),
+            Utterance(track: .others, start: 5, end: 9, text: "Let's start with the budget."),
+            Utterance(track: .me, start: 10, end: 12, text: "Sure."),
         ])
 
         #expect(transcript.paragraphs == [
-            Paragraph(track: .others, start: 0, text: "Buongiorno a tutti. Partiamo dal budget."),
-            Paragraph(track: .me, start: 10, text: "Va bene."),
+            Paragraph(track: .others, start: 0, text: "Good morning everyone. Let's start with the budget."),
+            Paragraph(track: .me, start: 10, text: "Sure."),
         ])
     }
 
-    @Test("dopo più di 30 secondi di pausa la stessa Traccia riparte con un nuovo paragrafo")
+    @Test("after a pause longer than 30 seconds the same Track starts a new paragraph")
     func longPauseStartsNewParagraph() {
         let transcript = Transcript(utterances: [
-            Utterance(track: .others, start: 0, end: 20, text: "Prima parte."),
-            Utterance(track: .others, start: 45, end: 50, text: "Ancora vicino."),
-            Utterance(track: .others, start: 420, end: 430, text: "Dopo cinque minuti."),
+            Utterance(track: .others, start: 0, end: 20, text: "First part."),
+            Utterance(track: .others, start: 45, end: 50, text: "Still close."),
+            Utterance(track: .others, start: 420, end: 430, text: "Five minutes later."),
         ])
 
         #expect(transcript.paragraphs == [
-            Paragraph(track: .others, start: 0, text: "Prima parte. Ancora vicino."),
-            Paragraph(track: .others, start: 420, text: "Dopo cinque minuti."),
+            Paragraph(track: .others, start: 0, text: "First part. Still close."),
+            Paragraph(track: .others, start: 420, text: "Five minutes later."),
         ])
     }
 
-    @Test("le battute fatte solo di annotazioni o spazi vengono scartate, il resto viene ripulito")
+    @Test("Utterances made only of annotations or whitespace are dropped, the rest is trimmed")
     func dropsAnnotations() {
         let transcript = Transcript(utterances: [
-            Utterance(track: .others, start: 0, end: 4, text: "  Buongiorno a tutti. "),
+            Utterance(track: .others, start: 0, end: 4, text: "  Good morning everyone. "),
             Utterance(track: .me, start: 5, end: 30, text: "[BLANK_AUDIO]"),
             Utterance(track: .me, start: 31, end: 60, text: " (Tolken pratar i en annan länk)"),
             Utterance(track: .me, start: 61, end: 62, text: "   "),
-            Utterance(track: .others, start: 63, end: 66, text: "[Musica]"),
-            Utterance(track: .others, start: 67, end: 70, text: "Partiamo dal budget."),
+            Utterance(track: .others, start: 63, end: 66, text: "[Music]"),
+            Utterance(track: .others, start: 67, end: 70, text: "Let's start with the budget."),
         ])
 
         #expect(transcript.paragraphs == [
-            Paragraph(track: .others, start: 0, text: "Buongiorno a tutti."),
-            Paragraph(track: .others, start: 67, text: "Partiamo dal budget."),
+            Paragraph(track: .others, start: 0, text: "Good morning everyone."),
+            Paragraph(track: .others, start: 67, text: "Let's start with the budget."),
         ])
     }
 
-    @Test("un paragrafo non supera i 60 secondi: oltre, la stessa Traccia riparte con un nuovo timestamp")
+    @Test("a paragraph stays under 60 seconds: past that the same Track starts again with a new timestamp")
     func longMonologueIsSplit() {
         let transcript = Transcript(utterances: [
-            Utterance(track: .others, start: 0, end: 25, text: "Uno."),
-            Utterance(track: .others, start: 26, end: 50, text: "Due."),
-            Utterance(track: .others, start: 51, end: 75, text: "Tre."),
-            Utterance(track: .others, start: 76, end: 100, text: "Quattro."),
+            Utterance(track: .others, start: 0, end: 25, text: "One."),
+            Utterance(track: .others, start: 26, end: 50, text: "Two."),
+            Utterance(track: .others, start: 51, end: 75, text: "Three."),
+            Utterance(track: .others, start: 76, end: 100, text: "Four."),
         ])
 
         #expect(transcript.paragraphs == [
-            Paragraph(track: .others, start: 0, text: "Uno. Due. Tre."),
-            Paragraph(track: .others, start: 76, text: "Quattro."),
+            Paragraph(track: .others, start: 0, text: "One. Two. Three."),
+            Paragraph(track: .others, start: 76, text: "Four."),
         ])
     }
 
-    @Test("il Markdown mette timestamp ed etichetta in grassetto, un paragrafo per blocco")
+    @Test("the Markdown puts timestamp and label in bold, one paragraph per block")
     func markdown() {
         let transcript = Transcript(utterances: [
-            Utterance(track: .others, start: 0, end: 4, text: "Buongiorno a tutti."),
-            Utterance(track: .me, start: 42.7, end: 45, text: "Sì, sul primo punto."),
-            Utterance(track: .others, start: 3723, end: 3730, text: "Chiudiamo qui."),
+            Utterance(track: .others, start: 0, end: 4, text: "Good morning everyone."),
+            Utterance(track: .me, start: 42.7, end: 45, text: "Yes, on the first point."),
+            Utterance(track: .others, start: 3723, end: 3730, text: "Let's wrap up."),
         ])
 
         #expect(transcript.markdown == """
-            **[00:00] Altri:** Buongiorno a tutti.
+            **[00:00] Others:** Good morning everyone.
 
-            **[00:42] Io:** Sì, sul primo punto.
+            **[00:42] Me:** Yes, on the first point.
 
-            **[1:02:03] Altri:** Chiudiamo qui.
+            **[1:02:03] Others:** Let's wrap up.
 
             """)
     }
 
-    @Test("il file della Trascrizione nel Vault ha frontmatter con steno_id, link alla Nota e lingua")
+    @Test("the Transcript file in the Vault has frontmatter with steno_id, link to the Meeting note and language")
     func vaultFile() {
         let transcript = Transcript(utterances: [
-            Utterance(track: .others, start: 0, end: 4, text: "Buongiorno a tutti."),
+            Utterance(track: .others, start: 0, end: 4, text: "Good morning everyone."),
         ])
 
-        let file = transcript.vaultFile(
-            stenoID: UUID(uuidString: "6F1C2A00-0000-4000-8000-000000000001")!,
-            meetingNoteName: "2026-10-04 1430 - Riunione",
-            language: "it"
-        )
+        let file = transcript.vaultFile(stenoID: stenoID, meetingNoteName: "2026-10-04 1430 - Meeting", language: "it")
 
         #expect(file == """
             ---
             steno_id: 6F1C2A00-0000-4000-8000-000000000001
-            riunione: "[[2026-10-04 1430 - Riunione]]"
-            lingua: it
+            meeting: "[[2026-10-04 1430 - Meeting]]"
+            language: it
             ---
-            **[00:00] Altri:** Buongiorno a tutti.
+            **[00:00] Others:** Good morning everyone.
 
             """)
     }
 
-    @Test("senza parlato la lingua non compare nel frontmatter")
+    @Test("without speech the language is left out of the frontmatter")
     func vaultFileWithoutLanguage() {
         let file = Transcript(utterances: []).vaultFile(
-            stenoID: UUID(uuidString: "6F1C2A00-0000-4000-8000-000000000001")!,
-            meetingNoteName: "2026-10-04 1430 - Riunione",
-            language: nil
+            stenoID: stenoID, meetingNoteName: "2026-10-04 1430 - Meeting", language: nil
         )
 
         #expect(file == """
             ---
             steno_id: 6F1C2A00-0000-4000-8000-000000000001
-            riunione: "[[2026-10-04 1430 - Riunione]]"
+            meeting: "[[2026-10-04 1430 - Meeting]]"
             ---
 
             """)
     }
 
-    @Test("il file della Trascrizione nel Vault si rilegge con paragrafi, tempi e lingua")
+    @Test("the Transcript file in the Vault reads back with paragraphs, times and language")
     func parseVaultFile() {
         let original = Transcript(utterances: [
-            Utterance(track: .others, start: 0, end: 4, text: "Buongiorno a tutti."),
-            Utterance(track: .me, start: 42.7, end: 45, text: "Sì, sul primo punto."),
-            Utterance(track: .others, start: 3723, end: 3730, text: "Chiudiamo qui."),
+            Utterance(track: .others, start: 0, end: 4, text: "Good morning everyone."),
+            Utterance(track: .me, start: 42.7, end: 45, text: "Yes, on the first point."),
+            Utterance(track: .others, start: 3723, end: 3730, text: "Let's wrap up."),
         ])
-        let file = original.vaultFile(
-            stenoID: UUID(uuidString: "6F1C2A00-0000-4000-8000-000000000001")!,
-            meetingNoteName: "2026-10-04 1430 - Riunione",
-            language: "en"
-        )
+        let file = original.vaultFile(stenoID: stenoID, meetingNoteName: "2026-10-04 1430 - Meeting", language: "en")
 
         let (parsed, language) = Transcript.parse(vaultFile: file)
 
         #expect(language == "en")
         #expect(parsed.paragraphs == [
-            Paragraph(track: .others, start: 0, text: "Buongiorno a tutti."),
-            Paragraph(track: .me, start: 42, text: "Sì, sul primo punto."),
-            Paragraph(track: .others, start: 3723, text: "Chiudiamo qui."),
+            Paragraph(track: .others, start: 0, text: "Good morning everyone."),
+            Paragraph(track: .me, start: 42, text: "Yes, on the first point."),
+            Paragraph(track: .others, start: 3723, text: "Let's wrap up."),
         ])
     }
 
-    @Test("le righe aggiunte o corrette a mano nella Trascrizione restano nel paragrafo in cui sono")
+    @Test("lines added or fixed by hand stay in the paragraph they belong to")
     func parseEditedVaultFile() {
         let file = """
             ---
             steno_id: 1
             ---
-            **[00:00] Altri:** Il budget è di 40 mila euro.
-            (corretto a mano: 45 mila)
+            **[00:00] Others:** The budget is 40 thousand euros.
+            (fixed by hand: 45 thousand)
 
-            **[00:12] Io:** Va bene.
+            **[00:12] Me:** Fine.
             """
 
         let (parsed, language) = Transcript.parse(vaultFile: file)
 
         #expect(language == nil)
         #expect(parsed.paragraphs == [
-            Paragraph(track: .others, start: 0, text: "Il budget è di 40 mila euro. (corretto a mano: 45 mila)"),
-            Paragraph(track: .me, start: 12, text: "Va bene."),
+            Paragraph(track: .others, start: 0, text: "The budget is 40 thousand euros. (fixed by hand: 45 thousand)"),
+            Paragraph(track: .me, start: 12, text: "Fine."),
+        ])
+    }
+
+    @Test("Transcripts written before the English rewrite (Io/Altri, lingua:) still read back")
+    func parseLegacyVaultFile() {
+        let file = """
+            ---
+            steno_id: 1
+            riunione: "[[2026-10-04 1430 - Riunione]]"
+            lingua: it
+            ---
+            **[00:00] Altri:** Buongiorno a tutti.
+
+            **[00:05] Io:** Sì.
+            """
+
+        let (parsed, language) = Transcript.parse(vaultFile: file)
+
+        #expect(language == "it")
+        #expect(parsed.paragraphs == [
+            Paragraph(track: .others, start: 0, text: "Buongiorno a tutti."),
+            Paragraph(track: .me, start: 5, text: "Sì."),
         ])
     }
 }

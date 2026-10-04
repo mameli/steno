@@ -1,6 +1,6 @@
-// Copia in Config/Local.xcconfig (ignorato da git) e inserisci il Team ID
-// del tuo Personal Team: la firma resta stabile e i permessi non vengono
-// richiesti a ogni build.
+// Copy to Config/Local.xcconfig (ignored by git) and fill in the Team ID of
+// your Personal Team: the signature stays stable and permissions are not
+// requested again after every build.
 CODE_SIGN_STYLE = Automatic
 CODE_SIGN_IDENTITY = Apple Development
 DEVELOPMENT_TEAM = XXXXXXXXXX

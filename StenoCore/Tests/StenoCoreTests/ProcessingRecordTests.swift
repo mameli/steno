@@ -2,18 +2,18 @@ import Foundation
 import Testing
 import StenoCore
 
-@Suite("Coda di Elaborazione")
+@Suite("Processing queue")
 struct ProcessingRecordTests {
     let start = Date(timeIntervalSince1970: 1_791_117_000)
 
     func record(_ status: ProcessingRecord.Status, minutesAfterStart minutes: Double = 0) -> ProcessingRecord {
         ProcessingRecord(
             stenoID: UUID(), startedAt: start.addingTimeInterval(minutes * 60),
-            status: status, templateName: "Generico", summaryProfile: nil, noteURL: nil
+            status: status, templateName: "Notes", summaryProfile: nil, noteURL: nil
         )
     }
 
-    @Test("al riavvio si riprendono, dalla più vecchia, le Riunioni in coda, in corso o interrotte durante la registrazione")
+    @Test("after a restart, Meetings queued, in progress or interrupted while recording resume, oldest first")
     func resumeAfterRestart() {
         let completed = record(.completed, minutesAfterStart: 0)
         let failed = record(.failed(reason: "401"), minutesAfterStart: 10)
@@ -27,20 +27,20 @@ struct ProcessingRecordTests {
         #expect(plan.toSave.isEmpty)
     }
 
-    @Test("lo stato salvato su disco si rilegge identico, compreso il motivo di un fallimento")
+    @Test("the state saved on disk reads back identical, including a failure reason")
     func persistence() throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        var saved = record(.failed(reason: "Il provider ha risposto con l'errore 401"))
+        var saved = record(.failed(reason: "The provider answered with error 401"))
         saved.summaryProfile = ProviderProfile(name: "Mistral UE", baseURL: "https://api.mistral.ai/v1", model: "m", maxContextTokens: 32_000)
-        saved.noteURL = URL(filePath: "/Vault/Meetings/2026-10-04 1430 - Riunione.md")
+        saved.noteURL = URL(filePath: "/Vault/Meetings/2026-10-04 1430 - Meeting.md")
 
         try saved.save(in: directory)
 
         #expect(try ProcessingRecord.load(from: directory) == saved)
     }
 
-    @Test("una Registrazione interrotta da un crash si ricostruisce dagli elenchi dei segmenti salvati")
+    @Test("a Recording interrupted by a crash is rebuilt from the saved Segment lists")
     func recoveredRecording() {
         let id = UUID()
         let end = start.addingTimeInterval(612)
@@ -51,10 +51,10 @@ struct ProcessingRecordTests {
 
         #expect(recording.meetingID == id)
         #expect(recording.endedAt == end)
-        #expect(recording.segments.map(\.fileName) == ["io-000.m4a", "io-001.m4a", "altri-000.m4a", "altri-001.m4a"])
+        #expect(recording.segments.map(\.fileName) == ["me-000.m4a", "me-001.m4a", "others-000.m4a", "others-001.m4a"])
     }
 
-    @Test("al riavvio una Rigenerazione interrotta non diventa un'Elaborazione completa: la Riunione torna completata")
+    @Test("after a restart an interrupted Regeneration does not become full Processing: the Meeting goes back to completed")
     func interruptedRegeneration() {
         let regenerating = record(.regenerating, minutesAfterStart: 5)
         let queued = record(.queued, minutesAfterStart: 10)
@@ -66,7 +66,7 @@ struct ProcessingRecordTests {
         #expect(plan.toSave.first?.status == .completed)
     }
 
-    @Test("Riprova e Rigenera sono possibili solo per Riunioni completate o fallite", arguments: [
+    @Test("Retry and Regenerate are allowed only for completed or failed Meetings", arguments: [
         (ProcessingRecord.Status.completed, true),
         (.failed(reason: "401"), true),
         (.recording, false),

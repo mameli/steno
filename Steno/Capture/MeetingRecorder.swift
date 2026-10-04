@@ -1,7 +1,7 @@
 import AVFoundation
 import StenoCore
 
-/// Registra le due Tracce di una Riunione nella sua cartella e ne salva il manifesto.
+/// Records the two Tracks of a Meeting into its folder and saves the manifest.
 @MainActor
 final class MeetingRecorder {
     private struct Active {
@@ -12,13 +12,13 @@ final class MeetingRecorder {
         let others: SegmentedTrackWriter
     }
 
-    /// Una Registrazione appena avviata: l'identificativo è lo `steno_id` della Riunione.
+    /// A Recording just started: the identifier is the Meeting's `steno_id`.
     struct Started {
         let meetingID: UUID
         let directory: URL
     }
 
-    /// Una Registrazione chiusa. `errors` elenca le Tracce che si sono interrotte prima dello stop.
+    /// A closed Recording. `errors` lists the Tracks that were interrupted before the stop.
     struct Stopped {
         let directory: URL
         let recording: Recording
@@ -31,17 +31,17 @@ final class MeetingRecorder {
 
     static var meetingsDirectory: URL {
         #if DEBUG
-        // Prove automatiche: le Registrazioni di prova restano fuori dalla cartella vera.
+        // Automated tests: test Recordings stay outside the real folder.
         if let path = UserDefaults.standard.string(forKey: "dataDirectory") {
             return URL(filePath: path, directoryHint: .isDirectory)
         }
         #endif
-        return URL.applicationSupportDirectory.appending(path: "Steno/Riunioni", directoryHint: .isDirectory)
+        return URL.applicationSupportDirectory.appending(path: "Steno/Recordings", directoryHint: .isDirectory)
     }
 
     private static var segmentDuration: TimeInterval {
         #if DEBUG
-        // `--args -segmentSeconds 5` per provare il cambio di segmento senza aspettare 5 minuti.
+        // `--args -segmentSeconds 5` to test Segment rotation without waiting 5 minutes.
         let override = UserDefaults.standard.double(forKey: "segmentSeconds")
         if override > 0 { return override }
         #endif
@@ -69,8 +69,8 @@ final class MeetingRecorder {
         let others = writer(for: .others)
 
         do {
-            // Prima il tap di sistema, poi il microfono: il voice processing
-            // riconfigura i dispositivi audio quando parte.
+            // System tap first, then the microphone: voice processing reconfigures
+            // the audio devices when it starts.
             try systemAudio.start { buffer, time in others.write(buffer, hostTime: time) }
             try microphone.start(echoCancellation: echoCancellation) { buffer, time in me.write(buffer, hostTime: time) }
         } catch {
@@ -84,10 +84,10 @@ final class MeetingRecorder {
         return Started(meetingID: meetingID, directory: directory)
     }
 
-    /// Ferma la cattura, chiude i segmenti e scrive `riunione.json` con quello che c'è,
-    /// anche se una Traccia si è interrotta.
+    /// Stops the capture, closes the Segments and writes `recording.json` with what there is,
+    /// even if a Track was interrupted.
     func stop(at endedAt: Date) throws -> Stopped {
-        guard let active else { preconditionFailure("stop senza una Registrazione attiva") }
+        guard let active else { preconditionFailure("stop without an active Recording") }
         self.active = nil
         microphone.stop()
         systemAudio.stop()
@@ -99,10 +99,10 @@ final class MeetingRecorder {
             endedAt: endedAt,
             segments: outcomes.flatMap { $0.1.segments }
         )
-        try recording.save(to: active.directory.appending(path: Recording.fileName))
+        try recording.save(inFolder: active.directory)
 
         let errors = outcomes.compactMap { track, outcome in
-            outcome.error.map { "Traccia \(track.rawValue): \($0.localizedDescription)" }
+            outcome.error.map { String(localized: "\(track.label) Track: \($0.localizedDescription)") }
         }
         return Stopped(directory: active.directory, recording: recording, errors: errors)
     }

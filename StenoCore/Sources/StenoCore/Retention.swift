@@ -1,13 +1,13 @@
 import Foundation
 
-/// Per quanto si tiene l'audio di una Riunione. La Trascrizione resta nel Vault per sempre.
+/// How long the audio of a Meeting is kept. The Transcript stays in the Vault forever.
 public enum Retention {
     public static let days = 7
 
     public struct Item: Sendable {
         public let stenoID: UUID
         public let startedAt: Date
-        /// `nil` per le Registrazioni senza stato salvato (create prima della coda persistente).
+        /// `nil` for Recordings without a saved state (made before the persistent queue).
         public let status: ProcessingRecord.Status?
 
         public init(stenoID: UUID, startedAt: Date, status: ProcessingRecord.Status?) {
@@ -17,8 +17,8 @@ public enum Retention {
         }
     }
 
-    /// Le Registrazioni da cancellare: più vecchie di `days` giorni e già concluse (elaborate o
-    /// fallite). Quelle ancora da concludere restano.
+    /// Recordings to delete: older than `days` days and already concluded (processed or
+    /// failed). Those still pending are kept.
     public static func expired(_ items: [Item], now: Date, days: Int = days) -> [UUID] {
         let limit = now.addingTimeInterval(-Double(days) * 86_400)
         return items

@@ -2,11 +2,11 @@ import Foundation
 import Testing
 import StenoCore
 
-@Suite("Stato della Riunione")
+@Suite("Meeting state")
 struct MeetingStateMachineTests {
     let start = Date(timeIntervalSince1970: 1_791_120_600)
 
-    @Test("avviare una Riunione da inattivo la mette in corso")
+    @Test("starting a Meeting from idle puts it in progress")
     func startFromIdle() throws {
         var machine = MeetingStateMachine()
         #expect(machine.state == .idle)
@@ -16,7 +16,7 @@ struct MeetingStateMachineTests {
         #expect(machine.state == .inProgress(startedAt: start))
     }
 
-    @Test("non si può avviare una Riunione mentre un'altra è in corso")
+    @Test("a Meeting cannot start while another one is in progress")
     func cannotStartTwice() throws {
         var machine = MeetingStateMachine()
         try machine.start(at: start)
@@ -27,7 +27,7 @@ struct MeetingStateMachineTests {
         #expect(machine.state == .inProgress(startedAt: start))
     }
 
-    @Test("fermare una Riunione restituisce inizio e fine e torna inattivo")
+    @Test("stopping a Meeting returns its start and end and goes back to idle")
     func stopReturnsInterval() throws {
         var machine = MeetingStateMachine()
         try machine.start(at: start)
@@ -39,7 +39,7 @@ struct MeetingStateMachineTests {
         #expect(machine.state == .idle)
     }
 
-    @Test("fermare quando non c'è una Riunione in corso è un errore")
+    @Test("stopping when no Meeting is in progress is an error")
     func cannotStopWhenIdle() {
         var machine = MeetingStateMachine()
 

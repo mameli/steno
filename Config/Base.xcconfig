@@ -1,4 +1,4 @@
-// Impostazioni condivise del target Steno.
+// Shared settings of the Steno target.
 PRODUCT_NAME = Steno
 PRODUCT_BUNDLE_IDENTIFIER = dev.mameli.steno
 MARKETING_VERSION = 0.1.0
@@ -8,11 +8,15 @@ MACOSX_DEPLOYMENT_TARGET = 15.0
 SWIFT_VERSION = 6.0
 
 INFOPLIST_FILE = Config/Info.plist
+
+// User-facing strings are in English in the code, translated in Steno/*.xcstrings.
+LOCALIZATION_PREFERS_STRING_CATALOGS = YES
+SWIFT_EMIT_LOC_STRINGS = YES
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/../Frameworks
 COMBINE_HIDPI_IMAGES = YES
 
-// Senza Local.xcconfig l'app è firmata ad-hoc: compila, ma macOS può
-// richiedere di nuovo i permessi a ogni build.
+// Without Local.xcconfig the app is signed ad hoc: it builds, but macOS may
+// ask for the permissions again after every build.
 CODE_SIGN_STYLE = Manual
 CODE_SIGN_IDENTITY = -
 DEVELOPMENT_TEAM =

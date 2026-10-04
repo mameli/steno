@@ -14,22 +14,26 @@ public struct ChatMessage: Codable, Equatable, Sendable {
     }
 }
 
-/// Client per qualsiasi server con API compatibile OpenAI (`POST {baseURL}/chat/completions`):
-/// provider remoti e server locali come llama.cpp o Ollama (ADR 0004).
+/// Client for any server with an OpenAI-compatible API (`POST {baseURL}/chat/completions`):
+/// remote providers and local servers such as llama.cpp or Ollama (ADR 0004).
 public struct ChatClient: Sendable {
     public enum Failure: LocalizedError, Equatable {
-        /// Il provider ha risposto con un errore: stato HTTP e messaggio così come li manda.
+        /// The provider answered with an error: HTTP status and message as it sent them.
         case http(status: Int, message: String)
-        /// Nessun testo utilizzabile nella risposta.
+        /// No usable text in the reply.
         case emptyReply
-        /// Il modello si è fermato per il limite di lunghezza: la risposta è a metà.
+        /// The model stopped at the length limit: the reply is cut in half.
         case truncated
 
         public var errorDescription: String? {
             switch self {
-            case .http(let status, let message): "Il provider ha risposto con l'errore \(status): \(message)"
-            case .emptyReply: "Il provider non ha restituito testo."
-            case .truncated: "La risposta del modello è stata troncata per il limite di lunghezza."
+            // Looked up in the app's string catalog (Bundle.main), so the app can translate them.
+            case .http(let status, let message):
+                String(localized: "The provider answered with error \(status): \(message)")
+            case .emptyReply:
+                String(localized: "The provider returned no text.")
+            case .truncated:
+                String(localized: "The model's reply was cut off by the length limit.")
             }
         }
     }
@@ -69,7 +73,7 @@ public struct ChatClient: Sendable {
         return reply
     }
 
-    /// Il messaggio d'errore nel formato OpenAI (`{"error":{"message":…}}`), altrimenti il testo grezzo.
+    /// The error message in the OpenAI format (`{"error":{"message":…}}`), otherwise the raw text.
     private static func errorMessage(in data: Data) -> String {
         struct ErrorBody: Decodable {
             struct Detail: Decodable { let message: String }

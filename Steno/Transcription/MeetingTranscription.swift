@@ -1,11 +1,11 @@
 import AVFoundation
 import StenoCore
 
-/// Trascrive i segmenti di una Riunione man mano che si chiudono e allo stop
-/// scrive `trascrizione.md` nella cartella della Registrazione.
+/// Transcribes the Segments of a Meeting as they close and, at the stop, writes
+/// `transcript.md` in the Recording folder.
 actor MeetingTranscription {
-    /// La Trascrizione scritta, la lingua usata (`nil` se non c'era parlato)
-    /// e i segmenti che non è stato possibile trascrivere.
+    /// The Transcript written, the language used (`nil` if there was no speech)
+    /// and the Segments that could not be transcribed.
     struct Finished {
         let url: URL
         let transcript: Transcript
@@ -13,21 +13,26 @@ actor MeetingTranscription {
         let failedSegments: [String]
     }
 
-    /// Risultato di un segmento salvato accanto all'audio: una nuova Elaborazione non lo rifà.
+    /// Result of a Segment saved next to the audio: a new Processing does not redo it.
     private struct CachedSegment: Codable {
-        /// `nil` se il segmento non contiene parlato.
+        /// `nil` if the Segment contains no speech.
         let language: String?
         let utterances: [Utterance]
     }
 
     private static let languageDetectionSeconds = 30.0
+    /// Below this much speech (e.g. a short "ok") detection is unreliable: the language is
+    /// used for that Segment only and detection is tried again on the next one.
+    private static let minimumSpeechToLockLanguage = 10.0
 
     private let transcriber: LocalTranscriber
     private let forcedLanguage: String?
     private var languageDetection: Task<String, Error>?
+    /// Language detected on too little speech to lock it for the Meeting.
+    private var provisionalLanguage: String?
     private var pending: [String: Task<[Utterance], Error>] = [:]
 
-    /// `language` è `nil` per rilevarla in automatico.
+    /// `language` is `nil` to detect it automatically.
     init(transcriber: LocalTranscriber, language: String?) {
         self.transcriber = transcriber
         self.forcedLanguage = language
@@ -37,8 +42,8 @@ actor MeetingTranscription {
         startIfNeeded(segment, in: directory)
     }
 
-    /// Trascrive i segmenti mancanti, aspetta quelli in corso e scrive la Trascrizione.
-    /// Un segmento che fallisce non blocca gli altri: la Trascrizione esce con un buco.
+    /// Transcribes the missing Segments, waits for those in progress and writes the Transcript.
+    /// A failing Segment does not block the others: the Transcript comes out with a gap.
     func finish(_ recording: Recording, in directory: URL) async throws -> Finished {
         for segment in recording.segments {
             startIfNeeded(segment, in: directory)
@@ -56,7 +61,13 @@ actor MeetingTranscription {
         let url = directory.appending(path: Transcript.recordingCopyFileName)
         let transcript = Transcript(utterances: utterances)
         try transcript.markdown.write(to: url, atomically: true, encoding: .utf8)
-        let language: String? = if let forcedLanguage { forcedLanguage } else { try? await languageDetection?.value }
+        let language: String? = if let forcedLanguage {
+            forcedLanguage
+        } else if let locked = try? await languageDetection?.value {
+            locked
+        } else {
+            provisionalLanguage
+        }
         return Finished(url: url, transcript: transcript, language: language, failedSegments: failed)
     }
 
@@ -70,7 +81,7 @@ actor MeetingTranscription {
         if let cached = try? JSONDecoder().decode(CachedSegment.self, from: Data(contentsOf: cacheURL)),
            cached.language == nil || forcedLanguage == nil || cached.language == forcedLanguage {
             if let language = cached.language, forcedLanguage == nil, languageDetection == nil {
-                // Stessa lingua per tutta la Riunione, anche se parte dei segmenti viene dalla cache.
+                // Same language for the whole Meeting, even if some Segments come from the cache.
                 languageDetection = Task { language }
             }
             return cached.utterances
@@ -78,8 +89,8 @@ actor MeetingTranscription {
 
         let sampleRate = Recording.sampleRate
         let samples = try Self.loadSamples(directory.appending(path: segment.fileName))
-        // Whisper riceve solo i tratti con parlato: sul silenzio e sull'audio debole
-        // (eco residuo, voci lontane) inventa frasi come "Grazie.".
+        // Whisper only gets the speech ranges: on silence and faint audio (echo residue,
+        // distant voices) it makes up sentences such as "Grazie.".
         let ranges = speechRanges(in: samples, sampleRate: sampleRate)
         guard !ranges.isEmpty else {
             try JSONEncoder().encode(CachedSegment(language: nil, utterances: [])).write(to: cacheURL)
@@ -99,28 +110,39 @@ actor MeetingTranscription {
         return utterances
     }
 
-    /// Una sola lingua per Riunione, rilevata una volta sui primi 30 secondi di parlato
-    /// del primo segmento che ne ha (il silenzio confonde il rilevamento).
+    /// One language per Meeting, detected once on up to 30 seconds of speech (silence
+    /// confuses detection). It is locked only when there are at least 10 seconds of speech:
+    /// on a short "ok" Whisper can pick the wrong language and then translate instead of transcribing.
     private func meetingLanguage(_ samples: [Float], speech ranges: [Range<Int>]) async throws -> String {
         if let forcedLanguage { return forcedLanguage }
-        if languageDetection == nil {
-            let limit = Int(Self.languageDetectionSeconds * Recording.sampleRate)
-            var speech: [Float] = []
-            for range in ranges where speech.count < limit {
-                speech += samples[range].prefix(limit - speech.count)
+        if let languageDetection {
+            do {
+                return try await languageDetection.value
+            } catch {
+                self.languageDetection = nil
+                throw error
             }
-            languageDetection = Task { [transcriber] in try await transcriber.detectLanguage(speech) }
         }
+        let limit = Int(Self.languageDetectionSeconds * Recording.sampleRate)
+        var speech: [Float] = []
+        for range in ranges where speech.count < limit {
+            speech += samples[range].prefix(limit - speech.count)
+        }
+        let detection = Task { [transcriber] in try await transcriber.detectLanguage(speech) }
+        let isReliable = Double(speech.count) >= Self.minimumSpeechToLockLanguage * Recording.sampleRate
+        if isReliable { languageDetection = detection }
         do {
-            return try await languageDetection!.value
+            let language = try await detection.value
+            if !isReliable { provisionalLanguage = language }
+            return language
         } catch {
-            languageDetection = nil
+            if isReliable { languageDetection = nil }
             throw error
         }
     }
 
-    /// Legge il segmento a blocchi da 10 secondi: una lettura unica di minuti di AAC, con il
-    /// voice processing attivo nello stesso processo, fa girare a vuoto il decoder di macOS.
+    /// Reads the Segment in 10-second blocks: a single read of minutes of AAC, with voice
+    /// processing active in the same process, makes the macOS decoder spin forever.
     private static func loadSamples(_ url: URL) throws -> [Float] {
         let file = try AVAudioFile(forReading: url)
         let blockFrames = AVAudioFrameCount(10 * Recording.sampleRate)
@@ -143,7 +165,7 @@ enum TranscriptionError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .unreadableAudio(let file): "Impossibile leggere l'audio di \(file)."
+        case .unreadableAudio(let file): String(localized: "Cannot read the audio of \(file).")
         }
     }
 }

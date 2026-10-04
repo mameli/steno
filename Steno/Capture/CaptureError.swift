@@ -8,11 +8,11 @@ enum CaptureError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .coreAudio(let step, let status):
-            "Core Audio non riesce a completare \"\(step)\" (codice \(status))."
+            String(localized: "Core Audio could not complete \"\(step)\" (code \(status)).")
         case .unsupportedFormat(let format):
-            "Formato audio non supportato: \(format)."
+            String(localized: "Unsupported audio format: \(format).")
         case .microphone(let format, let underlying):
-            "Il microfono non parte (\(format)): \(underlying.localizedDescription)"
+            String(localized: "The microphone does not start (\(format)): \(underlying.localizedDescription)")
         }
     }
 }

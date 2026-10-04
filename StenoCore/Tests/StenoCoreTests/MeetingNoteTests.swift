@@ -2,311 +2,320 @@ import Foundation
 import Testing
 import StenoCore
 
-@Suite("Nota della Riunione")
+@Suite("Meeting note")
 struct MeetingNoteTests {
     let rome = TimeZone(identifier: "Europe/Rome")!
     let stenoID = UUID(uuidString: "6F1C2A00-0000-4000-8000-000000000001")!
-    /// 4 ottobre 2026, 14:30 a Roma.
+    /// 4 October 2026, 14:30 in Rome.
     let startedAt = Date(timeIntervalSince1970: 1_791_117_000)
 
-    @Test("all'avvio la nota ha frontmatter, Zona gestita e la sezione per le Note personali")
+    @Test("at start the note has frontmatter, the managed section and a section for personal notes")
     func initialContent() {
         let note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, timeZone: rome)
 
         #expect(note.content == """
             ---
             steno_id: 6F1C2A00-0000-4000-8000-000000000001
-            data: 2026-10-04T14:30
-            tags: [riunione]
+            date: 2026-10-04T14:30
+            tags: [meeting]
             ---
-            %% steno:inizio %%
-            ⏺ Registrazione in corso: il Riepilogo comparirà qui dopo lo stop.
-            %% steno:fine %%
+            %% steno:start %%
+            ⏺ Recording in progress: the summary will appear here after you stop.
+            %% steno:end %%
 
-            ## Note personali
+            ## Personal notes
 
 
             """)
     }
 
-    @Test("riscrivere la Zona gestita lascia intatto tutto il resto")
+    @Test("rewriting the managed section leaves everything else untouched")
     func replaceManagedSection() {
         var note = MeetingNote(content: """
             ---
             steno_id: 1
             ---
-            Appunto scritto sopra.
-            %% steno:inizio %%
-            ⏺ Registrazione in corso.
-            %% steno:fine %%
+            Note written above.
+            %% steno:start %%
+            ⏺ Recording in progress.
+            %% steno:end %%
 
-            ## Note personali
+            ## Personal notes
 
-            - chiedere a Mario il budget
+            - ask Mario about the budget
             """)
 
-        note.replaceManagedSection(with: "## Riepilogo\n\nTutto ok.")
+        note.replaceManagedSection(with: "### Budget\n\nAll good.")
 
         #expect(note.content == """
             ---
             steno_id: 1
             ---
-            Appunto scritto sopra.
-            %% steno:inizio %%
-            ## Riepilogo
+            Note written above.
+            %% steno:start %%
+            ### Budget
 
-            Tutto ok.
-            %% steno:fine %%
+            All good.
+            %% steno:end %%
 
-            ## Note personali
+            ## Personal notes
 
-            - chiedere a Mario il budget
+            - ask Mario about the budget
             """)
     }
 
-    @Test("se i marcatori mancano, anche uno solo, la Zona gestita viene ricreata in cima al corpo")
+    @Test("if one or both markers are missing, the managed section is recreated at the top of the body")
     func missingMarkers() {
         var note = MeetingNote(content: """
             ---
             steno_id: 1
             ---
-            %% steno:inizio %%
-            Testo rimasto dopo che l'utente ha cancellato il marcatore di fine.
+            %% steno:start %%
+            Text left after the user deleted the end marker.
 
-            ## Note personali
+            ## Personal notes
 
-            - punto importante
+            - important point
             """)
 
-        note.replaceManagedSection(with: "Riepilogo.")
+        note.replaceManagedSection(with: "Summary.")
 
         #expect(note.content == """
             ---
             steno_id: 1
             ---
-            %% steno:inizio %%
-            Riepilogo.
-            %% steno:fine %%
+            %% steno:start %%
+            Summary.
+            %% steno:end %%
 
-            Testo rimasto dopo che l'utente ha cancellato il marcatore di fine.
+            Text left after the user deleted the end marker.
 
-            ## Note personali
+            ## Personal notes
 
-            - punto importante
+            - important point
             """)
     }
 
-    @Test("senza frontmatter la Zona gestita ricreata va in cima al file")
+    @Test("without frontmatter the recreated managed section goes at the top of the file")
     func missingMarkersWithoutFrontmatter() {
-        var note = MeetingNote(content: "Solo appunti.\n")
+        var note = MeetingNote(content: "Just notes.\n")
 
-        note.replaceManagedSection(with: "Riepilogo.")
+        note.replaceManagedSection(with: "Summary.")
 
-        #expect(note.content == "%% steno:inizio %%\nRiepilogo.\n%% steno:fine %%\n\nSolo appunti.\n")
+        #expect(note.content == "%% steno:start %%\nSummary.\n%% steno:end %%\n\nJust notes.\n")
     }
 
-    @Test("Steno aggiorna le sue chiavi del frontmatter e aggiunge quelle mancanti, lasciando quelle dell'utente")
+    @Test("markers inside a code block do not count: personal notes stay intact")
+    func markersInsideCodeBlock() {
+        var note = MeetingNote(content: """
+            ---
+            steno_id: 1
+            ---
+            %% steno:start %%
+            Old summary.
+
+            ## Personal notes
+
+            ```
+            %% steno:end %%
+            ```
+            """)
+
+        note.replaceManagedSection(with: "New.")
+
+        #expect(note.content == """
+            ---
+            steno_id: 1
+            ---
+            %% steno:start %%
+            New.
+            %% steno:end %%
+
+            Old summary.
+
+            ## Personal notes
+
+            ```
+            %% steno:end %%
+            ```
+            """)
+    }
+
+    @Test("a marker in the text being written is removed: it must not be able to close the managed section")
+    func markersInBodyAreRemoved() {
+        var note = MeetingNote(content: "%% steno:start %%\nOld.\n%% steno:end %%\n\nNotes.")
+
+        note.replaceManagedSection(with: "Summary.\n%% steno:end %%\nMore.")
+
+        #expect(note.content == "%% steno:start %%\nSummary.\nMore.\n%% steno:end %%\n\nNotes.")
+    }
+
+    @Test("a note with Windows line endings and a BOM is read correctly")
+    func windowsLineEndings() {
+        var note = MeetingNote(content: "\u{FEFF}---\r\nsteno_id: 1\r\n---\r\n%% steno:start %%\r\nOld.\r\n%% steno:end %%\r\n")
+
+        note.setFrontmatter([(.language, "it")])
+        note.replaceManagedSection(with: "New.")
+
+        #expect(note.content == "---\nsteno_id: 1\nlanguage: it\n---\n%% steno:start %%\nNew.\n%% steno:end %%\n")
+    }
+
+    @Test("a frontmatter closing line with trailing spaces is recognised, horizontal rules in the body are not")
+    func frontmatterCloseWithTrailingSpace() {
+        var note = MeetingNote(content: "---\nsteno_id: 1\n---  \nBefore.\n\n---\n\nAfter.")
+
+        note.setFrontmatter([(.language, "it")])
+
+        #expect(note.content == "---\nsteno_id: 1\nlanguage: it\n---  \nBefore.\n\n---\n\nAfter.")
+        #expect(note.personalNotes == "Before.\n\n---\n\nAfter.")
+    }
+
+    @Test("Steno updates its frontmatter keys and adds missing ones, leaving the user's keys alone")
     func frontmatter() {
         var note = MeetingNote(content: """
             ---
             steno_id: 1
-            data: 2026-10-04T14:30
-            progetto: Unipol
+            date: 2026-10-04T14:30
+            project: Unipol
             tags:
-              - riunione
-              - cliente
-            lingua:
+              - meeting
+              - client
+            language:
               - en
-            durata: 1m
+            duration: 1m
             ---
-            Corpo.
+            Body.
             """)
 
         note.setFrontmatter([
             (.duration, "47m"),
             (.language, "it"),
-            (.transcript, MeetingNote.wikiLink("2026-10-04 1430 - Riunione (trascrizione)")),
+            (.transcript, MeetingNote.wikiLink("2026-10-04 1430 - Meeting (transcript)")),
         ])
 
         #expect(note.content == """
             ---
             steno_id: 1
-            data: 2026-10-04T14:30
-            progetto: Unipol
+            date: 2026-10-04T14:30
+            project: Unipol
             tags:
-              - riunione
-              - cliente
-            lingua: it
-            durata: 47m
-            trascrizione: "[[2026-10-04 1430 - Riunione (trascrizione)]]"
+              - meeting
+              - client
+            language: it
+            duration: 47m
+            transcript: "[[2026-10-04 1430 - Meeting (transcript)]]"
             ---
-            Corpo.
+            Body.
             """)
     }
 
-    @Test("una nota senza frontmatter ne riceve uno con le chiavi di Steno")
+    @Test("a note without frontmatter gets one with Steno's keys")
     func frontmatterCreated() {
-        var note = MeetingNote(content: "Corpo.")
+        var note = MeetingNote(content: "Body.")
 
         note.setFrontmatter([(.language, "it")])
 
-        #expect(note.content == "---\nlingua: it\n---\nCorpo.")
+        #expect(note.content == "---\nlanguage: it\n---\nBody.")
     }
 
-    @Test("le Note personali sono tutto il corpo fuori dalla Zona gestita, senza l'intestazione")
+    @Test("steno_id is read from the frontmatter only")
+    func readsStenoIDFromFrontmatter() {
+        let id = "6F1C2A00-0000-4000-8000-000000000001"
+
+        #expect(MeetingNote(content: "---\nsteno_id: \(id)\n---\nBody.").stenoID == UUID(uuidString: id))
+        #expect(MeetingNote(content: "---\ntitle: x\n---\nsteno_id: \(id)\n").stenoID == nil)
+        #expect(MeetingNote(content: "steno_id: \(id)\n").stenoID == nil)
+    }
+
+    @Test("personal notes are the whole body outside the managed section, without the heading")
     func personalNotes() {
         let note = MeetingNote(content: """
             ---
             steno_id: 1
             ---
-            Appunto scritto sopra.
-            %% steno:inizio %%
-            ## Riepilogo
-            Non è dell'utente.
-            %% steno:fine %%
+            Note written above.
+            %% steno:start %%
+            ### Summary
+            Not the user's.
+            %% steno:end %%
 
-            ## Note personali
+            ## Personal notes
 
-            - chiedere a Mario il budget
-            - rischio: fornitore in ritardo
+            - ask Mario about the budget
+            - risk: supplier is late
 
             """)
 
         #expect(note.personalNotes == """
-            Appunto scritto sopra.
+            Note written above.
 
-            - chiedere a Mario il budget
-            - rischio: fornitore in ritardo
+            - ask Mario about the budget
+            - risk: supplier is late
             """)
     }
 
-    @Test("una nota appena creata non ha Note personali")
+    @Test("a freshly created note has no personal notes")
     func noPersonalNotes() {
         let note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, timeZone: rome)
 
         #expect(note.personalNotes.isEmpty)
     }
 
-    @Test("i marcatori dentro un blocco di codice non contano: le Note personali restano intatte")
-    func markersInsideCodeBlock() {
-        var note = MeetingNote(content: """
-            ---
-            steno_id: 1
-            ---
-            %% steno:inizio %%
-            Vecchio riepilogo.
-
-            ## Note personali
-
-            ```
-            %% steno:fine %%
-            ```
-            """)
-
-        note.replaceManagedSection(with: "Nuovo.")
-
-        #expect(note.content == """
-            ---
-            steno_id: 1
-            ---
-            %% steno:inizio %%
-            Nuovo.
-            %% steno:fine %%
-
-            Vecchio riepilogo.
-
-            ## Note personali
-
-            ```
-            %% steno:fine %%
-            ```
-            """)
-    }
-
-    @Test("una nota con a capo Windows e BOM viene letta correttamente")
-    func windowsLineEndings() {
-        var note = MeetingNote(content: "\u{FEFF}---\r\nsteno_id: 1\r\n---\r\n%% steno:inizio %%\r\nVecchio.\r\n%% steno:fine %%\r\n")
-
-        note.setFrontmatter([(.language, "it")])
-        note.replaceManagedSection(with: "Nuovo.")
-
-        #expect(note.content == "---\nsteno_id: 1\nlingua: it\n---\n%% steno:inizio %%\nNuovo.\n%% steno:fine %%\n")
-    }
-
-    @Test("la chiusura del frontmatter con spazi in fondo viene riconosciuta, le righe orizzontali del corpo no")
-    func frontmatterCloseWithTrailingSpace() {
-        var note = MeetingNote(content: "---\nsteno_id: 1\n---  \nPrima.\n\n---\n\nDopo.")
-
-        note.setFrontmatter([(.language, "it")])
-
-        #expect(note.content == "---\nsteno_id: 1\nlingua: it\n---  \nPrima.\n\n---\n\nDopo.")
-        #expect(note.personalNotes == "Prima.\n\n---\n\nDopo.")
-    }
-
-    @Test("lo steno_id si legge solo dal frontmatter")
-    func readsStenoIDFromFrontmatter() {
-        let id = "6F1C2A00-0000-4000-8000-000000000001"
-
-        #expect(MeetingNote(content: "---\nsteno_id: \(id)\n---\nCorpo.").stenoID == UUID(uuidString: id))
-        #expect(MeetingNote(content: "---\ntitolo: x\n---\nsteno_id: \(id)\n").stenoID == nil)
-        #expect(MeetingNote(content: "steno_id: \(id)\n").stenoID == nil)
-    }
-
-    @Test("a fine Elaborazione la nota riceve Riepilogo, link alla Trascrizione e chiavi di Steno")
+    @Test("at the end of Processing the note gets the Summary, the Transcript link and Steno's keys")
     func processingRecorded() {
         var note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, timeZone: rome)
 
         note.recordProcessing(
-            stenoID: stenoID, duration: 47 * 60 + 10, language: "it", transcriptionProvider: "Locale",
-            transcriptName: "2026-10-04 1430 - Riunione (trascrizione)",
-            summary: .written(text: "## Sintesi\nBudget approvato.", template: "Generico", provider: "Mistral EU")
+            stenoID: stenoID, duration: 47 * 60 + 10, language: "it", transcriptionProvider: "Local",
+            transcriptName: "2026-10-04 1430 - Meeting (transcript)",
+            summary: .written(text: "### Budget\n- Approved.", template: "Notes", provider: "Mistral EU")
         )
 
         #expect(note.content == """
             ---
             steno_id: 6F1C2A00-0000-4000-8000-000000000001
-            data: 2026-10-04T14:30
-            tags: [riunione]
-            durata: 47m
-            provider_trascrizione: Locale
-            trascrizione: "[[2026-10-04 1430 - Riunione (trascrizione)]]"
-            lingua: it
-            template: Generico
-            provider_riepilogo: Mistral EU
+            date: 2026-10-04T14:30
+            tags: [meeting]
+            duration: 47m
+            transcription_provider: Local
+            transcript: "[[2026-10-04 1430 - Meeting (transcript)]]"
+            language: it
+            template: Notes
+            summary_provider: Mistral EU
             ---
-            %% steno:inizio %%
-            ## Sintesi
-            Budget approvato.
+            %% steno:start %%
+            ### Budget
+            - Approved.
 
-            Trascrizione completa: [[2026-10-04 1430 - Riunione (trascrizione)]]
-            %% steno:fine %%
+            Full transcript: [[2026-10-04 1430 - Meeting (transcript)]]
+            %% steno:end %%
 
-            ## Note personali
+            ## Personal notes
 
 
             """)
     }
 
-    @Test("se il Riepilogo fallisce la Zona gestita mostra il motivo e il link alla Trascrizione")
+    @Test("if the Summary fails the managed section shows the reason and the Transcript link")
     func summaryFailed() {
         var note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, timeZone: rome)
 
         note.recordProcessing(
-            stenoID: stenoID, duration: 60, language: "it", transcriptionProvider: "Locale", transcriptName: "T",
-            summary: .failed(reason: "Il provider ha risposto con l'errore 401: chiave non valida")
+            stenoID: stenoID, duration: 60, language: "it", transcriptionProvider: "Local", transcriptName: "T",
+            summary: .failed(reason: "The provider answered with error 401: invalid key")
         )
 
         #expect(note.content.contains("""
-            %% steno:inizio %%
-            ⚠️ Riepilogo non generato: Il provider ha risposto con l'errore 401: chiave non valida
+            %% steno:start %%
+            ⚠️ Summary not generated: The provider answered with error 401: invalid key
 
-            Trascrizione completa: [[T]]
-            %% steno:fine %%
+            Full transcript: [[T]]
+            %% steno:end %%
             """))
-        #expect(!note.content.contains("provider_riepilogo"))
+        #expect(!note.content.contains("summary_provider"))
     }
 
-    @Test("la durata si scrive in minuti, con le ore oltre i 60 minuti", arguments: [
+    @Test("the duration is written in minutes, with hours past 60 minutes", arguments: [
         (20.0, "1m"),
         (47.0 * 60 + 29, "47m"),
         (65.0 * 60, "1h 05m"),
@@ -315,67 +324,130 @@ struct MeetingNoteTests {
         var note = MeetingNote(content: "")
 
         note.recordProcessing(
-            stenoID: stenoID, duration: seconds, language: nil, transcriptionProvider: "Locale", transcriptName: "T",
+            stenoID: stenoID, duration: seconds, language: nil, transcriptionProvider: "Local", transcriptName: "T",
             summary: .failed(reason: "-")
         )
 
-        #expect(note.content.contains("durata: \(expected)\n"))
-        #expect(!note.content.contains("lingua:"))
+        #expect(note.content.contains("duration: \(expected)\n"))
+        #expect(!note.content.contains("language:"))
     }
 
-    @Test("se l'utente ha cancellato il frontmatter, lo steno_id viene ripristinato")
+    @Test("if the user deleted the frontmatter, steno_id is restored")
     func stenoIDRestored() {
-        var note = MeetingNote(content: "Solo appunti.")
+        var note = MeetingNote(content: "Just notes.")
 
         note.recordProcessing(
-            stenoID: stenoID, duration: 60, language: "it", transcriptionProvider: "Locale", transcriptName: "T",
+            stenoID: stenoID, duration: 60, language: "it", transcriptionProvider: "Local", transcriptName: "T",
             summary: .failed(reason: "-")
         )
 
         #expect(note.stenoID == stenoID)
-        #expect(note.personalNotes == "Solo appunti.")
+        #expect(note.personalNotes == "Just notes.")
     }
 
-    @Test("se l'Elaborazione fallisce la Zona gestita mostra il motivo")
+    @Test("if Processing fails the managed section shows the reason")
     func failureRecorded() {
         var note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, timeZone: rome)
 
-        note.recordFailure(stenoID: stenoID, reason: "Trascrizione non riuscita: modello non disponibile.")
+        note.recordFailure(stenoID: stenoID, reason: "Transcription failed: model unavailable.")
 
         #expect(note.content.contains("""
-            %% steno:inizio %%
-            ⚠️ Trascrizione non riuscita: modello non disponibile.
-            %% steno:fine %%
+            %% steno:start %%
+            ⚠️ Transcription failed: model unavailable.
+            %% steno:end %%
             """))
     }
 
-    @Test("un marcatore nel testo da scrivere viene tolto: non deve poter chiudere la Zona gestita")
-    func markersInBodyAreRemoved() {
-        var note = MeetingNote(content: "%% steno:inizio %%\nVecchio.\n%% steno:fine %%\n\nAppunti.")
-
-        note.replaceManagedSection(with: "Riepilogo.\n%% steno:fine %%\nAltro.")
-
-        #expect(note.content == "%% steno:inizio %%\nRiepilogo.\nAltro.\n%% steno:fine %%\n\nAppunti.")
-    }
-
-    @Test("la Rigenerazione cambia Riepilogo, Template e provider ma lascia durata, lingua e Trascrizione")
+    @Test("Regeneration changes Summary, Template and provider but keeps duration, language and Transcript")
     func regeneration() {
         var note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, timeZone: rome)
         note.recordProcessing(
-            stenoID: stenoID, duration: 600, language: "it", transcriptionProvider: "Locale", transcriptName: "T",
-            summary: .written(text: "Vecchio.", template: "Generico", provider: "OpenRouter")
+            stenoID: stenoID, duration: 600, language: "it", transcriptionProvider: "Local", transcriptName: "T",
+            summary: .written(text: "Old.", template: "Notes", provider: "OpenRouter")
         )
 
         note.recordRegeneration(
             stenoID: stenoID, transcriptName: "T",
-            summary: .written(text: "## Retro\nNuovo.", template: "Retro", provider: "Mistral UE")
+            summary: .written(text: "### Retro\nNew.", template: "Retro", provider: "Mistral EU")
         )
 
-        #expect(note.content.contains("durata: 10m\n"))
-        #expect(note.content.contains("lingua: it\n"))
+        #expect(note.content.contains("duration: 10m\n"))
+        #expect(note.content.contains("language: it\n"))
         #expect(note.content.contains("template: Retro\n"))
-        #expect(note.content.contains("provider_riepilogo: Mistral UE\n"))
-        #expect(note.content.contains("%% steno:inizio %%\n## Retro\nNuovo.\n\nTrascrizione completa: [[T]]\n%% steno:fine %%"))
-        #expect(!note.content.contains("Vecchio."))
+        #expect(note.content.contains("summary_provider: Mistral EU\n"))
+        #expect(note.content.contains("%% steno:start %%\n### Retro\nNew.\n\nFull transcript: [[T]]\n%% steno:end %%"))
+        #expect(!note.content.contains("Old."))
+    }
+
+    // MARK: - Notes written before the English rewrite
+
+    @Test("Italian markers from older notes are recognised and rewritten in English, in place")
+    func legacyMarkers() {
+        var note = MeetingNote(content: """
+            ---
+            steno_id: 1
+            ---
+            %% steno:inizio %%
+            Vecchio riepilogo.
+            %% steno:fine %%
+
+            ## Note personali
+
+            - appunto
+            """)
+
+        note.replaceManagedSection(with: "New summary.")
+
+        #expect(note.content == """
+            ---
+            steno_id: 1
+            ---
+            %% steno:start %%
+            New summary.
+            %% steno:end %%
+
+            ## Note personali
+
+            - appunto
+            """)
+        #expect(note.personalNotes == "- appunto")
+    }
+
+    @Test("Italian frontmatter keys are replaced by their English names, in place and without duplicates")
+    func legacyKeys() {
+        var note = MeetingNote(content: """
+            ---
+            steno_id: 1
+            data: 2026-10-04T14:30
+            tags: [riunione]
+            durata: 12m
+            provider_trascrizione: Locale
+            trascrizione: "[[Vecchia (trascrizione)]]"
+            lingua: it
+            template: Generico
+            provider_riepilogo: OpenRouter
+            ---
+            Body.
+            """)
+
+        note.recordRegeneration(
+            stenoID: UUID(uuidString: "6F1C2A00-0000-4000-8000-000000000001")!, transcriptName: "Vecchia (trascrizione)",
+            summary: .written(text: "New.", template: "Notes", provider: "Mistral EU")
+        )
+        note.setFrontmatter([(.duration, "12m"), (.transcriptionProvider, "Local"), (.language, "it")])
+
+        #expect(note.content.hasPrefix("""
+            ---
+            steno_id: 6F1C2A00-0000-4000-8000-000000000001
+            data: 2026-10-04T14:30
+            tags: [riunione]
+            duration: 12m
+            transcription_provider: Local
+            trascrizione: "[[Vecchia (trascrizione)]]"
+            language: it
+            template: Notes
+            summary_provider: Mistral EU
+            ---
+            """))
     }
 }

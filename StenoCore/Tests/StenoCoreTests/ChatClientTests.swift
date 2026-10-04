@@ -2,7 +2,7 @@ import Foundation
 import Testing
 import StenoCore
 
-/// Registra le richieste e restituisce risposte preparate: nessuna chiamata di rete.
+/// Records requests and returns prepared replies: no network calls.
 final class StubTransport: @unchecked Sendable {
     private(set) var requests: [URLRequest] = []
     private let respond: (Int) -> (status: Int, body: String)
@@ -11,7 +11,7 @@ final class StubTransport: @unchecked Sendable {
         respond = { _ in (status, body) }
     }
 
-    /// `reply(n)` è il testo della risposta alla richiesta numero `n` (da 0).
+    /// `reply(n)` is the text of the reply to request number `n` (from 0).
     init(reply: @escaping (Int) -> String) {
         respond = { index in
             let content = String(data: try! JSONEncoder().encode(reply(index)), encoding: .utf8)!
@@ -26,7 +26,7 @@ final class StubTransport: @unchecked Sendable {
         return (Data(body.utf8), response)
     }
 
-    /// Il testo del messaggio `role` della richiesta numero `index`.
+    /// The text of the `role` message of request number `index`.
     func message(_ index: Int, _ role: String) -> String? {
         guard let body = requests[index].httpBody,
               let json = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
@@ -36,11 +36,11 @@ final class StubTransport: @unchecked Sendable {
     }
 }
 
-@Suite("Client compatibile OpenAI")
+@Suite("OpenAI-compatible client")
 struct ChatClientTests {
-    let messages = [ChatMessage(role: .system, content: "Sei Steno."), ChatMessage(role: .user, content: "Riassumi.")]
+    let messages = [ChatMessage(role: .system, content: "You are Steno."), ChatMessage(role: .user, content: "Summarise.")]
 
-    @Test("la richiesta va a chat/completions con modello, messaggi e chiave")
+    @Test("the request goes to chat/completions with model, messages and key")
     func request() async throws {
         let stub = StubTransport(body: #"{"choices":[{"message":{"role":"assistant","content":"Ok."}}]}"#)
         let client = ChatClient(
@@ -58,34 +58,34 @@ struct ChatClientTests {
         let body = try #require(JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
         #expect(body["model"] as? String == "openai/gpt-6-luna")
         let sent = try #require(body["messages"] as? [[String: String]])
-        #expect(sent == [["role": "system", "content": "Sei Steno."], ["role": "user", "content": "Riassumi."]])
+        #expect(sent == [["role": "system", "content": "You are Steno."], ["role": "user", "content": "Summarise."]])
     }
 
-    @Test("senza chiave (server locale) non c'è l'intestazione Authorization; la risposta è ripulita dagli spazi")
+    @Test("without a key (local server) there is no Authorization header; the reply is trimmed")
     func localServer() async throws {
-        let stub = StubTransport(body: #"{"choices":[{"message":{"role":"assistant","content":"\n  ## Sintesi\nTutto ok.\n\n"}}]}"#)
+        let stub = StubTransport(body: #"{"choices":[{"message":{"role":"assistant","content":"\n  ### Topics\nAll good.\n\n"}}]}"#)
         let client = ChatClient(
             baseURL: URL(string: "http://localhost:8080/v1/")!, apiKey: nil, model: "locale", transport: stub.send
         )
 
         let reply = try await client.complete(messages)
 
-        #expect(reply == "## Sintesi\nTutto ok.")
+        #expect(reply == "### Topics\nAll good.")
         #expect(stub.requests.first?.url?.absoluteString == "http://localhost:8080/v1/chat/completions")
         #expect(stub.requests.first?.value(forHTTPHeaderField: "Authorization") == nil)
     }
 
-    @Test("un errore HTTP riporta lo stato e il messaggio del provider")
+    @Test("an HTTP error carries the status and the provider's message")
     func httpError() async {
         let stub = StubTransport(status: 401, body: #"{"error":{"message":"No auth credentials found","code":401}}"#)
-        let client = ChatClient(baseURL: URL(string: "https://x.example/v1")!, apiKey: "sbagliata", model: "m", transport: stub.send)
+        let client = ChatClient(baseURL: URL(string: "https://x.example/v1")!, apiKey: "wrong", model: "m", transport: stub.send)
 
         await #expect(throws: ChatClient.Failure.http(status: 401, message: "No auth credentials found")) {
             try await client.complete(messages)
         }
     }
 
-    @Test("un errore HTTP senza corpo JSON riporta il testo grezzo")
+    @Test("an HTTP error without a JSON body carries the raw text")
     func httpErrorWithoutJSON() async {
         let stub = StubTransport(status: 502, body: "Bad Gateway")
         let client = ChatClient(baseURL: URL(string: "https://x.example/v1")!, apiKey: nil, model: "m", transport: stub.send)
@@ -95,11 +95,11 @@ struct ChatClientTests {
         }
     }
 
-    @Test("una risposta senza testo è un errore, non un Riepilogo vuoto", arguments: [
+    @Test("a reply without text is an error, not an empty Summary", arguments: [
         #"{"choices":[{"message":{"role":"assistant","content":"   "}}]}"#,
         #"{"choices":[{"message":{"role":"assistant","content":null}}]}"#,
         #"{"choices":[]}"#,
-        "non è JSON",
+        "not JSON",
     ])
     func emptyReply(body: String) async {
         let stub = StubTransport(body: body)
@@ -110,9 +110,9 @@ struct ChatClientTests {
         }
     }
 
-    @Test("una risposta troncata per limite di lunghezza è un errore, non un Riepilogo a metà")
+    @Test("a reply cut off by the length limit is an error, not half a Summary")
     func truncated() async {
-        let stub = StubTransport(body: ###"{"choices":[{"message":{"role":"assistant","content":"## Sintesi\nIl budget"},"finish_reason":"length"}]}"###)
+        let stub = StubTransport(body: ####"{"choices":[{"message":{"role":"assistant","content":"### Topics\nThe budget"},"finish_reason":"length"}]}"####)
         let client = ChatClient(baseURL: URL(string: "https://x.example/v1")!, apiKey: nil, model: "m", transport: stub.send)
 
         await #expect(throws: ChatClient.Failure.truncated) {

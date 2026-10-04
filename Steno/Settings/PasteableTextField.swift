@@ -1,8 +1,8 @@
 import AppKit
 import SwiftUI
 
-/// Campo di testo in cui ⌘V, ⌘C, ⌘X, ⌘A e ⌘Z funzionano sempre. Le app che vivono solo nella
-/// barra dei menu non hanno il menu Composizione, e senza quello i campi SwiftUI ignorano le scorciatoie.
+/// Text field where ⌘V, ⌘C, ⌘X, ⌘A and ⌘Z always work. Apps that live only in the menu bar
+/// have no Edit menu, and without it SwiftUI fields ignore those shortcuts.
 struct PasteableTextField: NSViewRepresentable {
     let placeholder: String
     @Binding var text: String
@@ -12,7 +12,7 @@ struct PasteableTextField: NSViewRepresentable {
         let field: NSTextField = isSecure ? ShortcutSecureTextField() : ShortcutTextField()
         field.placeholderString = placeholder
         field.delegate = context.coordinator
-        // Stesso aspetto dei campi SwiftUI in un Form raggruppato: senza bordo, allineato a destra.
+        // Same look as SwiftUI fields in a grouped Form: borderless, right-aligned.
         field.isBordered = false
         field.isBezeled = false
         field.drawsBackground = false
@@ -41,7 +41,7 @@ struct PasteableTextField: NSViewRepresentable {
     }
 }
 
-/// Inoltra le scorciatoie di modifica all'editor del campo, al posto del menu Composizione che manca.
+/// Forwards the editing shortcuts to the field editor, in place of the missing Edit menu.
 private func handleEditingShortcut(_ event: NSEvent, in field: NSTextField) -> Bool {
     guard event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
           let key = event.charactersIgnoringModifiers?.lowercased(),

@@ -1,10 +1,10 @@
 import Foundation
 @preconcurrency import WhisperKit
 
-/// Whisper locale tramite WhisperKit: un solo modello caricato per tutta l'app,
-/// una richiesta alla volta.
+/// Local Whisper through WhisperKit: a single model loaded for the whole app,
+/// one request at a time.
 actor LocalTranscriber {
-    /// Riconosciuto in un buffer audio, con tempi relativi all'inizio del buffer.
+    /// Recognised in an audio buffer, with times relative to the start of the buffer.
     struct RecognizedText: Sendable {
         let start: TimeInterval
         let end: TimeInterval
@@ -14,17 +14,18 @@ actor LocalTranscriber {
     static let model = "openai_whisper-large-v3-v20240930_turbo_632MB"
 
     static var modelsDirectory: URL {
-        URL.applicationSupportDirectory.appending(path: "Steno/Modelli", directoryHint: .isDirectory)
+        URL.applicationSupportDirectory.appending(path: "Steno/Models", directoryHint: .isDirectory)
     }
 
-    /// Le Riunioni sono in italiano o in inglese: la lingua si sceglie solo tra queste.
+    /// Meetings are in Italian or English: language detection picks only between these
+    /// (a Template can still ask for a Summary in any language).
     static let supportedLanguages = ["it", "en"]
 
     private var whisperKit: WhisperKit?
     private var isBusy = false
     private var waiting: [CheckedContinuation<Void, Never>] = []
 
-    /// Scarica il modello al primo uso e lo carica in memoria. Le chiamate successive sono immediate.
+    /// Downloads the model on first use and loads it in memory. Later calls are immediate.
     func prepare() async throws {
         await acquire()
         defer { release() }
@@ -43,8 +44,8 @@ actor LocalTranscriber {
     func transcribe(_ samples: [Float], language: String) async throws -> [RecognizedText] {
         await acquire()
         defer { release() }
-        // Il parlato è già garantito dai tratti passati da MeetingTranscription: la soglia
-        // "nessun parlato" di Whisper scarterebbe solo l'audio degradato (voci passate da un telefono).
+        // Speech is already guaranteed by the ranges MeetingTranscription passes in: Whisper's
+        // "no speech" threshold would only drop degraded audio (voices coming through a phone).
         let options = DecodingOptions(
             language: language,
             detectLanguage: false,
@@ -72,7 +73,7 @@ actor LocalTranscriber {
         return loaded
     }
 
-    // WhisperKit non garantisce richieste concorrenti sicure: una alla volta, in ordine d'arrivo.
+    // WhisperKit does not guarantee safe concurrent requests: one at a time, in arrival order.
 
     private func acquire() async {
         guard isBusy else {

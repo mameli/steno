@@ -2,7 +2,7 @@ import AppKit
 import StenoCore
 import SwiftUI
 
-/// Finestra Impostazioni essenziale: Vault, Template di default, Profili per il Riepilogo.
+/// Minimal Settings window: Vault, Templates, Provider Profiles for the Summary.
 struct SettingsView: View {
     @State private var vaultPath = AppSettings.vaultPath ?? ""
     @State private var profiles = AppSettings.summaryProfiles
@@ -12,14 +12,14 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Vault Obsidian") {
-                LabeledContent("Cartella") {
+            Section("Obsidian Vault") {
+                LabeledContent("Folder") {
                     HStack {
-                        Text(vaultPath.isEmpty ? "Nessuna" : vaultPath)
+                        Text(vaultPath.isEmpty ? String(localized: "None") : vaultPath)
                             .lineLimit(1)
                             .truncationMode(.middle)
                             .foregroundStyle(vaultPath.isEmpty ? .secondary : .primary)
-                        Button("Scegli…", action: chooseVault)
+                        Button("Choose…", action: chooseVault)
                     }
                 }
             }
@@ -28,7 +28,7 @@ struct SettingsView: View {
 
             Section {
                 if profiles.isEmpty {
-                    Text("Nessun Profilo. Aggiungine uno per generare i Riepiloghi.")
+                    Text("No Profile yet. Add one to generate Summaries.")
                         .foregroundStyle(.secondary)
                 }
                 ForEach(profiles) { profile in
@@ -41,15 +41,15 @@ struct SettingsView: View {
                     .onTapGesture { selectedProfileID = profile.id }
                 }
                 HStack {
-                    Button("Aggiungi Profilo", action: addProfile)
+                    Button("Add Profile", action: addProfile)
                     Spacer()
-                    Button("Elimina", role: .destructive, action: deleteSelectedProfile)
+                    Button("Delete", role: .destructive, action: deleteSelectedProfile)
                         .disabled(selectedProfileID == nil)
                 }
             } header: {
-                Text("Profili per il Riepilogo")
+                Text("Summary Profiles")
             } footer: {
-                Text("Qualsiasi server con API compatibile OpenAI. Per le riunioni di lavoro usa solo Provider locali o con sede e dati in UE.")
+                Text("Any server with an OpenAI-compatible API. For work meetings use only local Providers or Providers based and hosting data in the EU.")
                     .foregroundStyle(.secondary)
             }
 
@@ -73,10 +73,11 @@ struct SettingsView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Usa questo Vault"
+        panel.prompt = String(localized: "Use this Vault")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         vaultPath = url.path(percentEncoded: false)
         AppSettings.vaultPath = vaultPath
+        Vault.configured?.migrateLegacyLayout()
         try? Vault.configured?.ensureDefaultTemplate()
     }
 
@@ -98,10 +99,10 @@ struct SettingsView: View {
     }
 }
 
-/// I Template del Vault: si creano qui e si scrivono in Obsidian, come le altre note.
+/// The Vault's Templates: created here and written in Obsidian, like the other notes.
 private struct TemplatesSection: View {
     @Binding var defaultTemplate: String
-    /// Cambia quando si sceglie un altro Vault: l'elenco va riletto.
+    /// Changes when another Vault is chosen: the list must be read again.
     let vaultPath: String
     @State private var names: [String] = []
     @State private var newName = ""
@@ -111,9 +112,9 @@ private struct TemplatesSection: View {
     var body: some View {
         Section {
             if Vault.configured == nil {
-                Text("Scegli prima il Vault.").foregroundStyle(.secondary)
+                Text("Choose the Vault first.").foregroundStyle(.secondary)
             } else {
-                Picker("Template di default", selection: $defaultTemplate) {
+                Picker("Default Template", selection: $defaultTemplate) {
                     ForEach(Vault.templateChoices(including: defaultTemplate), id: \.self) { Text($0).tag($0) }
                 }
                 .onChange(of: defaultTemplate) { AppSettings.defaultTemplate = defaultTemplate }
@@ -125,15 +126,15 @@ private struct TemplatesSection: View {
                             Text("Default").font(.caption).foregroundStyle(.green)
                         }
                         Spacer()
-                        Button("Apri in Obsidian") { open(name) }
-                        Button("Elimina", role: .destructive) { pendingDeletion = name }
+                        Button("Open in Obsidian") { open(name) }
+                        Button("Delete", role: .destructive) { pendingDeletion = name }
                     }
                 }
 
-                LabeledContent("Nuovo Template") {
+                LabeledContent("New Template") {
                     HStack {
-                        PasteableTextField(placeholder: "es. 1:1 settimanale", text: $newName)
-                        Button("Crea e apri", action: create)
+                        PasteableTextField(placeholder: String(localized: "e.g. Weekly 1:1"), text: $newName)
+                        Button("Create and open", action: create)
                             .disabled(newName.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                 }
@@ -142,22 +143,22 @@ private struct TemplatesSection: View {
                 }
             }
         } header: {
-            Text("Template")
+            Text("Templates")
         } footer: {
-            Text("Un Template nuovo parte da Appunti: in Obsidian cambi istruzioni e sezioni. Sono in Meetings/_Template/ nel Vault.")
+            Text("A new Template starts from Notes: change instructions and sections in Obsidian. They live in Meetings/_Templates/ in the Vault.")
                 .foregroundStyle(.secondary)
         }
         .onAppear(perform: reload)
         .onChange(of: vaultPath) { reload() }
         .confirmationDialog(
-            "Spostare il Template \"\(pendingDeletion ?? "")\" nel Cestino?",
+            String(localized: "Move the Template \"\(pendingDeletion ?? "")\" to the Trash?"),
             isPresented: Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } })
         ) {
-            Button("Sposta nel Cestino", role: .destructive) {
+            Button("Move to Trash", role: .destructive) {
                 if let name = pendingDeletion { delete(name) }
             }
         } message: {
-            Text("Le Riunioni che lo usavano passano al Template Appunti.")
+            Text("Meetings that used it switch to the Notes Template.")
         }
     }
 
@@ -171,7 +172,7 @@ private struct TemplatesSection: View {
             let name = try vault.createTemplate(named: newName)
             newName = ""
             reload()
-            status = "Creato \"\(name)\": modificalo in Obsidian."
+            status = String(localized: "Created \"\(name)\": edit it in Obsidian.")
             open(name)
         } catch {
             status = error.localizedDescription
@@ -190,7 +191,7 @@ private struct TemplatesSection: View {
             if defaultTemplate == name { defaultTemplate = Template.defaultName }
             try? vault.ensureDefaultTemplate()
             reload()
-            status = "\"\(name)\" è nel Cestino."
+            status = String(localized: "\"\(name)\" is in the Trash.")
         } catch {
             status = error.localizedDescription
         }
@@ -209,13 +210,13 @@ private struct ProfileRow: View {
                 .foregroundStyle(isSelected ? Color.accentColor : .secondary)
             VStack(alignment: .leading) {
                 Text(profile.displayName)
-                Text(profile.model.isEmpty ? "Da configurare" : profile.model)
+                Text(profile.model.isEmpty ? String(localized: "To be configured") : profile.model)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
             if isActive {
-                Text("In uso").font(.caption).foregroundStyle(.green)
+                Text("In use").font(.caption).foregroundStyle(.green)
             }
         }
     }
@@ -232,30 +233,32 @@ private struct ProfileEditor: View {
 
     var body: some View {
         Section {
-            LabeledContent("Nome") {
-                PasteableTextField(placeholder: "es. Mistral UE", text: $profile.name)
+            LabeledContent("Name") {
+                PasteableTextField(placeholder: String(localized: "e.g. Mistral EU"), text: $profile.name)
             }
-            LabeledContent("URL base") {
-                PasteableTextField(placeholder: "es. https://api.mistral.ai/v1", text: $profile.baseURL)
+            LabeledContent("Base URL") {
+                PasteableTextField(placeholder: String(localized: "e.g. https://api.mistral.ai/v1"), text: $profile.baseURL)
             }
-            LabeledContent("Modello") {
-                PasteableTextField(placeholder: "es. mistral-medium-latest", text: $profile.model)
+            LabeledContent("Model") {
+                PasteableTextField(placeholder: String(localized: "e.g. mistral-medium-latest"), text: $profile.model)
             }
-            TextField("Contesto massimo (token)", value: $profile.maxContextTokens, format: .number)
+            TextField("Max context (tokens)", value: $profile.maxContextTokens, format: .number)
 
-            // L'unico punto in cui si inserisce la chiave: si salva nel Portachiavi appena incollata.
-            LabeledContent("Chiave API") {
+            // The only place where the key is entered: it is saved to the Keychain as soon as it is pasted.
+            LabeledContent("API key") {
                 HStack {
                     PasteableTextField(
-                        placeholder: hasStoredKey ? "Salvata nel Portachiavi · incolla qui per sostituirla" : "Incolla qui la chiave",
+                        placeholder: hasStoredKey
+                            ? String(localized: "Saved in the Keychain · paste here to replace it")
+                            : String(localized: "Paste the key here"),
                         text: $apiKey,
                         isSecure: true
                     )
                     if hasStoredKey && apiKey.isEmpty {
-                        Button("Rimuovi", role: .destructive) {
+                        Button("Remove", role: .destructive) {
                             Keychain.deleteAPIKey(for: profile.id)
                             hasStoredKey = false
-                            status = "Chiave rimossa."
+                            status = String(localized: "Key removed.")
                         }
                     }
                 }
@@ -263,23 +266,23 @@ private struct ProfileEditor: View {
             .onChange(of: apiKey) { saveKey() }
 
             HStack {
-                Button("Prova connessione") { Task { await test() } }
+                Button("Test connection") { Task { await test() } }
                     .disabled(isTesting || profile.baseURL.isEmpty || profile.model.isEmpty)
                 if isTesting { ProgressView().controlSize(.small) }
                 Spacer()
                 if isActive {
-                    Text("In uso per i Riepiloghi").foregroundStyle(.green)
+                    Text("Used for Summaries").foregroundStyle(.green)
                 } else {
-                    Button("Usa per i Riepiloghi", action: activate)
+                    Button("Use for Summaries", action: activate)
                 }
             }
             if let status {
                 Text(status).foregroundStyle(.secondary).textSelection(.enabled)
             }
         } header: {
-            Text("Profilo: \(profile.displayName)")
+            Text("Profile: \(profile.displayName)")
         } footer: {
-            Text("Le modifiche si salvano da sole mentre scrivi. La chiave va nel Portachiavi appena la incolli.")
+            Text("Changes are saved as you type. The key goes to the Keychain as soon as you paste it.")
                 .foregroundStyle(.secondary)
         }
         .onAppear { hasStoredKey = Keychain.apiKey(for: profile.id) != nil }
@@ -290,7 +293,7 @@ private struct ProfileEditor: View {
         do {
             try Keychain.setAPIKey(apiKey, for: profile.id)
             hasStoredKey = true
-            status = "Chiave salvata nel Portachiavi."
+            status = String(localized: "Key saved in the Keychain.")
         } catch {
             status = error.localizedDescription
         }
@@ -301,9 +304,9 @@ private struct ProfileEditor: View {
         defer { isTesting = false }
         do {
             let reply = try await ChatClient(profile: profile).complete([
-                ChatMessage(role: .user, content: "Rispondi solo con la parola OK."),
+                ChatMessage(role: .user, content: "Reply with the word OK only."),
             ])
-            status = "Funziona. Risposta: \(reply.prefix(40))"
+            status = String(localized: "It works. Reply: \(String(reply.prefix(40)))")
         } catch {
             status = error.localizedDescription
         }

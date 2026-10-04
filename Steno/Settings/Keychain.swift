@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// Le chiavi API dei Profili, nel Portachiavi di macOS (mai su file o in UserDefaults).
+/// The Profiles' API keys, in the macOS Keychain (never in files or UserDefaults).
 enum Keychain {
     private static let service = "dev.mameli.steno"
 
@@ -14,8 +14,8 @@ enum Keychain {
         return String(data: data, encoding: .utf8)
     }
 
-    /// Salva la chiave, o la cancella se è vuota. La chiave precedente resta finché la nuova
-    /// non è salvata: se il salvataggio fallisce non si perdono entrambe.
+    /// Saves the key, or deletes it if empty. The previous key stays until the new one is
+    /// saved: if saving fails, both are not lost.
     static func setAPIKey(_ key: String, for profile: UUID) throws {
         let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
@@ -27,7 +27,7 @@ enum Keychain {
         if status == errSecItemNotFound {
             var item = baseQuery(profile)
             item[kSecValueData as String] = data
-            item[kSecAttrLabel as String] = "Steno: chiave API del Profilo"
+            item[kSecAttrLabel as String] = "Steno: Profile API key"
             status = SecItemAdd(item as CFDictionary, nil)
         }
         guard status == errSecSuccess else { throw KeychainError(status: status) }
@@ -50,7 +50,7 @@ struct KeychainError: LocalizedError {
     let status: OSStatus
 
     var errorDescription: String? {
-        let message = SecCopyErrorMessageString(status, nil) as String? ?? "codice \(status)"
-        return "Portachiavi: \(message)"
+        let message = SecCopyErrorMessageString(status, nil) as String? ?? String(localized: "code \(status)")
+        return String(localized: "Keychain: \(message)")
     }
 }

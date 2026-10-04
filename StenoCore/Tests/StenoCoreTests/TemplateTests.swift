@@ -1,61 +1,110 @@
 import Testing
 import StenoCore
 
-@Suite("Template del Riepilogo")
+@Suite("Summary Template")
 struct TemplateTests {
-    @Test("dal file si leggono nome, lingua del Riepilogo e corpo")
+    @Test("the file gives name, Summary language and body")
     func parse() {
-        let template = Template(fileName: "1-1 settimanale", content: """
+        let template = Template(fileName: "1-1 weekly", content: """
             ---
-            nome: 1:1 settimanale
-            lingua_riepilogo: it
+            name: 1:1 weekly
+            summary_language: it
             ---
-            Concentrati su blocchi e decisioni.
+            Focus on blockers and decisions.
 
-            ## Punti discussi
-            ## Azioni
+            ### Topics
+            ### Next steps
             """)
 
-        #expect(template.name == "1:1 settimanale")
+        #expect(template.name == "1:1 weekly")
         #expect(template.summaryLanguage == "it")
-        #expect(template.body == "Concentrati su blocchi e decisioni.\n\n## Punti discussi\n## Azioni")
+        #expect(template.body == "Focus on blockers and decisions.\n\n### Topics\n### Next steps")
     }
 
-    @Test("senza frontmatter il nome è quello del file e la lingua segue la Riunione")
+    @Test("without frontmatter the name is the file's and the language follows the Meeting")
     func withoutFrontmatter() {
-        let template = Template(fileName: "Retro", content: "## Cosa è andato bene\n## Cosa migliorare\n")
+        let template = Template(fileName: "Retro", content: "### What went well\n### What to improve\n")
 
         #expect(template.name == "Retro")
         #expect(template.summaryLanguage == nil)
-        #expect(template.body == "## Cosa è andato bene\n## Cosa migliorare")
+        #expect(template.body == "### What went well\n### What to improve")
     }
 
-    @Test("lingua_riepilogo auto o sconosciuta vuol dire: la lingua della Riunione", arguments: ["auto", "fr", ""])
-    func automaticLanguage(value: String) {
-        let template = Template(fileName: "T", content: "---\nlingua_riepilogo: \(value)\n---\nCorpo")
+    @Test("summary_language accepts any language code; auto or empty means the Meeting's language", arguments: [
+        ("fr", "fr"),
+        ("DE", "de"),
+        ("pt-BR", "pt-br"),
+        ("auto", nil),
+        ("", nil),
+        ("not a language", nil),
+    ] as [(String, String?)])
+    func language(value: String, expected: String?) {
+        let template = Template(fileName: "T", content: "---\nsummary_language: \(value)\n---\nBody")
 
-        #expect(template.summaryLanguage == nil)
+        #expect(template.summaryLanguage == expected)
     }
 
-    @Test("il Template predefinito Appunti chiede argomenti nell'ordine della Riunione e Prossimi passi in fondo")
+    @Test("Templates written before the English rewrite (nome, lingua_riepilogo) still work")
+    func legacyKeys() {
+        let template = Template(fileName: "Vecchio", content: "---\nnome: Settimanale\nlingua_riepilogo: en\n---\nCorpo")
+
+        #expect(template.name == "Settimanale")
+        #expect(template.summaryLanguage == "en")
+    }
+
+    @Test("the default Notes Template asks for topics in Meeting order and Next steps at the end")
     func defaultTemplate() {
-        let template = Template(fileName: "Appunti", content: Template.defaultFileContent)
+        let template = Template(fileName: "Notes", content: Template.defaultFileContent)
 
-        #expect(template.name == "Appunti")
+        #expect(template.name == "Notes")
         #expect(template.summaryLanguage == nil)
-        #expect(template.body.contains("nell'ordine in cui sono stati discussi"))
-        #expect(template.body.contains("### Prossimi passi"))
-        #expect(template.body.contains("- [ ] Cosa fare (Chi)"))
-        #expect(!template.body.contains("## Sintesi"))
+        #expect(template.body.contains("in the order they were discussed"))
+        #expect(template.body.contains("### Next steps"))
+        #expect(template.body.contains("- [ ] What to do (Who)"))
     }
 
-    @Test("un Template nuovo parte dal predefinito con il nome scelto")
+    @Test("a new Template starts from the default one with the chosen name")
     func newTemplate() {
-        let template = Template(fileName: "Retro sprint", content: Template.newFileContent(name: "Retro sprint"))
+        let template = Template(fileName: "Sprint retro", content: Template.newFileContent(name: "Sprint retro"))
         let base = Template(fileName: Template.defaultName, content: Template.defaultFileContent)
 
-        #expect(template.name == "Retro sprint")
+        #expect(template.name == "Sprint retro")
         #expect(template.summaryLanguage == nil)
         #expect(template.body == base.body)
+    }
+
+    @Test("the Italian default Template of earlier versions is recognised, so it can be replaced")
+    func legacyDefault() {
+        #expect(Template.isLegacyDefault(Template.legacyDefaultFileContent))
+        #expect(!Template.isLegacyDefault(Template.defaultFileContent))
+        #expect(!Template.isLegacyDefault(Template.legacyDefaultFileContent + "\nMy own extra rule."))
+    }
+
+    @Test("the Italian default exactly as the previous version wrote it to the Vault is recognised")
+    func legacyDefaultAsWritten() {
+        let writtenByPreviousVersion = """
+            ---
+            nome: Appunti
+            lingua_riepilogo: auto
+            ---
+            Scrivi gli appunti della riunione come li prenderebbe un collega attento, non un verbale.
+
+            - Dividi la riunione in argomenti, nell'ordine in cui sono stati discussi. Per ogni argomento un'intestazione `###` con un titolo breve e concreto.
+            - Sotto ogni argomento un elenco puntato: un punto per ogni idea, proposta, decisione o problema, con sotto-punti per motivi, dettagli, persone, cifre, date e link. Frasi brevi, niente premesse.
+            - Le decisioni stanno nell'argomento a cui appartengono, non in una sezione a parte.
+            - Niente sintesi iniziale e niente conclusioni generiche.
+
+            ### Prossimi passi
+            Un punto per ogni azione concordata, nella forma `- [ ] Cosa fare (Chi)`, con sotto un sotto-punto per contesto e scadenza quando ci sono.
+
+            """
+
+        #expect(Template.isLegacyDefault(writtenByPreviousVersion))
+    }
+
+    @Test("the default Templates contain no stray backslashes from line continuations")
+    func noStrayBackslashes() {
+        #expect(!Template.defaultFileContent.contains("\\"))
+        #expect(!Template.legacyDefaultFileContent.contains("\\"))
     }
 }

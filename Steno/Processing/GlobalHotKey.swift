@@ -1,13 +1,13 @@
 import Carbon.HIToolbox
 
-/// Scorciatoia da tastiera valida in qualsiasi app (⌃⌥⌘R per avviare e fermare la Riunione).
+/// Keyboard shortcut that works in any app (⌃⌥⌘R starts and stops the Meeting).
 ///
-/// Carbon chiama il gestore sul main thread; `action` non cambia dopo l'inizializzazione.
+/// Carbon calls the handler on the main thread; `action` never changes after init.
 final class GlobalHotKey: @unchecked Sendable {
     private var hotKey: EventHotKeyRef?
     private var handler: EventHandlerRef?
     private let action: @MainActor @Sendable () -> Void
-    /// Falso se un'altra app usa già la stessa combinazione.
+    /// False if another app already uses the same combination.
     private(set) var isRegistered = false
 
     init(

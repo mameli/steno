@@ -1,15 +1,14 @@
 import AppKit
 @preconcurrency import UserNotifications
 
-/// Notifiche di fine Elaborazione. Un clic su "Riepilogo pronto" apre la nota in Obsidian.
+/// End-of-Processing notifications. Clicking "Summary ready" opens the note in Obsidian.
 @MainActor
 final class Notifications: NSObject, UNUserNotificationCenterDelegate {
     static let shared = Notifications()
     private nonisolated static let noteKey = "notePath"
-
     private var isAuthorized = false
 
-    /// Chiede il permesso una volta, all'avvio dell'app.
+    /// Asks for permission once, at app launch.
     func configure() {
         let center = UNUserNotificationCenter.current()
         center.delegate = self
@@ -34,7 +33,7 @@ final class Notifications: NSObject, UNUserNotificationCenterDelegate {
         await MainActor.run { Vault.openInObsidian(URL(filePath: path)) }
     }
 
-    /// Steno non ha finestre in primo piano: senza questo le notifiche non comparirebbero mai.
+    /// Steno has no window in the foreground: without this, notifications would never show.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter, willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {

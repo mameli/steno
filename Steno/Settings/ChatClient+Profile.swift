@@ -2,8 +2,8 @@ import Foundation
 import StenoCore
 
 extension ChatClient {
-    /// Un modello locale lento può restare minuti senza mandare un byte prima di rispondere:
-    /// il timeout di default (60 s di silenzio) non basta.
+    /// A slow local model can go minutes without sending a byte before answering:
+    /// the default timeout (60 s of silence) is not enough.
     private static let session: URLSession = {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 900
@@ -17,7 +17,7 @@ extension ChatClient {
         else {
             throw ProfileError.invalidURL(profile.baseURL)
         }
-        // In chiaro solo verso questo Mac o la rete locale: altrimenti chiave e Trascrizione viaggerebbero leggibili.
+        // Plain HTTP only towards this Mac or the local network: otherwise key and Transcript would travel readable.
         guard scheme == "https" || ["localhost", "127.0.0.1", "::1"].contains(host) || host.hasSuffix(".local") else {
             throw ProfileError.insecureURL(profile.baseURL)
         }
@@ -36,9 +36,12 @@ enum ProfileError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidURL(let url): "URL del Profilo non valido: \"\(url)\" (serve http:// o https:// e un indirizzo)."
-        case .insecureURL(let url): "URL del Profilo in chiaro: \"\(url)\". Usa https://, http:// è ammesso solo per i server su questo Mac."
-        case .noActiveProfile: "Nessun Profilo per il Riepilogo: scegline uno nelle Impostazioni."
+        case .invalidURL(let url):
+            String(localized: "Invalid Profile URL: \"\(url)\" (http:// or https:// and an address are needed).")
+        case .insecureURL(let url):
+            String(localized: "Plain-text Profile URL: \"\(url)\". Use https://; http:// is allowed only for servers on this Mac.")
+        case .noActiveProfile:
+            String(localized: "No Profile for the Summary: choose one in Settings.")
         }
     }
 }

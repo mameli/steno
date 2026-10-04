@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>it</string>
+	<string>en</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -25,8 +25,8 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Steno registra la tua voce durante le riunioni per trascriverla.</string>
+	<string>Steno records your voice during meetings to transcribe it.</string>
 	<key>NSAudioCaptureUsageDescription</key>
-	<string>Steno registra l'audio degli altri partecipanti alle riunioni per trascriverlo.</string>
+	<string>Steno records the audio of the other meeting participants to transcribe it.</string>
 </dict>
 </plist>

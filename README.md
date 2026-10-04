@@ -1,22 +1,30 @@
 # Steno
 
-App macOS nella barra dei menu che registra le riunioni e ne scrive Trascrizione e Riepilogo in un vault Obsidian, con provider locali o ospitati in UE. Vedi [docs/SPEC.md](docs/SPEC.md) e il glossario in [CONTEXT.md](CONTEXT.md).
+macOS menu bar app that records meetings and writes their Transcript and Summary into an Obsidian Vault, using local providers or providers hosted in the EU. See [docs/SPEC.md](docs/SPEC.md), the glossary in [CONTEXT.md](CONTEXT.md) and the decisions in [docs/adr](docs/adr/).
 
 ## Build
 
-Richiede Xcode 16+ (il progetto usa cartelle sincronizzate) e macOS 15+.
+Requires Xcode 16+ (the project uses synchronized folders) and macOS 15+.
 
 ```sh
 xcodebuild -project Steno.xcodeproj -scheme Steno -derivedDataPath build/DerivedData build
 open build/DerivedData/Build/Products/Debug/Steno.app
 ```
 
-Test della logica di dominio:
+Domain logic tests:
 
 ```sh
 cd StenoCore && swift test
 ```
 
-## Firma
+## Signing
 
-Senza configurazione l'app è firmata ad-hoc e macOS può chiedere di nuovo i permessi a ogni build. Per una firma stabile copia `Config/Local.xcconfig.example` in `Config/Local.xcconfig` (ignorato da git) e inserisci il Team ID del tuo Personal Team.
+Without configuration the app is signed ad hoc and macOS may ask for the permissions again after every build. For a stable signature copy `Config/Local.xcconfig.example` to `Config/Local.xcconfig` (ignored by git) and fill in the Team ID of your Personal Team.
+
+## Localization
+
+User-facing strings are written in English in the code and translated in `Steno/Localizable.xcstrings` (Italian). New strings are picked up by Xcode at build time; `xcodebuild -exportLocalizations -project Steno.xcodeproj -localizationPath <folder> -exportLanguage it` lists them. Error messages raised in `StenoCore` are looked up in the app's catalog as well and must be added to it by hand.
+
+## Manual tests
+
+[docs/TESTING.md](docs/TESTING.md) lists the checks to run by hand.

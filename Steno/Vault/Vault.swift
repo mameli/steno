@@ -1,33 +1,65 @@
 import AppKit
 import StenoCore
 
-/// Il Vault Obsidian in cui Steno scrive le Note della Riunione e le Trascrizioni.
+/// The Obsidian Vault where Steno writes Meeting notes and Transcripts.
 struct Vault {
     let root: URL
 
     var meetingsFolder: URL { root.appending(path: "Meetings", directoryHint: .isDirectory) }
-    var transcriptsFolder: URL { meetingsFolder.appending(path: "Trascrizioni", directoryHint: .isDirectory) }
-    var templatesFolder: URL { meetingsFolder.appending(path: "_Template", directoryHint: .isDirectory) }
+    var transcriptsFolder: URL { meetingsFolder.appending(path: "Transcripts", directoryHint: .isDirectory) }
+    var templatesFolder: URL { meetingsFolder.appending(path: "_Templates", directoryHint: .isDirectory) }
 
-    /// I Template disponibili, per nome di file (senza `.md`), in ordine alfabetico.
+    static var configured: Vault? {
+        AppSettings.vaultPath.map { Vault(root: URL(filePath: $0, directoryHint: .isDirectory)) }
+    }
+
+    // MARK: - Layout written before the English rewrite
+
+    /// Moves the Italian layout of earlier versions to the English one: `Trascrizioni` →
+    /// `Transcripts`, `_Template` → `_Templates`, and the untouched Italian default Template
+    /// (`Appunti`) → the English one (`Notes`). Files are never overwritten.
+    func migrateLegacyLayout() {
+        moveContents(of: meetingsFolder.appending(path: "Trascrizioni", directoryHint: .isDirectory), to: transcriptsFolder)
+        moveContents(of: meetingsFolder.appending(path: "_Template", directoryHint: .isDirectory), to: templatesFolder)
+
+        let legacyDefault = templateURL(Template.legacyDefaultName)
+        if let content = try? String(contentsOf: legacyDefault, encoding: .utf8), Template.isLegacyDefault(content) {
+            try? FileManager.default.trashItem(at: legacyDefault, resultingItemURL: nil)
+            if AppSettings.defaultTemplate == Template.legacyDefaultName {
+                AppSettings.defaultTemplate = Template.defaultName
+            }
+        }
+    }
+
+    private func moveContents(of legacy: URL, to folder: URL) {
+        let files = (try? FileManager.default.contentsOfDirectory(at: legacy, includingPropertiesForKeys: nil)) ?? []
+        guard !files.isEmpty else { return }
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        for file in files {
+            let destination = folder.appending(path: file.lastPathComponent)
+            guard !FileManager.default.fileExists(atPath: destination.path(percentEncoded: false)) else { continue }
+            try? FileManager.default.moveItem(at: file, to: destination)
+        }
+        if (try? FileManager.default.contentsOfDirectory(atPath: legacy.path(percentEncoded: false)))?.isEmpty == true {
+            try? FileManager.default.removeItem(at: legacy)
+        }
+    }
+
+    // MARK: - Templates
+
+    /// The available Templates, by file name (without `.md`), in alphabetical order.
     func templateNames() -> [String] {
         Self.noteNames(in: templatesFolder).sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
-    /// I Template da proporre in un menu: quelli del Vault più quello già scelto, anche se nel frattempo è sparito.
+    /// The Templates to offer in a menu: the Vault's plus the one already chosen, even if it is gone meanwhile.
     static func templateChoices(including selected: String) -> [String] {
         let names = configured?.templateNames() ?? []
         return names.contains(selected) ? names : [selected] + names
     }
 
-    /// La nota è ancora nella cartella Meetings, dove Steno l'ha creata (non è stata spostata).
-    func isInMeetingsFolder(_ noteURL: URL) -> Bool {
-        noteURL.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
-            == meetingsFolder.resolvingSymlinksInPath().standardizedFileURL
-    }
-
-    /// Crea il Template predefinito (Appunti) se la cartella dei Template non ne contiene nessuno,
-    /// o se il Template di default delle Impostazioni non esiste più (in quel caso diventa Appunti).
+    /// Creates the default Template (Notes) if the Templates folder has none, or if the
+    /// default Template of the Settings no longer exists (then the default becomes Notes).
     func ensureDefaultTemplate() throws {
         let names = templateNames()
         guard names.isEmpty || !names.contains(AppSettings.defaultTemplate) else { return }
@@ -38,7 +70,7 @@ struct Vault {
         AppSettings.defaultTemplate = Template.defaultName
     }
 
-    /// Crea un Template nuovo partendo dal predefinito e restituisce il nome del file (senza `.md`).
+    /// Creates a new Template from the default one and returns its file name (without `.md`).
     func createTemplate(named name: String) throws -> String {
         guard let safeName = VaultNaming.fileName(name) else { throw VaultError.invalidName(name) }
         try FileManager.default.createDirectory(at: templatesFolder, withIntermediateDirectories: true)
@@ -48,7 +80,7 @@ struct Vault {
         return fileName
     }
 
-    /// Sposta il Template nel Cestino: si può recuperare.
+    /// Moves the Template to the Trash: it can be recovered.
     func trashTemplate(named name: String) throws {
         try FileManager.default.trashItem(at: templateURL(name), resultingItemURL: nil)
     }
@@ -57,7 +89,7 @@ struct Vault {
         templatesFolder.appending(path: name + ".md")
     }
 
-    /// Il Template con quel nome di file; se non c'è più, il predefinito.
+    /// The Template with that file name; if it is gone, the default one.
     func template(named name: String) -> Template {
         guard let content = try? String(contentsOf: templateURL(name), encoding: .utf8) else {
             return Template(fileName: Template.defaultName, content: Template.defaultFileContent)
@@ -65,27 +97,10 @@ struct Vault {
         return Template(fileName: name, content: content)
     }
 
-    /// Rinomina la nota (con suffisso " (2)" se il nome è occupato) e restituisce il nuovo percorso.
-    func rename(_ noteURL: URL, to name: String) throws -> URL {
-        let folder = noteURL.deletingLastPathComponent()
-        let current = noteURL.deletingPathExtension().lastPathComponent
-        let available = VaultNaming.available(name, taken: Self.noteNames(in: folder).subtracting([current]))
-        let destination = folder.appending(path: available + ".md")
-        guard destination != noteURL else { return noteURL }
-        try FileManager.default.moveItem(at: noteURL, to: destination)
-        return destination
-    }
+    // MARK: - Meeting notes and Transcripts
 
-    func meetingNote(at url: URL) throws -> MeetingNote {
-        MeetingNote(content: try String(contentsOf: url, encoding: .utf8))
-    }
-
-    static var configured: Vault? {
-        AppSettings.vaultPath.map { Vault(root: URL(filePath: $0, directoryHint: .isDirectory)) }
-    }
-
-    /// Crea la Nota della Riunione con il titolo provvisorio. Non crea mai la cartella del Vault:
-    /// se non c'è (volume non montato) fallisce, e la nota verrà creata a fine Elaborazione.
+    /// Creates the Meeting note with the provisional title. Never creates the Vault folder:
+    /// if it is missing (volume not mounted) it fails, and the note is created at the end of Processing.
     func createMeetingNote(stenoID: UUID, startedAt: Date) throws -> URL {
         guard FileManager.default.fileExists(atPath: root.path(percentEncoded: false)) else {
             throw VaultError.unreachable(root.path(percentEncoded: false))
@@ -101,24 +116,24 @@ struct Vault {
         return url
     }
 
-    /// La Nota della Riunione: al percorso noto o, se l'utente l'ha rinominata o spostata,
-    /// cercando il suo `steno_id` nella cartella Meetings (Trascrizioni escluse).
+    /// The Meeting note: at the known path or, if the user renamed or moved it, by looking
+    /// for its `steno_id` in the Meetings folder (Transcripts excluded).
     func findMeetingNote(stenoID: UUID, expected: URL?) -> URL? {
         if let expected, Self.belongs(expected, to: stenoID) { return expected }
         return Self.firstFile(in: meetingsFolder, excluding: transcriptsFolder) { Self.belongs($0, to: stenoID) }
     }
 
-    /// Il file della Trascrizione di una Riunione, ritrovato tramite `steno_id`.
+    /// The Transcript file of a Meeting, found by its `steno_id`.
     func findTranscript(stenoID: UUID) -> URL? {
         Self.firstFile(in: transcriptsFolder) { Self.belongs($0, to: stenoID) }
     }
 
-    /// Scrive la Trascrizione nel Vault. Se esiste già un file della stessa Riunione lo
-    /// sovrascrive, così una nuova Elaborazione non crea doppioni.
+    /// Writes the Transcript in the Vault. If a file of the same Meeting already exists it is
+    /// overwritten, so a new Processing does not create duplicates.
     func writeTranscript(_ transcript: Transcript, stenoID: UUID, meetingNoteName: String, language: String?) throws -> URL {
         try FileManager.default.createDirectory(at: transcriptsFolder, withIntermediateDirectories: true)
         let url = findTranscript(stenoID: stenoID) ?? {
-            let name = VaultNaming.available("\(meetingNoteName) (trascrizione)", taken: Self.noteNames(in: transcriptsFolder))
+            let name = VaultNaming.available("\(meetingNoteName) (transcript)", taken: Self.noteNames(in: transcriptsFolder))
             return transcriptsFolder.appending(path: name + ".md")
         }()
         let content = transcript.vaultFile(stenoID: stenoID, meetingNoteName: meetingNoteName, language: language)
@@ -126,9 +141,30 @@ struct Vault {
         return url
     }
 
-    /// Modifica una nota esistente. Se Obsidian la salva tra la lettura e la scrittura,
-    /// la rilegge e riapplica la modifica, così non si perde quello che l'utente ha appena scritto.
-    /// La scrittura avviene sul file stesso (non lo sostituisce): restano link simbolici e data di creazione.
+    /// The note is still in the Meetings folder, where Steno created it (it was not moved).
+    func isInMeetingsFolder(_ noteURL: URL) -> Bool {
+        noteURL.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
+            == meetingsFolder.resolvingSymlinksInPath().standardizedFileURL
+    }
+
+    /// Renames the note (with a " (2)" suffix if the name is taken) and returns the new path.
+    func rename(_ noteURL: URL, to name: String) throws -> URL {
+        let folder = noteURL.deletingLastPathComponent()
+        let current = noteURL.deletingPathExtension().lastPathComponent
+        let available = VaultNaming.available(name, taken: Self.noteNames(in: folder).subtracting([current]))
+        let destination = folder.appending(path: available + ".md")
+        guard destination != noteURL else { return noteURL }
+        try FileManager.default.moveItem(at: noteURL, to: destination)
+        return destination
+    }
+
+    func meetingNote(at url: URL) throws -> MeetingNote {
+        MeetingNote(content: try String(contentsOf: url, encoding: .utf8))
+    }
+
+    /// Edits an existing note. If Obsidian saves it between the read and the write, it is read
+    /// again and the change reapplied, so what the user just typed is not lost.
+    /// The write happens on the file itself (not replacing it): symlinks and creation date survive.
     func update(_ noteURL: URL, _ change: (inout MeetingNote) -> Void) throws {
         for _ in 0..<3 {
             let before = try Self.modificationDate(noteURL)
@@ -146,6 +182,8 @@ struct Vault {
         components.queryItems = [URLQueryItem(name: "path", value: url.path(percentEncoded: false))]
         NSWorkspace.shared.open(components.url!)
     }
+
+    // MARK: - Private
 
     private static func belongs(_ url: URL, to stenoID: UUID) -> Bool {
         (try? String(contentsOf: url, encoding: .utf8)).map { MeetingNote(content: $0).stenoID == stenoID } ?? false
@@ -180,9 +218,9 @@ enum VaultError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .unreachable(let path): "Vault non raggiungibile: \(path)."
-        case .busy(let file): "\(file) continua a cambiare mentre Steno prova ad aggiornarla."
-        case .invalidName(let name): "\"\(name)\" non è un nome valido per un file."
+        case .unreachable(let path): String(localized: "Vault not reachable: \(path).")
+        case .busy(let file): String(localized: "\(file) keeps changing while Steno tries to update it.")
+        case .invalidName(let name): String(localized: "\"\(name)\" is not a valid file name.")
         }
     }
 }

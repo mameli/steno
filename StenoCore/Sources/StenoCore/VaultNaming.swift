@@ -1,22 +1,26 @@
 import Foundation
 
-/// Nomi dei file che Steno scrive nel Vault (senza estensione `.md`).
+/// Names of the files Steno writes in the Vault (without the `.md` extension).
 public enum VaultNaming {
-    public static let defaultTitle = "Riunione"
+    public static let defaultTitle = "Meeting"
+    /// Provisional title used before the English rewrite: such notes can still be renamed.
+    static let legacyDefaultTitle = "Riunione"
 
-    /// Caratteri che Obsidian non accetta nei nomi dei file o che rompono i link `[[…]]`.
+    /// Characters Obsidian does not accept in file names or that break `[[…]]` links.
     private static let forbidden = CharacterSet(charactersIn: "*\"\\/<>:|?#^[]")
 
     public static func noteName(startedAt: Date, title: String, timeZone: TimeZone = .current) -> String {
         "\(DateFormatter.posix("yyyy-MM-dd HHmm", timeZone: timeZone).string(from: startedAt)) - \(sanitized(title))"
     }
 
-    /// Il nuovo nome della Nota della Riunione con il titolo generato, oppure `nil` se l'utente
-    /// l'ha già rinominata (non ha più il nome provvisorio, eventualmente con suffisso " (n)").
+    /// The new name of the Meeting note with the generated title, or `nil` if the user already
+    /// renamed it (it no longer has the provisional name, possibly with a " (n)" suffix).
     public static func renamedNoteName(current: String, startedAt: Date, title: String, timeZone: TimeZone = .current) -> String? {
-        let provisional = noteName(startedAt: startedAt, title: defaultTitle, timeZone: timeZone)
-        guard current == provisional || isSuffixed(current, of: provisional) else { return nil }
-        return noteName(startedAt: startedAt, title: title, timeZone: timeZone)
+        let isProvisional = [defaultTitle, legacyDefaultTitle].contains { provisionalTitle in
+            let provisional = noteName(startedAt: startedAt, title: provisionalTitle, timeZone: timeZone)
+            return current == provisional || isSuffixed(current, of: provisional)
+        }
+        return isProvisional ? noteName(startedAt: startedAt, title: title, timeZone: timeZone) : nil
     }
 
     private static func isSuffixed(_ name: String, of base: String) -> Bool {
@@ -25,8 +29,8 @@ public enum VaultNaming {
         return !number.isEmpty && number.allSatisfy { $0.isASCII && $0.isNumber }
     }
 
-    /// `name` se è libero, altrimenti `name (2)`, `name (3)`… Il confronto ignora maiuscole
-    /// e minuscole, come il file system del Mac.
+    /// `name` if it is free, otherwise `name (2)`, `name (3)`… The comparison ignores case,
+    /// like the Mac file system.
     public static func available(_ name: String, taken: Set<String>) -> String {
         let taken = Set(taken.map { $0.lowercased() })
         guard taken.contains(name.lowercased()) else { return name }
@@ -41,7 +45,7 @@ public enum VaultNaming {
         fileName(title) ?? defaultTitle
     }
 
-    /// Un nome scelto dall'utente reso valido come nome di file in Obsidian, `nil` se non resta niente.
+    /// A user-chosen name made valid as an Obsidian file name, `nil` if nothing is left.
     public static func fileName(_ name: String) -> String? {
         let words = name
             .components(separatedBy: forbidden)

@@ -1,18 +1,18 @@
 import AVFoundation
 import StenoCore
 
-/// Riceve i buffer di una sorgente audio con l'host time del loro primo frame.
+/// Receives the buffers of an audio source with the host time of their first frame.
 typealias AudioBufferHandler = @Sendable (AVAudioPCMBuffer, UInt64) -> Void
 
-/// Chiamato dal thread audio quando un segmento è completo su disco, con la cartella della Registrazione.
+/// Called from the audio thread when a Segment is complete on disk, with the Recording folder.
 typealias SegmentClosedHandler = @Sendable (Segment, URL) -> Void
 
-/// Converte l'audio di una Traccia in mono 16 kHz e lo scrive in segmenti AAC.
+/// Converts the audio of a Track to mono 16 kHz and writes it in AAC Segments.
 ///
-/// `write` viene chiamato dal thread della sorgente audio, `finish` dal main
-/// thread dopo che la sorgente è stata fermata: il lock serializza i due.
+/// `write` is called from the source's audio thread, `finish` from the main thread
+/// after the source has stopped: the lock serialises the two.
 final class SegmentedTrackWriter: @unchecked Sendable {
-    /// I segmenti scritti e, se c'è stato, l'errore che ha interrotto la Traccia.
+    /// The Segments written and, if there was one, the error that interrupted the Track.
     struct Outcome {
         let segments: [Segment]
         let error: Error?
@@ -38,7 +38,7 @@ final class SegmentedTrackWriter: @unchecked Sendable {
     private var firstError: Error?
     private var isFinished = false
 
-    /// `onSegmentClosed` scatta a ogni cambio di segmento; l'ultimo segmento si chiude con `finish`.
+    /// `onSegmentClosed` fires at every Segment change; the last Segment closes with `finish`.
     init(
         track: Track,
         directory: URL,
@@ -53,15 +53,15 @@ final class SegmentedTrackWriter: @unchecked Sendable {
         self.onSegmentClosed = onSegmentClosed
     }
 
-    /// Elenco dei segmenti aggiornato a ogni apertura: se l'app va in crash
-    /// prima dello stop, gli offset restano su disco.
+    /// Segment list updated at every opening: if the app crashes before the stop,
+    /// the offsets stay on disk.
     var segmentsFileURL: URL {
         directory.appending(path: Segment.listFileName(for: track))
     }
 
     func write(_ buffer: AVAudioPCMBuffer, hostTime: UInt64) {
         lock.withLock {
-            // Un buffer può arrivare dal thread audio anche dopo lo stop.
+            // A buffer can arrive from the audio thread even after the stop.
             guard !isFinished, firstError == nil else { return }
             do {
                 try writeLocked(buffer, hostTime: hostTime)
@@ -117,7 +117,7 @@ final class SegmentedTrackWriter: @unchecked Sendable {
                 throw CaptureError.unsupportedFormat(buffer.format.description)
             }
             if buffer.format.channelCount > 2 {
-                // Voice processing: il canale 0 è quello già ripulito dall'eco.
+                // Voice processing: channel 0 is the one already cleaned of echo.
                 newConverter.channelMap = [0]
             } else {
                 newConverter.downmix = true

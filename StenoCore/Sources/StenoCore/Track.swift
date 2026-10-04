@@ -1,15 +1,26 @@
-/// Una delle due sorgenti audio di una Registrazione.
+/// One of the two audio sources of a Recording.
 public enum Track: String, Codable, Sendable, CaseIterable {
-    /// Il microfono.
-    case me = "io"
-    /// L'audio di sistema.
-    case others = "altri"
+    /// The microphone.
+    case me
+    /// System audio.
+    case others
 
-    /// Come la Traccia compare nella Trascrizione.
+    /// How the Track appears in the Transcript.
     public var label: String {
         switch self {
-        case .me: "Io"
-        case .others: "Altri"
+        case .me: "Me"
+        case .others: "Others"
+        }
+    }
+
+    /// Segment lists saved before the English rewrite used "io" and "altri".
+    public init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer().decode(String.self)
+        switch value {
+        case "me", "io": self = .me
+        case "others", "altri": self = .others
+        default:
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Unknown track \(value)"))
         }
     }
 }
