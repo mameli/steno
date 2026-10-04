@@ -4,4 +4,12 @@ public enum Track: String, Codable, Sendable, CaseIterable {
     case me = "io"
     /// L'audio di sistema.
     case others = "altri"
+
+    /// Come la Traccia compare nella Trascrizione.
+    public var label: String {
+        switch self {
+        case .me: "Io"
+        case .others: "Altri"
+        }
+    }
 }

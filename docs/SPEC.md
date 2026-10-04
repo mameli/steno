@@ -58,8 +58,12 @@ Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in
 
 ## Trascrizione
 
-- Ogni Traccia si trascrive separatamente. I segmenti delle due Tracce si ordinano per tempo d'inizio e si fondono: i segmenti consecutivi dello stesso parlante diventano un paragrafo.
-- **Locale**: WhisperKit, modello large-v3-turbo, scaricato al primo avvio. Lingua `auto` oppure forzata `it`/`en`. La lingua si rileva su un tratto in cui qualcuno parla davvero (la prima finestra sopra una soglia di volume, su Altri o in mancanza su Io) e vale per tutta la Riunione. Rilevarla sui primi 30 secondi non basta: nella prova reale della fase 1 la Traccia Io iniziava con 80 secondi di quasi silenzio e Whisper l'ha classificata come svedese.
+- Ogni Traccia si trascrive separatamente. Le Battute delle due Tracce si ordinano per tempo d'inizio e si fondono in paragrafi (regole sotto).
+- Un segmento che non si riesce a trascrivere non blocca gli altri: la Trascrizione viene scritta con un buco e l'errore viene segnalato.
+- A Whisper arrivano solo i **tratti con parlato** di ogni segmento: finestre da mezzo secondo con RMS sopra 0,004, pause sotto i 2 secondi assorbite, un quarto di secondo di margine per lato. Sul silenzio, sull'eco residuo e sulle voci lontane Whisper inventa frasi ("Grazie.", decine di volte nella prova della fase 1). Le annotazioni come `[BLANK_AUDIO]` o le frasi tra parentesi vengono comunque scartate.
+- Un paragrafo della Trascrizione riunisce le Battute consecutive della stessa Traccia, ma si spezza dopo una pausa di oltre 30 secondi o quando una Battuta inizia più di 60 secondi dopo l'inizio del paragrafo: c'è un nuovo timestamp circa ogni minuto (una Battuta di Whisper dura al massimo 30 secondi).
+- Il risultato di ogni segmento (lingua e Battute) viene salvato accanto all'audio (`io-000.m4a.json`), così una nuova Elaborazione non ritrascrive quello che è già fatto.
+- **Locale**: WhisperKit, modello `openai_whisper-large-v3-v20240930_turbo_632MB` (646 MB), scaricato al primo uso in `~/Library/Application Support/Steno/Modelli` e preparato mentre la prima Riunione è in corso. Lingua `auto` oppure forzata `it`/`en`. La lingua si rileva una sola volta, su 30 secondi di solo parlato (i tratti con voce, senza silenzi) del primo segmento che ne contiene, di qualsiasi Traccia, scegliendo solo tra italiano e inglese, e vale per tutta la Riunione. Non si preferisce più Altri (era la difesa contro lo "svedese" della fase 1, nato dal silenzio): rilevando solo sul parlato il problema sparisce, e nella call reale l'eco residuo in Io resta sotto la soglia del parlato. La lingua usata viene salvata nella cache di ogni segmento; se poi si forza una lingua diversa, il segmento viene ritrascritto. Si può forzare con `defaults write dev.mameli.steno language it` (o `en`, `auto`) finché non ci sono le impostazioni. Rilevarla sui primi 30 secondi non basta: nella prova reale della fase 1 la Traccia Io iniziava con 80 secondi di quasi silenzio e Whisper l'ha classificata come svedese.
 - **Remota**: `POST {baseURL}/audio/transcriptions` (multipart, un segmento per richiesta) tramite l'adattatore compatibile OpenAI. Viene usata solo allo stop: durante la call l'audio non lascia mai il Mac.
 
 File `<Vault>/Meetings/Trascrizioni/2026-10-04 1430 - <Titolo> (trascrizione).md`:
@@ -71,6 +75,7 @@ riunione: "[[2026-10-04 1430 - Titolo]]"
 lingua: it
 ---
 **[00:00] Altri:** Buongiorno a tutti, partiamo dal…
+
 **[00:42] Io:** Sì, sul primo punto…
 ```
 
@@ -172,7 +177,8 @@ Ogni fase si chiude con una verifica concreta.
 
 - **Ducking**: con il voice processing attivo e `voiceProcessingOtherAudioDuckingConfiguration` al minimo, la Traccia Altri registra circa metà del volume. In una call Meet reale (fase 1) l'utente non ha percepito abbassamenti di ciò che sente, quindi riguarda solo il segnale registrato. Se un giorno desse fastidio: cancellazione d'eco disattivata e cuffie.
 - **Contesto di Ollama**: il contesto di default è piccolo e tramite l'endpoint compatibile OpenAI non si cambia per richiesta. Serve `OLLAMA_CONTEXT_LENGTH` (o l'impostazione equivalente in LM Studio), coerente con il *contesto massimo* del Profilo.
-- **Buchi nell'audio**: l'offset di un segmento si calcola dai frame scritti dall'inizio della Traccia. Se una sorgente perde buffer (cambio di dispositivo, reset del voice processing) gli offset successivi di quella Traccia slittano rispetto all'altra. Da valutare nella fase 2, quando si fondono le Tracce: eventualmente si riallinea ogni segmento con l'host time del suo primo buffer.
-- **Parole tagliate tra i segmenti**: il confine dei 5 minuti può spezzare una parola. Si valuta nella fase 2; se pesa, si aggiunge una breve sovrapposizione tra segmenti.
+- **Buchi nell'audio**: l'offset di un segmento si calcola dai frame scritti dall'inizio della Traccia. Se una sorgente perde buffer (cambio di dispositivo, reset del voice processing) gli offset successivi di quella Traccia slittano rispetto all'altra. Fase 2: nella call reale di 12 minuti le due Tracce finiscono a meno di 10 ms l'una dall'altra, nessuno slittamento visibile nella Trascrizione. Se comparisse (es. cuffie collegate a metà call), si riallinea ogni segmento con l'host time del suo primo buffer.
+- **Parole tagliate tra i segmenti**: il confine dei 5 minuti può spezzare una parola. Fase 2: con segmenti da 5 secondi una frase a cavallo di due segmenti si ricompone correttamente; nella call reale nessuna parola persa ai confini. Se dovesse pesare, si aggiunge una breve sovrapposizione tra segmenti.
+- **Whisper non deterministico sull'audio degradato**: con il fallback di temperatura, lo stesso tratto può dare testi diversi tra due Elaborazioni. Nella prova della fase 2 (voce ripresa da un telefono in un'altra stanza, passata per Meet e riprodotta dagli altoparlanti) la prima frase si è persa in un giro su tre. Disattivare il fallback rende il risultato stabile ma peggiore; la soglia "nessun parlato" di Whisper è disattivata perché scartava proprio questi tratti. Da rivalutare se succede con l'audio di call normali.
 - **Rinomina con la nota aperta in Obsidian**: Obsidian di solito segue il cambio di nome, ma va verificato nella fase 3. Il ripiego è non rinominare (titolo solo nell'intestazione).
 - **Download del modello Whisper**: WhisperKit scarica i pesi da Hugging Face. Non è un dato di Riunione e non tocca l'ADR 0001, ma richiede rete al primo avvio.

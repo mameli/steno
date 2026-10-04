@@ -4,6 +4,9 @@ import StenoCore
 /// Riceve i buffer di una sorgente audio con l'host time del loro primo frame.
 typealias AudioBufferHandler = @Sendable (AVAudioPCMBuffer, UInt64) -> Void
 
+/// Chiamato dal thread audio quando un segmento è completo su disco, con la cartella della Registrazione.
+typealias SegmentClosedHandler = @Sendable (Segment, URL) -> Void
+
 /// Converte l'audio di una Traccia in mono 16 kHz e lo scrive in segmenti AAC.
 ///
 /// `write` viene chiamato dal thread della sorgente audio, `finish` dal main
@@ -15,18 +18,17 @@ final class SegmentedTrackWriter: @unchecked Sendable {
         let error: Error?
     }
 
-    static let sampleRate: Double = 16_000
-
     private static var fileSettings: [String: Any] {
-        [AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: sampleRate, AVNumberOfChannelsKey: 1]
+        [AVFormatIDKey: kAudioFormatMPEG4AAC, AVSampleRateKey: Recording.sampleRate, AVNumberOfChannelsKey: 1]
     }
 
     private let track: Track
     private let directory: URL
     private let meetingStartHostTime: UInt64
     private let segmentDuration: TimeInterval
+    private let onSegmentClosed: SegmentClosedHandler
     private let outputFormat = AVAudioFormat(
-        commonFormat: .pcmFormatFloat32, sampleRate: sampleRate, channels: 1, interleaved: false
+        commonFormat: .pcmFormatFloat32, sampleRate: Recording.sampleRate, channels: 1, interleaved: false
     )!
     private let lock = NSLock()
     private var converter: AVAudioConverter?
@@ -36,11 +38,19 @@ final class SegmentedTrackWriter: @unchecked Sendable {
     private var firstError: Error?
     private var isFinished = false
 
-    init(track: Track, directory: URL, meetingStartHostTime: UInt64, segmentDuration: TimeInterval) {
+    /// `onSegmentClosed` scatta a ogni cambio di segmento; l'ultimo segmento si chiude con `finish`.
+    init(
+        track: Track,
+        directory: URL,
+        meetingStartHostTime: UInt64,
+        segmentDuration: TimeInterval,
+        onSegmentClosed: @escaping SegmentClosedHandler
+    ) {
         self.track = track
         self.directory = directory
         self.meetingStartHostTime = meetingStartHostTime
         self.segmentDuration = segmentDuration
+        self.onSegmentClosed = onSegmentClosed
     }
 
     /// Elenco dei segmenti aggiornato a ogni apertura: se l'app va in crash
@@ -77,14 +87,18 @@ final class SegmentedTrackWriter: @unchecked Sendable {
         if segmenter == nil {
             segmenter = TrackSegmenter(
                 track: track,
-                sampleRate: Self.sampleRate,
+                sampleRate: Recording.sampleRate,
                 trackStart: secondsSinceMeetingStart(hostTime),
                 segmentDuration: segmentDuration
             )
         }
+        let previous = segmenter!.segments.last
         let segment = segmenter!.place(frameCount: Int(converted.frameLength))
         if segment.index != fileIndex {
-            file?.close()
+            if let file, let previous {
+                file.close()
+                onSegmentClosed(previous, directory)
+            }
             file = try AVAudioFile(
                 forWriting: directory.appending(path: segment.fileName),
                 settings: Self.fileSettings,

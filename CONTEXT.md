@@ -35,6 +35,10 @@ _Evita_: post-processing, job
 Il testo parlato di una Riunione, con timestamp e attribuzione a Io/Altri. Vive in un file separato nel Vault.
 _Evita_: transcript, sbobinatura
 
+**Battuta** (`Utterance`):
+Un tratto di parlato riconosciuto in una Traccia, con inizio e fine rispetto all'inizio della Riunione. Le Battute consecutive della stessa Traccia formano un paragrafo della Trascrizione.
+_Evita_: segmento (è un'altra cosa), frase, chunk
+
 **Riepilogo** (`Summary`):
 La sintesi strutturata di una Riunione, generata applicando un Template a Trascrizione e Note personali.
 _Evita_: recap, summary (in italiano), verbale

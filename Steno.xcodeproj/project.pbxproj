@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		A10000000000000000000022 /* StenoCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000021 /* StenoCore */; };
+		A10000000000000000000025 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000024 /* WhisperKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000022 /* StenoCore in Frameworks */,
+				A10000000000000000000025 /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,6 +81,7 @@
 			name = Steno;
 			packageProductDependencies = (
 				A10000000000000000000021 /* StenoCore */,
+				A10000000000000000000024 /* WhisperKit */,
 			);
 			productName = Steno;
 			productReference = A10000000000000000000005 /* Steno.app */;
@@ -106,6 +109,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A10000000000000000000020 /* XCLocalSwiftPackageReference "StenoCore" */,
+				A10000000000000000000023 /* XCRemoteSwiftPackageReference "WhisperKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A10000000000000000000002 /* Products */;
@@ -213,10 +217,26 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		A10000000000000000000023 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/WhisperKit";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 1.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		A10000000000000000000021 /* StenoCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = StenoCore;
+		};
+		A10000000000000000000024 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000000000000000000023 /* XCRemoteSwiftPackageReference "WhisperKit" */;
+			productName = WhisperKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -40,6 +40,11 @@ private struct MeetingMenu: View {
             Button("Avvia riunione") { Task { await controller.start() } }
         }
 
+        if controller.transcriptionsInProgress > 0 {
+            Divider()
+            Text("Trascrizione in corso…")
+        }
+
         if let lastError = controller.lastError {
             Divider()
             Text("⚠️ \(lastError)")
@@ -50,6 +55,9 @@ private struct MeetingMenu: View {
             Button("Mostra ultima Registrazione nel Finder") {
                 NSWorkspace.shared.activateFileViewerSelecting([directory])
             }
+        }
+        if let transcript = controller.lastTranscriptURL {
+            Button("Apri ultima Trascrizione") { NSWorkspace.shared.open(transcript) }
         }
         #endif
 
