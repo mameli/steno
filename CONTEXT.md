@@ -18,6 +18,10 @@ _Evita_: audio, file audio
 Una delle due sorgenti audio di una Registrazione: **Io** (microfono) o **Altri** (audio di sistema).
 _Evita_: canale, stream
 
+**Segmento** (`Segment`):
+Una porzione di una Traccia salvata in un file a sé, con il suo istante d'inizio rispetto all'inizio della Riunione.
+_Evita_: pezzo, chunk, blocco
+
 **Modalità** (`CaptureMode`):
 Come viene catturata una Riunione: **Call** (Tracce Io e Altri separate) o **Sala** (solo microfono, per riunioni in presenza, senza attribuzione Io/Altri).
 

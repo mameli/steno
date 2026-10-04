@@ -10,6 +10,9 @@ struct StenoApp: App {
             MeetingMenu(controller: controller)
         } label: {
             MenuBarLabel(controller: controller)
+                #if DEBUG
+                .task { await controller.runSmokeTestIfRequested() }
+                #endif
         }
     }
 }
@@ -36,6 +39,19 @@ private struct MeetingMenu: View {
         } else {
             Button("Avvia riunione") { Task { await controller.start() } }
         }
+
+        if let lastError = controller.lastError {
+            Divider()
+            Text("⚠️ \(lastError)")
+        }
+
+        #if DEBUG
+        if let directory = controller.lastRecordingDirectory, !controller.isInProgress {
+            Button("Mostra ultima Registrazione nel Finder") {
+                NSWorkspace.shared.activateFileViewerSelecting([directory])
+            }
+        }
+        #endif
 
         if controller.microphoneDenied {
             Divider()

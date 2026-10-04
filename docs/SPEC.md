@@ -49,10 +49,10 @@ Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in
 
 ## Cattura audio
 
-- **Altri**: Core Audio process tap globale (`CATapDescription`, tutti i processi tranne Steno) + aggregate device. Richiede `NSAudioCaptureUsageDescription` ("Registrazione solo audio di sistema").
-- **Io**: `AVAudioEngine` sul microfono di default con `setVoiceProcessingEnabled(true)` per la cancellazione d'eco. Disattivabile nelle impostazioni. Richiede `NSMicrophoneUsageDescription`.
+- **Altri**: Core Audio process tap globale (`CATapDescription`, tutti i processi: Steno non riproduce audio, quindi non serve escluderlo) + aggregate device che contiene **solo il tap**. Un aggregato con gli altoparlanti come dispositivo principale smette di ricevere audio quando il voice processing del microfono è attivo. Si avvia prima del microfono. Richiede `NSAudioCaptureUsageDescription`: la prima volta macOS mostra il popup "Registrazione solo audio di sistema" e l'avvio resta in attesa della risposta.
+- **Io**: `AVAudioEngine` sul microfono di default con `setVoiceProcessingEnabled(true)` per la cancellazione d'eco. Con il voice processing il microfono arriva a 9 canali: si tiene solo il canale 0, già ripulito. Il ramo d'uscita del motore non va collegato, altrimenti l'avvio fallisce (-10875). Disattivabile con `defaults write dev.mameli.steno echoCancellation -bool false` finché non ci sono le impostazioni. Richiede `NSMicrophoneUsageDescription`.
 - Ogni Traccia viene scritta in **segmenti di 5 minuti** (`io-000.m4a`, `altri-000.m4a`, …), AAC mono 16 kHz. Motivi: un crash perde al massimo un segmento; i segmenti chiusi si trascrivono durante la call; i file restano sotto i limiti di upload dei Provider remoti.
-- Le due Tracce condividono l'orologio d'avvio: ogni segmento registra il proprio offset dall'inizio della Riunione.
+- Le due Tracce condividono l'orologio d'avvio: ogni segmento registra il proprio offset dall'inizio della Riunione. L'elenco dei segmenti di ogni Traccia (`io-segmenti.json`, `altri-segmenti.json`) si aggiorna a ogni apertura, così gli offset sopravvivono a un crash; allo stop confluisce in `riunione.json`, che viene scritto anche se una Traccia si è interrotta.
 
 **Stop per silenzio**: se la Traccia Altri resta sotto una soglia RMS per 5 minuti → notifica "La riunione sembra finita: fermo?" con azioni *Ferma* / *Continua*. Senza risposta per altri 5 minuti → stop automatico, e il silenzio finale viene tagliato prima dell'Elaborazione.
 
@@ -170,8 +170,9 @@ Ogni fase si chiude con una verifica concreta.
 
 ## Rischi noti
 
-- **Ducking**: con il voice processing attivo, macOS può abbassare il volume delle altre app. Si mitiga con `voiceProcessingOtherAudioDuckingConfiguration` al minimo; se non basta, cancellazione d'eco disattivata e cuffie. Da verificare nella fase 1.
+- **Ducking**: con il voice processing attivo e `voiceProcessingOtherAudioDuckingConfiguration` al minimo, la Traccia Altri registra comunque circa metà del volume (misurato nella fase 1). Probabilmente si abbassa anche la call che l'utente sente. Se dà fastidio: cancellazione d'eco disattivata e cuffie.
 - **Contesto di Ollama**: il contesto di default è piccolo e tramite l'endpoint compatibile OpenAI non si cambia per richiesta. Serve `OLLAMA_CONTEXT_LENGTH` (o l'impostazione equivalente in LM Studio), coerente con il *contesto massimo* del Profilo.
+- **Buchi nell'audio**: l'offset di un segmento si calcola dai frame scritti dall'inizio della Traccia. Se una sorgente perde buffer (cambio di dispositivo, reset del voice processing) gli offset successivi di quella Traccia slittano rispetto all'altra. Da valutare nella fase 2, quando si fondono le Tracce: eventualmente si riallinea ogni segmento con l'host time del suo primo buffer.
 - **Parole tagliate tra i segmenti**: il confine dei 5 minuti può spezzare una parola. Si valuta nella fase 2; se pesa, si aggiunge una breve sovrapposizione tra segmenti.
 - **Rinomina con la nota aperta in Obsidian**: Obsidian di solito segue il cambio di nome, ma va verificato nella fase 3. Il ripiego è non rinominare (titolo solo nell'intestazione).
 - **Download del modello Whisper**: WhisperKit scarica i pesi da Hugging Face. Non è un dato di Riunione e non tocca l'ADR 0001, ma richiede rete al primo avvio.
