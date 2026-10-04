@@ -59,7 +59,7 @@ Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in
 ## Trascrizione
 
 - Ogni Traccia si trascrive separatamente. I segmenti delle due Tracce si ordinano per tempo d'inizio e si fondono: i segmenti consecutivi dello stesso parlante diventano un paragrafo.
-- **Locale**: WhisperKit, modello large-v3-turbo, scaricato al primo avvio. Lingua `auto` oppure forzata `it`/`en`. La lingua rilevata sul primo segmento di Altri (o di Io, se Altri è muta) vale per tutta la Riunione.
+- **Locale**: WhisperKit, modello large-v3-turbo, scaricato al primo avvio. Lingua `auto` oppure forzata `it`/`en`. La lingua si rileva su un tratto in cui qualcuno parla davvero (la prima finestra sopra una soglia di volume, su Altri o in mancanza su Io) e vale per tutta la Riunione. Rilevarla sui primi 30 secondi non basta: nella prova reale della fase 1 la Traccia Io iniziava con 80 secondi di quasi silenzio e Whisper l'ha classificata come svedese.
 - **Remota**: `POST {baseURL}/audio/transcriptions` (multipart, un segmento per richiesta) tramite l'adattatore compatibile OpenAI. Viene usata solo allo stop: durante la call l'audio non lascia mai il Mac.
 
 File `<Vault>/Meetings/Trascrizioni/2026-10-04 1430 - <Titolo> (trascrizione).md`:
@@ -170,7 +170,7 @@ Ogni fase si chiude con una verifica concreta.
 
 ## Rischi noti
 
-- **Ducking**: con il voice processing attivo e `voiceProcessingOtherAudioDuckingConfiguration` al minimo, la Traccia Altri registra comunque circa metà del volume (misurato nella fase 1). Probabilmente si abbassa anche la call che l'utente sente. Se dà fastidio: cancellazione d'eco disattivata e cuffie.
+- **Ducking**: con il voice processing attivo e `voiceProcessingOtherAudioDuckingConfiguration` al minimo, la Traccia Altri registra circa metà del volume. In una call Meet reale (fase 1) l'utente non ha percepito abbassamenti di ciò che sente, quindi riguarda solo il segnale registrato. Se un giorno desse fastidio: cancellazione d'eco disattivata e cuffie.
 - **Contesto di Ollama**: il contesto di default è piccolo e tramite l'endpoint compatibile OpenAI non si cambia per richiesta. Serve `OLLAMA_CONTEXT_LENGTH` (o l'impostazione equivalente in LM Studio), coerente con il *contesto massimo* del Profilo.
 - **Buchi nell'audio**: l'offset di un segmento si calcola dai frame scritti dall'inizio della Traccia. Se una sorgente perde buffer (cambio di dispositivo, reset del voice processing) gli offset successivi di quella Traccia slittano rispetto all'altra. Da valutare nella fase 2, quando si fondono le Tracce: eventualmente si riallinea ogni segmento con l'host time del suo primo buffer.
 - **Parole tagliate tra i segmenti**: il confine dei 5 minuti può spezzare una parola. Si valuta nella fase 2; se pesa, si aggiunge una breve sovrapposizione tra segmenti.
