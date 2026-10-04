@@ -7,9 +7,59 @@ struct Vault {
 
     var meetingsFolder: URL { root.appending(path: "Meetings", directoryHint: .isDirectory) }
     var transcriptsFolder: URL { meetingsFolder.appending(path: "Trascrizioni", directoryHint: .isDirectory) }
+    var templatesFolder: URL { meetingsFolder.appending(path: "_Template", directoryHint: .isDirectory) }
+
+    /// I Template disponibili, per nome di file (senza `.md`), in ordine alfabetico.
+    func templateNames() -> [String] {
+        Self.noteNames(in: templatesFolder).sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
+    /// I Template da proporre in un menu: quelli del Vault più quello già scelto, anche se nel frattempo è sparito.
+    static func templateChoices(including selected: String) -> [String] {
+        let names = configured?.templateNames() ?? []
+        return names.contains(selected) ? names : [selected] + names
+    }
+
+    /// La nota è ancora nella cartella Meetings, dove Steno l'ha creata (non è stata spostata).
+    func isInMeetingsFolder(_ noteURL: URL) -> Bool {
+        noteURL.deletingLastPathComponent().resolvingSymlinksInPath().standardizedFileURL
+            == meetingsFolder.resolvingSymlinksInPath().standardizedFileURL
+    }
+
+    /// Crea il Template Generico se la cartella dei Template non ne contiene nessuno.
+    func ensureDefaultTemplate() throws {
+        guard templateNames().isEmpty else { return }
+        try FileManager.default.createDirectory(at: templatesFolder, withIntermediateDirectories: true)
+        let url = templatesFolder.appending(path: Template.genericName + ".md")
+        try Template.genericFileContent.write(to: url, atomically: true, encoding: .utf8)
+    }
+
+    /// Il Template con quel nome di file; se non c'è più, il Generico.
+    func template(named name: String) -> Template {
+        let url = templatesFolder.appending(path: name + ".md")
+        guard let content = try? String(contentsOf: url, encoding: .utf8) else {
+            return Template(fileName: Template.genericName, content: Template.genericFileContent)
+        }
+        return Template(fileName: name, content: content)
+    }
+
+    /// Rinomina la nota (con suffisso " (2)" se il nome è occupato) e restituisce il nuovo percorso.
+    func rename(_ noteURL: URL, to name: String) throws -> URL {
+        let folder = noteURL.deletingLastPathComponent()
+        let current = noteURL.deletingPathExtension().lastPathComponent
+        let available = VaultNaming.available(name, taken: Self.noteNames(in: folder).subtracting([current]))
+        let destination = folder.appending(path: available + ".md")
+        guard destination != noteURL else { return noteURL }
+        try FileManager.default.moveItem(at: noteURL, to: destination)
+        return destination
+    }
+
+    func meetingNote(at url: URL) throws -> MeetingNote {
+        MeetingNote(content: try String(contentsOf: url, encoding: .utf8))
+    }
 
     static var configured: Vault? {
-        Settings.vaultPath.map { Vault(root: URL(filePath: $0, directoryHint: .isDirectory)) }
+        AppSettings.vaultPath.map { Vault(root: URL(filePath: $0, directoryHint: .isDirectory)) }
     }
 
     /// Crea la Nota della Riunione con il titolo provvisorio. Non crea mai la cartella del Vault:

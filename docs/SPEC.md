@@ -13,20 +13,21 @@ Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in
 **Dentro la v1**
 - App nella barra dei menu: avvio/stop, scorciatoia globale, scelta del **Template**
 - Cattura in Modalità Call: **Tracce** Io (microfono, con cancellazione d'eco) e Altri (audio di sistema)
-- Trascrizione locale WhisperKit a blocchi durante la call; remota allo stop
+- Trascrizione locale WhisperKit a blocchi durante la call
 - Lingua rilevata in automatico o forzata
-- **Profili** per i due **Ruoli**, adattatore compatibile OpenAI, chiavi nel Keychain
+- **Profili** per il Riepilogo, adattatore compatibile OpenAI, chiavi nel Keychain, finestra Impostazioni essenziale
 - **Nota della Riunione** creata all'avvio e aperta in Obsidian; **Zona gestita**; Trascrizione in un file separato
 - Template letti dal Vault, **Rigenerazione**, "Riprova"
 - Registrazione conservata 7 giorni, coda di **Elaborazione**, stop per silenzio
 
 **Fuori dalla v1** (in ordine di probabilità)
 1. Calendario (titolo e partecipanti da EventKit)
-2. Modalità Sala (solo microfono, per riunioni in presenza)
-3. Notifica "sembra una call" quando un'app prende il microfono
-4. Diarizzazione vera (Persona 1, 2…)
-5. Preset dei Provider già pronti
-6. Distribuzione ad altri (firma Developer ID, notarizzazione)
+2. Trascrizione remota (la locale basta: 12 minuti in 50 secondi su M3 Pro); i Profili avranno allora anche il Ruolo trascrizione
+3. Modalità Sala (solo microfono, per riunioni in presenza)
+4. Notifica "sembra una call" quando un'app prende il microfono
+5. Diarizzazione vera (Persona 1, 2…)
+6. Preset dei Provider già pronti
+7. Distribuzione ad altri (firma Developer ID, notarizzazione)
 
 ## Flusso principale
 
@@ -35,10 +36,10 @@ Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in
    - crea la Nota della Riunione `<Vault>/Meetings/2026-10-04 1430 - Riunione.md` (vedi [struttura](#nota-della-riunione));
    - la apre in Obsidian con `obsidian://open?path=<percorso assoluto>`;
    - avvia la cattura delle due Tracce.
-2. **Durante la call**: l'utente scrive le **Note personali** nella nota. Con un Profilo di trascrizione locale, i segmenti audio già chiusi vengono trascritti in background. Il Template si può cambiare dalla barra dei menu.
+2. **Durante la call**: l'utente scrive le **Note personali** nella nota. I segmenti audio già chiusi vengono trascritti in background. Il Template si può cambiare dalla barra dei menu; il Profilo per il Riepilogo è quello attivo all'avvio.
 3. **Stop** (clic, scorciatoia o stop per silenzio). La Riunione entra nella coda di Elaborazione e si può subito avviare un'altra Riunione.
 4. **Elaborazione** (una alla volta, in ordine di arrivo):
-   1. completa la Trascrizione (ultimi segmenti se locale, tutto se remota);
+   1. completa la Trascrizione (gli ultimi segmenti);
    2. scrive il file della Trascrizione;
    3. rilegge la Nota della Riunione ed estrae le Note personali;
    4. genera Riepilogo e titolo con il Profilo di riepilogo;
@@ -64,7 +65,7 @@ Uso personale, una macchina (M3 Pro, 18 GB, macOS 26). Riunioni in italiano o in
 - Un paragrafo della Trascrizione riunisce le Battute consecutive della stessa Traccia, ma si spezza dopo una pausa di oltre 30 secondi o quando una Battuta inizia più di 60 secondi dopo l'inizio del paragrafo: c'è un nuovo timestamp circa ogni minuto (una Battuta di Whisper dura al massimo 30 secondi).
 - Il risultato di ogni segmento (lingua e Battute) viene salvato accanto all'audio (`io-000.m4a.json`), così una nuova Elaborazione non ritrascrive quello che è già fatto.
 - **Locale**: WhisperKit, modello `openai_whisper-large-v3-v20240930_turbo_632MB` (646 MB), scaricato al primo uso in `~/Library/Application Support/Steno/Modelli` e preparato mentre la prima Riunione è in corso. Lingua `auto` oppure forzata `it`/`en`. La lingua si rileva una sola volta, su 30 secondi di solo parlato (i tratti con voce, senza silenzi) del primo segmento che ne contiene, di qualsiasi Traccia, scegliendo solo tra italiano e inglese, e vale per tutta la Riunione. Non si preferisce più Altri (era la difesa contro lo "svedese" della fase 1, nato dal silenzio): rilevando solo sul parlato il problema sparisce, e nella call reale l'eco residuo in Io resta sotto la soglia del parlato. La lingua usata viene salvata nella cache di ogni segmento; se poi si forza una lingua diversa, il segmento viene ritrascritto. Si può forzare con `defaults write dev.mameli.steno language it` (o `en`, `auto`) finché non ci sono le impostazioni. Rilevarla sui primi 30 secondi non basta: nella prova reale della fase 1 la Traccia Io iniziava con 80 secondi di quasi silenzio e Whisper l'ha classificata come svedese.
-- **Remota**: `POST {baseURL}/audio/transcriptions` (multipart, un segmento per richiesta) tramite l'adattatore compatibile OpenAI. Viene usata solo allo stop: durante la call l'audio non lascia mai il Mac.
+- **Remota** (dopo la v1): `POST {baseURL}/audio/transcriptions` (multipart, un segmento per richiesta) tramite l'adattatore compatibile OpenAI. Verrà usata solo allo stop: durante la call l'audio non lascia mai il Mac.
 
 File `<Vault>/Meetings/Trascrizioni/2026-10-04 1430 - <Titolo> (trascrizione).md` (una copia senza frontmatter resta anche in `trascrizione.md` nella cartella della Registrazione). Una nuova Elaborazione della stessa Riunione sovrascrive il file esistente, ritrovato tramite `steno_id`:
 
@@ -117,7 +118,7 @@ Regole:
 
 ## Template
 
-- Cartella `<Vault>/Meetings/_Template/`. Al primo avvio, se è vuota, Steno crea `Generico.md`.
+- Cartella `<Vault>/Meetings/_Template/`. Se è vuota, Steno crea `Generico.md` all'avvio dell'app e quando si sceglie il Vault.
 - Formato: frontmatter con `nome` e `lingua_riepilogo` (`auto` | `it` | `en`, default `auto` = lingua della Riunione). Il corpo, cioè le istruzioni libere e la struttura di intestazioni, si passa al modello così com'è.
 - Il Template si sceglie all'avvio (default dalle impostazioni) e si può cambiare fino allo stop.
 
@@ -126,29 +127,32 @@ Regole:
 - `POST {baseURL}/chat/completions` con:
   - **prompt di sistema fisso**: non inventare, attribuisci a Io/Altri, azioni come `- [ ] chi: cosa (quando)`, rispondi nella lingua indicata, segui la struttura del Template, dai priorità ai temi presenti nelle Note personali;
   - **messaggio utente**: Template, Note personali, Trascrizione.
-- **Titolo**: seconda chiamata breve sul Riepilogo ("massimo 6 parole, niente data").
+- **Titolo**: seconda chiamata breve sul Riepilogo ("massimo 6 parole, niente data"), ripulito da intestazioni, prefissi "Titolo:", virgolette, grassetto e punteggiatura finale. Se il titolo non arriva la nota resta con il nome provvisorio: non è un errore.
+- **Zona gestita**: il Riepilogo seguito da `Trascrizione completa: [[…]]`. Se il Riepilogo fallisce (nessun Profilo attivo, errore del Provider, Riunione senza parlato) mostra `⚠️ Riepilogo non generato: <motivo>` e il link alla Trascrizione, che resta utilizzabile. Eventuali marcatori della Zona gestita nella risposta del modello vengono tolti.
+- **Stima dei token**: circa 3 caratteri per token, con 4.096 token riservati alla risposta; un blocco non spezza mai un paragrafo della Trascrizione.
 - **Riunioni lunghe**: ogni Profilo di riepilogo ha un campo *contesto massimo*. Se Trascrizione + Note + Template lo superano, la Trascrizione si divide in blocchi, si riassume ogni blocco e i riassunti parziali si uniscono con il Template.
 - **Rigenerazione**: da "Riunioni recenti" → *Rigenera con* ▸ Template / Profilo. Rilegge Trascrizione e Note personali correnti e riscrive solo la Zona gestita. È disponibile anche dopo i 7 giorni, perché la Trascrizione è nel Vault.
 
 ## Profili e impostazioni
 
-**Profilo**: nome, Ruolo (trascrizione | riepilogo), tipo (`whisperkit-locale` | `openai-compatibile`), base URL, chiave API (nel Keychain), modello, contesto massimo (solo per il riepilogo). Esempi: "Locale" (WhisperKit), "Ollama" (`http://localhost:11434/v1`), "Mistral EU".
+**Profilo** (v1: solo per il Riepilogo): nome, base URL, chiave API (nel Keychain, facoltativa per i server locali), modello, contesto massimo. Esempi: "llama.cpp locale" (`http://localhost:8080/v1`), "Mistral EU" (`https://api.mistral.ai/v1`). La trascrizione è sempre locale (WhisperKit). Un Profilo fuori UE (es. OpenRouter) è ammesso solo per lo sviluppo con registrazioni di prova: Steno non lo impedisce, la scelta resta dell'utente (eccezione registrata nell'ADR 0001). Il Profilo si fissa all'avvio della Riunione. L'URL deve essere `https://`; `http://` è ammesso solo per server su questo Mac (`localhost`, `127.0.0.1`, `*.local`).
 
-**Impostazioni** (UserDefaults; i segreti nel Keychain):
+**Impostazioni** (UserDefaults; i segreti nel Keychain). Nella finestra Impostazioni della v1:
 - percorso del Vault
-- cartelle Meetings / Trascrizioni / Template (relative al Vault)
 - Template di default
-- Profilo attivo per ciascun Ruolo
+- Profili per il Riepilogo e Profilo attivo (con "Prova connessione")
+
+Per ora solo da terminale (`defaults write dev.mameli.steno …`), da portare nella finestra quando serviranno:
 - lingua (`auto` | `it` | `en`)
 - cancellazione d'eco on/off
-- scorciatoia globale
-- soglie di silenzio
-- giorni di conservazione della Registrazione (7)
+- scorciatoia globale, soglie di silenzio, giorni di conservazione della Registrazione (7) — fasi 5 e 6
+
+Le cartelle sono fisse: `Meetings/`, `Meetings/Trascrizioni/`, `Meetings/_Template/`.
 
 ## Barra dei menu
 
-- **Inattiva**: Avvia riunione (scorciatoia) · Template ▸ · Lingua ▸ · Profili ▸ (Trascrizione, Riepilogo) · Riunioni recenti ▸ (Apri nota · Rigenera con ▸ · Riprova) · Impostazioni… · Esci
-- **In registrazione**: icona rossa con timer · Ferma · Template ▸
+- **Inattiva**: Avvia riunione (scorciatoia) · Template ▸ · Profilo Riepilogo ▸ · Riunioni recenti ▸ (Apri nota · Rigenera con ▸ · Riprova) · Impostazioni… · Esci
+- **In registrazione**: icona rossa con timer · Ferma · Template ▸ · Impostazioni…
 - **In Elaborazione**: icona di avanzamento e numero di Riunioni in coda
 
 ## Stato e conservazione
@@ -174,14 +178,15 @@ Ogni fase si chiude con una verifica concreta.
 | 1 | **Cattura** delle due Tracce a segmenti, cancellazione d'eco | Una call Meet/Teams di 12 minuti produce 3+3 segmenti udibili, con Io senza eco degli altri |
 | 2 | **Trascrizione locale** a blocchi + fusione Io/Altri | Il file Trascrizione della call di prova è leggibile, ordinato e attribuito |
 | 3 | **Vault**: Nota della Riunione, Zona gestita, frontmatter, `steno_id` (la rinomina passa alla fase 4, insieme al titolo) | Test verdi; la nota appare in Obsidian all'avvio e le Note personali restano intatte dopo l'Elaborazione |
-| 4 | **Riepilogo**: Profili, Keychain, client compatibile OpenAI, Template, suddivisione in blocchi, titolo e rinomina; trascrizione remota | Riepilogo corretto della call di prova sia con Ollama sia con un Provider UE |
-| 5 | **Flusso completo**: coda persistente, Rigenerazione, Riprova, notifiche, scorciatoia, conservazione | Due Riunioni consecutive elaborate in coda; Riprova dopo aver spento Ollama |
+| 4 | **Riepilogo**: finestra Impostazioni, Profili, Keychain, client compatibile OpenAI, Template, suddivisione in blocchi, titolo e rinomina | Riepilogo corretto della call di prova con un Provider remoto (in sviluppo OpenRouter, solo registrazioni di prova). Restano da provare, quando l'utente li configura: un server locale (llama.cpp) e un Provider UE |
+| 5 | **Flusso completo**: coda persistente, Rigenerazione, Riprova, notifiche, scorciatoia, conservazione | Due Riunioni consecutive elaborate in coda; Riprova dopo aver spento il server locale |
 | 6 | **Stop per silenzio** | Una call finita senza stop si ferma da sola e il silenzio finale viene tagliato |
 
 ## Rischi noti
 
 - **Ducking**: con il voice processing attivo e `voiceProcessingOtherAudioDuckingConfiguration` al minimo, la Traccia Altri registra circa metà del volume. In una call Meet reale (fase 1) l'utente non ha percepito abbassamenti di ciò che sente, quindi riguarda solo il segnale registrato. Se un giorno desse fastidio: cancellazione d'eco disattivata e cuffie.
-- **Contesto di Ollama**: il contesto di default è piccolo e tramite l'endpoint compatibile OpenAI non si cambia per richiesta. Serve `OLLAMA_CONTEXT_LENGTH` (o l'impostazione equivalente in LM Studio), coerente con il *contesto massimo* del Profilo.
+- **Contesto del server locale**: llama.cpp (`llama-server -c`), Ollama (`OLLAMA_CONTEXT_LENGTH`) e LM Studio hanno un contesto di default piccolo che tramite l'endpoint compatibile OpenAI non si cambia per richiesta: va impostato all'avvio del server, coerente con il *contesto massimo* del Profilo (minimo 8.192 token, Steno non scende sotto).
+- **Risposte troncate**: se il modello si ferma per limite di lunghezza (`finish_reason: length`) il Riepilogo è considerato fallito, non salvato a metà. Le Riunioni molto lunghe uniscono i riassunti parziali a gruppi finché l'unione finale entra nel contesto.
 - **Buchi nell'audio**: l'offset di un segmento si calcola dai frame scritti dall'inizio della Traccia. Se una sorgente perde buffer (cambio di dispositivo, reset del voice processing) gli offset successivi di quella Traccia slittano rispetto all'altra. Fase 2: nella call reale di 12 minuti le due Tracce finiscono a meno di 10 ms l'una dall'altra, nessuno slittamento visibile nella Trascrizione. Se comparisse (es. cuffie collegate a metà call), si riallinea ogni segmento con l'host time del suo primo buffer.
 - **Parole tagliate tra i segmenti**: il confine dei 5 minuti può spezzare una parola. Fase 2: con segmenti da 5 secondi una frase a cavallo di due segmenti si ricompone correttamente; nella call reale nessuna parola persa ai confini. Se dovesse pesare, si aggiunge una breve sovrapposizione tra segmenti.
 - **Whisper non deterministico sull'audio degradato**: con il fallback di temperatura, lo stesso tratto può dare testi diversi tra due Elaborazioni. Nella prova della fase 2 (voce ripresa da un telefono in un'altra stanza, passata per Meet e riprodotta dagli altoparlanti) la prima frase si è persa in un giro su tre. Disattivare il fallback rende il risultato stabile ma peggiore; la soglia "nessun parlato" di Whisper è disattivata perché scartava proprio questi tratti. Da rivalutare se succede con l'audio di call normali.

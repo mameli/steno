@@ -63,7 +63,9 @@ public struct MeetingNote: Equatable, Sendable {
     /// I marcatori dentro i blocchi di codice non contano.
     public mutating func replaceManagedSection(with body: String) {
         var lines = content.components(separatedBy: "\n")
+        // Un marcatore nel testo (es. nella risposta del modello) chiuderebbe la Zona gestita al giro dopo.
         let bodyLines = body.components(separatedBy: "\n")
+            .filter { !Self.isLine($0, Self.managedStart) && !Self.isLine($0, Self.managedEnd) }
 
         if let managed = Self.managedRange(in: lines) {
             lines.replaceSubrange((managed.lowerBound + 1)..<managed.upperBound, with: bodyLines)
@@ -98,20 +100,37 @@ public struct MeetingNote: Equatable, Sendable {
         return kept.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// Registra l'esito della Trascrizione: chiavi di Steno nel frontmatter (ripristinando lo
-    /// `steno_id` se l'utente l'ha cancellato) e link alla Trascrizione nella Zona gestita.
-    public mutating func recordTranscription(
-        stenoID: UUID, duration: TimeInterval, language: String?, provider: String, transcriptName: String
+    /// Com'è andato il Riepilogo di una Riunione.
+    public enum SummaryOutcome: Equatable, Sendable {
+        case written(text: String, template: String, provider: String)
+        case failed(reason: String)
+    }
+
+    /// Registra l'esito dell'Elaborazione: chiavi di Steno nel frontmatter (ripristinando lo
+    /// `steno_id` se l'utente l'ha cancellato), Riepilogo o motivo del fallimento e link alla
+    /// Trascrizione nella Zona gestita.
+    public mutating func recordProcessing(
+        stenoID: UUID, duration: TimeInterval, language: String?, transcriptionProvider: String,
+        transcriptName: String, summary: SummaryOutcome
     ) {
         var values: [(key: StenoKey, value: String)] = [
             (.stenoID, stenoID.uuidString),
             (.duration, Self.durationValue(duration)),
-            (.transcriptionProvider, provider),
+            (.transcriptionProvider, transcriptionProvider),
             (.transcript, Self.wikiLink(transcriptName)),
         ]
         if let language { values.append((.language, language)) }
+
+        let summaryText: String
+        switch summary {
+        case .written(let text, let template, let provider):
+            values += [(.template, template), (.summaryProvider, provider)]
+            summaryText = text
+        case .failed(let reason):
+            summaryText = "⚠️ Riepilogo non generato: \(reason)"
+        }
         setFrontmatter(values)
-        replaceManagedSection(with: "Trascrizione pronta: [[\(transcriptName)]]")
+        replaceManagedSection(with: "\(summaryText)\n\nTrascrizione completa: [[\(transcriptName)]]")
     }
 
     /// Registra un'Elaborazione fallita: il motivo compare nella Zona gestita.

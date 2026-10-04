@@ -63,6 +63,10 @@ public struct Transcript: Sendable {
 
     /// Corpo del file Trascrizione: `**[mm:ss] Io:** testo`, un paragrafo per blocco.
     public var markdown: String {
+        Self.markdown(of: paragraphs)
+    }
+
+    static func markdown(of paragraphs: [Paragraph]) -> String {
         paragraphs
             .map { "**[\(elapsedLabel($0.start))] \($0.track.label):** \($0.text)\n" }
             .joined(separator: "\n")

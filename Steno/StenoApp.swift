@@ -14,6 +14,10 @@ struct StenoApp: App {
                 .task { await controller.runSmokeTestIfRequested() }
                 #endif
         }
+
+        Settings {
+            SettingsView()
+        }
     }
 }
 
@@ -32,12 +36,21 @@ private struct MenuBarLabel: View {
 
 private struct MeetingMenu: View {
     let controller: MeetingController
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         if controller.isInProgress {
             Button("Ferma riunione") { controller.stop() }
         } else {
             Button("Avvia riunione") { Task { await controller.start() } }
+        }
+
+        Picker("Template", selection: Bindable(controller).templateName) {
+            ForEach(Vault.templateChoices(including: controller.templateName), id: \.self) { Text($0).tag($0) }
+        }
+        // Il Profilo di una Riunione si fissa all'avvio: cambiarlo durante la registrazione non avrebbe effetto.
+        if !controller.isInProgress {
+            ProviderProfileMenu()
         }
 
         if controller.processingCount > 0 {
@@ -71,8 +84,15 @@ private struct MeetingMenu: View {
             }
         }
 
+        Divider()
+        Button("Impostazioni…") {
+            // Steno non ha icona nel Dock: senza attivarla la finestra resterebbe dietro le altre.
+            NSApplication.shared.activate()
+            openSettings()
+        }
+        .keyboardShortcut(",")
+
         if !controller.isInProgress {
-            Divider()
             Button("Esci da Steno") { NSApplication.shared.terminate(nil) }
                 .keyboardShortcut("q")
         }
@@ -88,4 +108,16 @@ private extension NSImage {
         image.isTemplate = false
         return image
     }()
+}
+
+/// Cambio rapido del Profilo per il Riepilogo (es. da uno di prova a uno UE).
+private struct ProviderProfileMenu: View {
+    @AppStorage(AppSettings.activeProviderProfileKey) private var activeID = ""
+
+    var body: some View {
+        Picker("Profilo Riepilogo", selection: $activeID) {
+            Text("Nessuno").tag("")
+            ForEach(AppSettings.summaryProfiles) { Text($0.displayName).tag($0.id.uuidString) }
+        }
+    }
 }

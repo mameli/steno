@@ -17,6 +17,9 @@ final class MeetingController {
         let startedAt: Date
         let noteURL: URL?
         let transcription: MeetingTranscription
+        var templateName: String
+        /// Fissato all'avvio (ADR 0001): cambiare Profilo dopo non sposta la Riunione su un altro Provider.
+        let summaryProfile: ProviderProfile?
     }
 
     private var machine = MeetingStateMachine()
@@ -32,9 +35,15 @@ final class MeetingController {
     private(set) var lastTranscriptURL: URL?
     private(set) var lastNoteURL: URL?
     private(set) var processingCount = 0
+    /// Template per la Riunione in corso o per la prossima; si può cambiare fino allo stop.
+    var templateName = AppSettings.defaultTemplate {
+        didSet { current?.templateName = templateName }
+    }
 
     init() {
-        Settings.registerDefaults()
+        AppSettings.registerDefaults()
+        templateName = AppSettings.defaultTemplate
+        try? Vault.configured?.ensureDefaultTemplate()
     }
 
     var isInProgress: Bool { machine.state != .idle }
@@ -56,10 +65,10 @@ final class MeetingController {
         guard granted else { return }
 
         now = Date()
-        let transcription = MeetingTranscription(transcriber: transcriber, language: Settings.forcedLanguage)
+        let transcription = MeetingTranscription(transcriber: transcriber, language: AppSettings.forcedLanguage)
         let started: MeetingRecorder.Started
         do {
-            started = try recorder.start(at: now, echoCancellation: Settings.echoCancellation) { segment, directory in
+            started = try recorder.start(at: now, echoCancellation: AppSettings.echoCancellation) { segment, directory in
                 Task { await transcription.segmentClosed(segment, in: directory) }
             }
         } catch {
@@ -79,7 +88,9 @@ final class MeetingController {
             stenoID: started.meetingID,
             startedAt: now,
             noteURL: createMeetingNote(stenoID: started.meetingID, startedAt: now),
-            transcription: transcription
+            transcription: transcription,
+            templateName: templateName,
+            summaryProfile: AppSettings.activeProviderProfile
         )
         startTicker()
 
@@ -120,6 +131,7 @@ final class MeetingController {
 
         if let context = current {
             current = nil
+            templateName = AppSettings.defaultTemplate
             Task { await process(stopped.recording, in: stopped.directory, context: context) }
         }
     }
@@ -130,7 +142,7 @@ final class MeetingController {
         guard let vault = Vault.configured else { return nil }
         do {
             let url = try vault.createMeetingNote(stenoID: stenoID, startedAt: startedAt)
-            if Settings.openInObsidian {
+            if AppSettings.openInObsidian {
                 Task {
                     // Obsidian deve prima accorgersi del file nuovo.
                     try? await Task.sleep(for: .milliseconds(500))
@@ -170,8 +182,9 @@ final class MeetingController {
 
         if let vault = Vault.configured {
             do {
-                let noteURL = try writeToVault(vault, finished, recording: recording, context: context)
+                let (noteURL, summaryProblem) = try await writeToVault(vault, finished, recording: recording, context: context)
                 if isLatest { lastNoteURL = noteURL }
+                if let summaryProblem { problems.append(summaryProblem) }
             } catch {
                 problems.append("Scrittura nel Vault non riuscita: \(error.localizedDescription)")
             }
@@ -185,17 +198,38 @@ final class MeetingController {
         }
     }
 
+    /// Scrive l'esito dell'Elaborazione nel Vault: Riepilogo, titolo e rinomina, Trascrizione,
+    /// Nota della Riunione. Restituisce la nota e, se c'è stato, il problema del Riepilogo.
     private func writeToVault(
         _ vault: Vault, _ finished: MeetingTranscription.Finished?, recording: Recording, context: MeetingContext
-    ) throws -> URL {
-        let noteURL = try vault.findMeetingNote(stenoID: context.stenoID, expected: context.noteURL)
+    ) async throws -> (URL, String?) {
+        var noteURL = try vault.findMeetingNote(stenoID: context.stenoID, expected: context.noteURL)
             ?? vault.createMeetingNote(stenoID: context.stenoID, startedAt: context.startedAt)
         guard let finished else {
             try vault.update(noteURL) {
                 $0.recordFailure(stenoID: context.stenoID, reason: "Trascrizione non riuscita: la Registrazione è salvata, si potrà riprovare.")
             }
-            return noteURL
+            return (noteURL, nil)
         }
+
+        let personalNotes = try vault.meetingNote(at: noteURL).personalNotes
+        let (summary, title) = await summarize(
+            finished, personalNotes: personalNotes,
+            template: vault.template(named: context.templateName), profile: context.summaryProfile
+        )
+        // Si rinomina solo una nota ancora al suo posto e col nome provvisorio. Se la rinomina
+        // fallisce la nota resta com'è: il Riepilogo non deve andare perso per un nome.
+        if let title, vault.isInMeetingsFolder(noteURL),
+           let newName = VaultNaming.renamedNoteName(
+               current: noteURL.deletingPathExtension().lastPathComponent, startedAt: context.startedAt, title: title
+           ) {
+            do {
+                noteURL = try vault.rename(noteURL, to: newName)
+            } catch {
+                logger.error("Rinomina della nota non riuscita: \(error, privacy: .public)")
+            }
+        }
+
         let transcriptURL = try vault.writeTranscript(
             finished.transcript,
             stenoID: context.stenoID,
@@ -203,15 +237,44 @@ final class MeetingController {
             language: finished.language
         )
         try vault.update(noteURL) {
-            $0.recordTranscription(
+            $0.recordProcessing(
                 stenoID: context.stenoID,
                 duration: recording.endedAt.timeIntervalSince(recording.startedAt),
                 language: finished.language,
-                provider: "Locale",
-                transcriptName: transcriptURL.deletingPathExtension().lastPathComponent
+                transcriptionProvider: "Locale",
+                transcriptName: transcriptURL.deletingPathExtension().lastPathComponent,
+                summary: summary
             )
         }
-        return noteURL
+        if case .failed(let reason) = summary {
+            return (noteURL, "Riepilogo non generato: \(reason)")
+        }
+        return (noteURL, nil)
+    }
+
+    /// Riepilogo e titolo con il Profilo attivo. Un titolo mancante non è un errore: la nota resta col nome provvisorio.
+    private func summarize(
+        _ finished: MeetingTranscription.Finished, personalNotes: String, template: Template, profile: ProviderProfile?
+    ) async -> (MeetingNote.SummaryOutcome, String?) {
+        guard let profile else {
+            return (.failed(reason: ProfileError.noActiveProfile.localizedDescription), nil)
+        }
+        guard !finished.transcript.paragraphs.isEmpty else {
+            return (.failed(reason: "nella Registrazione non c'è parlato."), nil)
+        }
+        do {
+            let client = try ChatClient(profile: profile)
+            let prompt = SummaryPrompt(
+                template: template, personalNotes: personalNotes,
+                transcript: finished.transcript, meetingLanguage: finished.language
+            )
+            let text = try await Summarizer(client: client, maxContextTokens: profile.maxContextTokens).summarize(prompt)
+            let reply = try? await client.complete(MeetingTitle.request(summary: text, language: prompt.summaryLanguage))
+            return (.written(text: text, template: template.name, provider: profile.displayName), reply.flatMap(MeetingTitle.clean))
+        } catch {
+            logger.error("Riepilogo non generato: \(error, privacy: .public)")
+            return (.failed(reason: error.localizedDescription), nil)
+        }
     }
 
     #if DEBUG
@@ -229,7 +292,9 @@ final class MeetingController {
                     stenoID: recording.meetingID,
                     startedAt: recording.startedAt,
                     noteURL: nil,
-                    transcription: MeetingTranscription(transcriber: transcriber, language: Settings.forcedLanguage)
+                    transcription: MeetingTranscription(transcriber: transcriber, language: AppSettings.forcedLanguage),
+                    templateName: templateName,
+                    summaryProfile: AppSettings.activeProviderProfile
                 )
                 await process(recording, in: directory, context: context)
             } catch {

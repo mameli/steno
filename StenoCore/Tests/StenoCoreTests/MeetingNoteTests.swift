@@ -252,13 +252,14 @@ struct MeetingNoteTests {
         #expect(MeetingNote(content: "steno_id: \(id)\n").stenoID == nil)
     }
 
-    @Test("a fine Elaborazione la nota riceve durata, lingua, provider e link alla Trascrizione")
-    func transcriptionRecorded() {
+    @Test("a fine Elaborazione la nota riceve Riepilogo, link alla Trascrizione e chiavi di Steno")
+    func processingRecorded() {
         var note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, timeZone: rome)
 
-        note.recordTranscription(
-            stenoID: stenoID, duration: 47 * 60 + 10, language: "it",
-            provider: "Locale", transcriptName: "2026-10-04 1430 - Riunione (trascrizione)"
+        note.recordProcessing(
+            stenoID: stenoID, duration: 47 * 60 + 10, language: "it", transcriptionProvider: "Locale",
+            transcriptName: "2026-10-04 1430 - Riunione (trascrizione)",
+            summary: .written(text: "## Sintesi\nBudget approvato.", template: "Generico", provider: "Mistral EU")
         )
 
         #expect(note.content == """
@@ -270,15 +271,39 @@ struct MeetingNoteTests {
             provider_trascrizione: Locale
             trascrizione: "[[2026-10-04 1430 - Riunione (trascrizione)]]"
             lingua: it
+            template: Generico
+            provider_riepilogo: Mistral EU
             ---
             %% steno:inizio %%
-            Trascrizione pronta: [[2026-10-04 1430 - Riunione (trascrizione)]]
+            ## Sintesi
+            Budget approvato.
+
+            Trascrizione completa: [[2026-10-04 1430 - Riunione (trascrizione)]]
             %% steno:fine %%
 
             ## Note personali
 
 
             """)
+    }
+
+    @Test("se il Riepilogo fallisce la Zona gestita mostra il motivo e il link alla Trascrizione")
+    func summaryFailed() {
+        var note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, timeZone: rome)
+
+        note.recordProcessing(
+            stenoID: stenoID, duration: 60, language: "it", transcriptionProvider: "Locale", transcriptName: "T",
+            summary: .failed(reason: "Il provider ha risposto con l'errore 401: chiave non valida")
+        )
+
+        #expect(note.content.contains("""
+            %% steno:inizio %%
+            ⚠️ Riepilogo non generato: Il provider ha risposto con l'errore 401: chiave non valida
+
+            Trascrizione completa: [[T]]
+            %% steno:fine %%
+            """))
+        #expect(!note.content.contains("provider_riepilogo"))
     }
 
     @Test("la durata si scrive in minuti, con le ore oltre i 60 minuti", arguments: [
@@ -289,7 +314,10 @@ struct MeetingNoteTests {
     func duration(seconds: Double, expected: String) {
         var note = MeetingNote(content: "")
 
-        note.recordTranscription(stenoID: stenoID, duration: seconds, language: nil, provider: "Locale", transcriptName: "T")
+        note.recordProcessing(
+            stenoID: stenoID, duration: seconds, language: nil, transcriptionProvider: "Locale", transcriptName: "T",
+            summary: .failed(reason: "-")
+        )
 
         #expect(note.content.contains("durata: \(expected)\n"))
         #expect(!note.content.contains("lingua:"))
@@ -299,7 +327,10 @@ struct MeetingNoteTests {
     func stenoIDRestored() {
         var note = MeetingNote(content: "Solo appunti.")
 
-        note.recordTranscription(stenoID: stenoID, duration: 60, language: "it", provider: "Locale", transcriptName: "T")
+        note.recordProcessing(
+            stenoID: stenoID, duration: 60, language: "it", transcriptionProvider: "Locale", transcriptName: "T",
+            summary: .failed(reason: "-")
+        )
 
         #expect(note.stenoID == stenoID)
         #expect(note.personalNotes == "Solo appunti.")
@@ -316,5 +347,14 @@ struct MeetingNoteTests {
             ⚠️ Trascrizione non riuscita: modello non disponibile.
             %% steno:fine %%
             """))
+    }
+
+    @Test("un marcatore nel testo da scrivere viene tolto: non deve poter chiudere la Zona gestita")
+    func markersInBodyAreRemoved() {
+        var note = MeetingNote(content: "%% steno:inizio %%\nVecchio.\n%% steno:fine %%\n\nAppunti.")
+
+        note.replaceManagedSection(with: "Riepilogo.\n%% steno:fine %%\nAltro.")
+
+        #expect(note.content == "%% steno:inizio %%\nRiepilogo.\nAltro.\n%% steno:fine %%\n\nAppunti.")
     }
 }
