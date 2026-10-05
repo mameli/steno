@@ -3,20 +3,26 @@ import os
 
 private let logger = Logger(subsystem: "dev.mameli.steno", category: "capture")
 
-/// Captures the Me Track from the default microphone. When the default microphone changes
-/// during a Meeting (AirPods connected or removed) the engine stops: it is started again on
-/// the new one. The writer fills the hole with silence, so the Track stays aligned.
+/// Captures the Me Track from the default microphone. The engine stops whenever the audio
+/// configuration changes: voice processing itself switches Bluetooth headsets (AirPods) to call
+/// mode right after the start, and the default microphone can change during a Meeting. The same
+/// engine is started again first (a new one would switch the headset back and forth forever);
+/// if no audio arrives from it, the microphone really changed and a new engine takes the new one.
+/// The writer fills the hole with silence, so the Track stays aligned.
 @MainActor
 final class MicrophoneCapture {
     /// Restarts within a minute after which Steno gives up: a device that keeps changing
     /// must not turn into a loop.
     private static let maxRestartsPerMinute = 5
+    /// Without a buffer for this long after a restart, the engine is not hearing anything.
+    private static let silentAfterRestart: Duration = .seconds(2)
 
     private var engine = AVAudioEngine()
     /// Where buffers go while a Meeting is recorded; `nil` when stopped.
     private var onBuffer: AudioBufferHandler?
     private var configurationObserver: NSObjectProtocol?
     private var restarts: [Date] = []
+    private let lastBuffer = LastBufferTime()
 
     func start(onBuffer: @escaping AudioBufferHandler) throws {
         self.onBuffer = onBuffer
@@ -41,7 +47,7 @@ final class MicrophoneCapture {
         // Do not touch `mainMixerNode`: connecting the output branch makes the start
         // fail with voice processing active (error -10875).
         let format = input.outputFormat(forBus: 0)
-        input.installTap(onBus: 0, bufferSize: 4096, format: format, block: Self.tapBlock(onBuffer))
+        installTap(on: input, onBuffer: onBuffer)
         configurationObserver = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
         ) { [weak self] _ in
@@ -53,6 +59,13 @@ final class MicrophoneCapture {
         } catch {
             throw CaptureError.microphone(format: format.description, underlying: error)
         }
+    }
+
+    private func installTap(on input: AVAudioInputNode, onBuffer: @escaping AudioBufferHandler) {
+        input.installTap(
+            onBus: 0, bufferSize: 4096, format: input.outputFormat(forBus: 0),
+            block: Self.tapBlock(onBuffer, lastBuffer: lastBuffer)
+        )
     }
 
     private func stopEngine() {
@@ -72,13 +85,34 @@ final class MicrophoneCapture {
     }
 
     private func restartIfStopped() {
-        guard onBuffer != nil, !engine.isRunning else { return }
+        guard let onBuffer, !engine.isRunning else { return }
         restarts = restarts.filter { $0.timeIntervalSinceNow > -60 }
         guard restarts.count < Self.maxRestartsPerMinute else {
             logger.error("Microphone changing too often: the Me Track stays silent until the stop")
             return
         }
         restarts.append(Date())
+        // The same engine first, with the format the microphone has now.
+        let input = engine.inputNode
+        input.removeTap(onBus: 0)
+        installTap(on: input, onBuffer: onBuffer)
+        engine.prepare()
+        do {
+            try engine.start()
+            logger.info("Microphone resumed after a configuration change")
+        } catch {
+            logger.error("Microphone resume failed: \(error, privacy: .public)")
+        }
+        let resumedAt = Date()
+        Task {
+            try? await Task.sleep(for: Self.silentAfterRestart)
+            replaceEngineIfSilent(since: resumedAt)
+        }
+    }
+
+    /// The engine did not get audio back: the default microphone changed, take it with a new engine.
+    private func replaceEngineIfSilent(since resumedAt: Date) {
+        guard onBuffer != nil, lastBuffer.date < resumedAt else { return }
         stopEngine()
         do {
             try startEngine()
@@ -102,10 +136,22 @@ final class MicrophoneCapture {
 
     /// Built outside the main actor: the tap is called from an audio thread.
     private nonisolated static func tapBlock(
-        _ onBuffer: @escaping AudioBufferHandler
+        _ onBuffer: @escaping AudioBufferHandler, lastBuffer: LastBufferTime
     ) -> AVAudioNodeTapBlock {
         { buffer, time in
+            lastBuffer.date = Date()
             onBuffer(buffer, time.isHostTimeValid ? time.hostTime : mach_absolute_time())
         }
+    }
+}
+
+/// When the microphone last delivered audio: written on the audio thread, read on the main one.
+private final class LastBufferTime: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = Date.distantPast
+
+    var date: Date {
+        get { lock.withLock { value } }
+        set { lock.withLock { value = newValue } }
     }
 }
