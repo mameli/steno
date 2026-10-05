@@ -141,6 +141,7 @@ Rules:
 **Profile** (v1: Summary only): name, base URL, API key (in the Keychain, optional for local servers), model, max context. Examples: "Local llama.cpp" (`http://localhost:8080/v1`), "Mistral EU" (`https://api.mistral.ai/v1`). Transcription is always local (WhisperKit). A Profile outside the EU (e.g. OpenRouter) is allowed only for development with test recordings: Steno does not prevent it, the choice stays with the user (exception recorded in ADR 0001). The Profile is fixed when the Meeting starts; if it is deleted before the Summary (its key goes with it), the Summary fails saying so, and Retry with another Profile fixes it. A new Profile is not made active by itself. The URL must be `https://`; `http://` is allowed only for servers on this Mac (`localhost`, `127.0.0.1`, `::1`): to any other machine, even on the local network, key and Transcript would travel readable.
 
 **Settings** (UserDefaults; secrets in the Keychain). In the v1 Settings window:
+- Open at login (a login item registered with macOS, also visible in System Settings → General → Login Items)
 - Vault path
 - Templates and default Template
 - Summary Profiles and active Profile (with "Test connection")

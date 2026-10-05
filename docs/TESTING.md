@@ -9,6 +9,8 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 - [x] **App icon**: Finder and notifications show the orange notebook.
 - [x] **Menu bar**: the notebook outline and handwriting are crisp on light and dark menu bars and when the menu is selected. Recording still shows a red dot; Processing still shows an hourglass.
 
+- [ ] **Open at login**: Settings → *General* → *Open at login* on → Steno is in System Settings → General → Login Items; log out and back in → Steno is in the menu bar. Turn it off → it disappears from Login Items.
+
 ## 1. Recording
 
 - [x] **Start from the menu**: *Start meeting* → the red dot appears in the bar, Obsidian opens `Meetings/<date> <time> - Meeting.md`.

@@ -1,8 +1,9 @@
 import AppKit
+import ServiceManagement
 import StenoCore
 import SwiftUI
 
-/// Minimal Settings window: Vault, Templates, Recordings, Provider Profiles for the Summary.
+/// Minimal Settings window: start at login, Vault, Templates, Recordings, Provider Profiles for the Summary.
 struct SettingsView: View {
     @State private var vaultPath = AppSettings.vaultPath ?? ""
     @State private var profiles = AppSettings.summaryProfiles
@@ -13,6 +14,16 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section {
+                LaunchAtLoginToggle()
+            } header: {
+                // The header of the first Section, so the icon scrolls away with the rest.
+                VStack(alignment: .leading, spacing: 16) {
+                    AppIdentity().frame(maxWidth: .infinity)
+                    Text("General")
+                }
+            }
+
+            Section("Obsidian Vault") {
                 LabeledContent("Folder") {
                     HStack {
                         Text(vaultPath.isEmpty ? String(localized: "None") : vaultPath)
@@ -21,12 +32,6 @@ struct SettingsView: View {
                             .foregroundStyle(vaultPath.isEmpty ? .secondary : .primary)
                         Button("Choose…", action: chooseVault)
                     }
-                }
-            } header: {
-                // The header of the first Section, so the icon scrolls away with the rest.
-                VStack(alignment: .leading, spacing: 16) {
-                    AppIdentity().frame(maxWidth: .infinity)
-                    Text("Obsidian Vault")
                 }
             }
 
@@ -124,6 +129,46 @@ private struct AppIdentity: View {
             Text("Version \(version)").font(.caption).foregroundStyle(.secondary)
         }
         .padding(.top, 8)
+    }
+}
+
+/// Starts Steno when the user logs in, as a login item registered with macOS: it also appears,
+/// and can be turned off, in System Settings → General → Login Items.
+private struct LaunchAtLoginToggle: View {
+    @State private var status = SMAppService.mainApp.status
+    @State private var error: String?
+
+    var body: some View {
+        Toggle("Open at login", isOn: Binding(
+            get: { status == .enabled || status == .requiresApproval },
+            set: setEnabled
+        ))
+        // The status can change in System Settings while this window is closed.
+        .onAppear { status = SMAppService.mainApp.status }
+        if status == .requiresApproval {
+            HStack {
+                Text("Allow Steno in System Settings → Login Items.").foregroundStyle(.secondary)
+                Spacer()
+                Button("Open Login Items") { SMAppService.openSystemSettingsLoginItems() }
+            }
+        }
+        if let error {
+            Text(error).foregroundStyle(.secondary)
+        }
+    }
+
+    private func setEnabled(_ isEnabled: Bool) {
+        do {
+            if isEnabled {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+            error = nil
+        } catch {
+            self.error = error.localizedDescription
+        }
+        status = SMAppService.mainApp.status
     }
 }
 

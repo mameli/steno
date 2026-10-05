@@ -81,6 +81,16 @@
         }
       }
     },
+    "Allow Steno in System Settings → Login Items.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti Steno in Impostazioni di Sistema → Elementi login."
+          }
+        }
+      }
+    },
     "Any server with an OpenAI-compatible API. For work meetings use only local Providers or Providers based and hosting data in the EU.": {
       "localizations": {
         "it": {
@@ -237,6 +247,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cartella"
+          }
+        }
+      }
+    },
+    "General": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generali"
           }
         }
       }
@@ -498,6 +518,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vault Obsidian"
+          }
+        }
+      }
+    },
+    "Open Login Items": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri Elementi login"
+          }
+        }
+      }
+    },
+    "Open at login": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri all'avvio del Mac"
           }
         }
       }
