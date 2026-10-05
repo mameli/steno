@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import StenoCore
 import os
@@ -32,6 +33,7 @@ final class MeetingProcessor {
     private(set) var lastError: String?
     private(set) var recent: [RecentMeeting] = []
     private(set) var lastNoteURL: URL?
+    /// The Transcript in the Vault or, without a Vault, the copy in the Recording folder.
     private(set) var lastTranscriptURL: URL?
 
     init(transcriber: LocalTranscriber) {
@@ -103,6 +105,16 @@ final class MeetingProcessor {
             return
         }
         Vault.openInObsidian(note)
+    }
+
+    /// In Obsidian like the notes; the copy in the Recording folder (no Vault) with the default app.
+    func openLastTranscript() {
+        guard let url = lastTranscriptURL else { return }
+        if let vault = Vault.configured, url.path(percentEncoded: false).hasPrefix(vault.root.path(percentEncoded: false)) {
+            Vault.openInObsidian(url)
+        } else {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     /// Redoes the whole Processing (Segments already transcribed come from the cache).
@@ -318,6 +330,7 @@ final class MeetingProcessor {
             meetingNoteName: noteURL.deletingPathExtension().lastPathComponent,
             language: finished.language
         )
+        lastTranscriptURL = transcriptURL
         try vault.update(noteURL) {
             $0.recordProcessing(
                 stenoID: record.stenoID,

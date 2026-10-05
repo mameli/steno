@@ -90,8 +90,8 @@ private struct MeetingMenu: View {
                 NSWorkspace.shared.activateFileViewerSelecting([directory])
             }
         }
-        if let transcript = controller.processor.lastTranscriptURL {
-            Button("Open last Transcript") { NSWorkspace.shared.open(transcript) }
+        if controller.processor.lastTranscriptURL != nil {
+            Button("Open last Transcript") { controller.processor.openLastTranscript() }
         }
         #endif
 
