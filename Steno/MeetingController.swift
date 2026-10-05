@@ -272,7 +272,11 @@ final class MeetingController {
             nonisolated(unsafe) let menu = note.object as? NSMenu
             MainActor.assumeIsolated {
                 guard let self else { return }
-                if self.openMenus == 0 { self.openMenu = menu }
+                if self.openMenus == 0 {
+                    self.openMenu = menu
+                    // Notes deleted or renamed in the Vault since the last time.
+                    self.processor.refreshRecent()
+                }
                 self.openMenus += 1
             }
         }

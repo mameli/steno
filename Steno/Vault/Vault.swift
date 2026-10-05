@@ -112,6 +112,20 @@ struct Vault {
         return Self.firstFile(in: meetingsFolder, excluding: transcriptsFolder) { Self.belongs($0, to: stenoID) }
     }
 
+    /// The Meeting notes in the Meetings folder (Transcripts excluded) by `steno_id`, in one pass:
+    /// for looking up many Meetings at once.
+    func meetingNotesByStenoID() -> [UUID: URL] {
+        var notes: [UUID: URL] = [:]
+        _ = Self.firstFile(in: meetingsFolder, excluding: transcriptsFolder) { url in
+            if let stenoID = (try? String(contentsOf: url, encoding: .utf8)).flatMap({ MeetingNote(content: $0).stenoID }),
+               notes[stenoID] == nil {
+                notes[stenoID] = url
+            }
+            return false
+        }
+        return notes
+    }
+
     /// The Transcript file of a Meeting, found by its `steno_id`.
     func findTranscript(stenoID: UUID) -> URL? {
         Self.firstFile(in: transcriptsFolder) { Self.belongs($0, to: stenoID) }

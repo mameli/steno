@@ -40,6 +40,7 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 
 - [x] **Two Meetings in a row**: stop the first one and start the second right away → the menu says "Processing… (1 more queued)", then two notifications.
 - [x] **Recent meetings → Open note**: opens the right note, even if you renamed or moved it.
+- [ ] **Meeting deleted from the Vault**: delete a Meeting note in Obsidian, open the menu → *Recent meetings* no longer lists it (an older Meeting takes its place); rename a note → the menu shows the new name.
 - [x] **New Template**: Settings → *Templates* → type a name → *Create and open* → it opens in Obsidian; change instructions and sections and save.
 - [x] **Default Template**: choose the new Template as default → the next Meeting starts with it.
 - [x] **Delete Template**: *Delete* → confirm → the row disappears with no message, the file is in the Mac Trash; if it was the default, Notes is back. Notes has no *Delete*.

@@ -11,7 +11,7 @@ private let logger = Logger(subsystem: "dev.mameli.steno", category: "processing
 @MainActor
 @Observable
 final class MeetingProcessor {
-    struct RecentMeeting: Identifiable {
+    struct RecentMeeting: Identifiable, Equatable {
         let id: UUID
         let title: String
         let status: ProcessingRecord.Status
@@ -441,15 +441,28 @@ final class MeetingProcessor {
         (try? FileManager.default.contentsOfDirectory(at: MeetingRecorder.recordingsDirectory, includingPropertiesForKeys: nil)) ?? []
     }
 
+    /// The last five Meetings whose note is still in the Vault: a Meeting deleted from the Vault
+    /// is gone from the menu too (its Recording stays until the audio expires). Meetings not
+    /// concluded yet, and those recorded without a Vault, are always listed. The title is the
+    /// note's current name, also after a rename in Obsidian.
     func refreshRecent() {
-        recent = allRecords()
-            .sorted { $0.startedAt > $1.startedAt }
-            .prefix(5)
-            .map { record in
-                let title = record.noteURL?.deletingPathExtension().lastPathComponent
-                    ?? record.startedAt.formatted(date: .abbreviated, time: .shortened)
-                return RecentMeeting(id: record.stenoID, title: title, status: record.status)
+        let vault = Vault.configured
+        // Read only if a note is not where Steno left it.
+        lazy var notesByStenoID = vault?.meetingNotesByStenoID() ?? [:]
+        var meetings: [RecentMeeting] = []
+        for record in allRecords().sorted(by: { $0.startedAt > $1.startedAt }) where meetings.count < 5 {
+            var note = record.noteURL
+            if vault != nil, let expected = record.noteURL, !record.status.isPending,
+               !FileManager.default.fileExists(atPath: expected.path(percentEncoded: false)) {
+                guard let moved = notesByStenoID[record.stenoID] else { continue }
+                note = moved
             }
+            let title = note?.deletingPathExtension().lastPathComponent
+                ?? record.startedAt.formatted(date: .abbreviated, time: .shortened)
+            meetings.append(RecentMeeting(id: record.stenoID, title: title, status: record.status))
+        }
+        // Unchanged most of the time: assigning would rebuild the menu anyway.
+        if meetings != recent { recent = meetings }
     }
 
     private static func hasAudio(_ directory: URL) -> Bool {
