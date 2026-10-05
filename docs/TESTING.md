@@ -15,9 +15,9 @@ Before starting: Steno running from the menu bar (waveform icon), Vault and a Su
 ## 2. Processing
 
 - [ ] **Notes Template**: the Summary has the topics in Meeting order, with bullets and sub-bullets, and *Next steps* at the end as a "What to do (Who)" checklist.
-- [ ] **Personal notes**: write a few lines under `## Personal notes` during the call → after the stop they are untouched and the Summary gives those topics priority.
+- [x] **Personal notes**: write a few lines under `## Personal notes` during the call → after the stop they are untouched and the Summary gives those topics priority.
 - [ ] **Summary**: after the stop an hourglass in the bar, then the "Summary ready" notification; the note has the Summary, the Transcript link and the frontmatter (duration, language, template, provider).
-- [ ] **Title and rename**: the note is no longer "… - Meeting" but "… - <title>"; the Transcript in `Transcripts/` has the same name with "(transcript)". With the note open and Obsidian in front, Obsidian shows the renamed note, not the previous one.
+- [x] **Title and rename**: the note is no longer "… - Meeting" but "… - <title>"; the Transcript in `Transcripts/` has the same name with "(transcript)". With the note open and Obsidian in front, Obsidian shows the renamed note, not the previous one.
 - [ ] **Notification click**: opens the note in Obsidian.
 - [x] **Note renamed by you**: rename the note during the call → Steno finds it and does not rename it.
 - [x] **English meeting**: a test with an English video → Transcript and Summary in English.
