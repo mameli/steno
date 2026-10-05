@@ -11,7 +11,6 @@ public struct MeetingNote: Equatable, Sendable {
         case stenoID = "steno_id"
         case duration
         case language
-        case transcriptionProvider = "transcription_provider"
         case summaryProvider = "summary_provider"
         case template
         case transcript
@@ -116,13 +115,12 @@ public struct MeetingNote: Equatable, Sendable {
     /// user deleted it), the Summary or the failure reason, and the Transcript link in the
     /// managed section.
     public mutating func recordProcessing(
-        stenoID: UUID, duration: TimeInterval, language: String?, transcriptionProvider: String,
-        transcriptName: String, summary: SummaryOutcome
+        stenoID: UUID, duration: TimeInterval, language: String?, transcriptName: String,
+        summary: SummaryOutcome
     ) {
         var values: [(key: StenoKey, value: String)] = [
             (.stenoID, stenoID.uuidString),
             (.duration, Self.durationValue(duration)),
-            (.transcriptionProvider, transcriptionProvider),
             (.transcript, Self.wikiLink(transcriptName)),
         ]
         if let language { values.append((.language, language)) }

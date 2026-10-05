@@ -7,7 +7,7 @@ struct RetentionTests {
     let now = Date(timeIntervalSince1970: 1_791_117_000)
     let day: TimeInterval = 86_400
 
-    func item(_ daysAgo: Double, _ status: ProcessingRecord.Status?) -> Retention.Item {
+    func item(_ daysAgo: Double, _ status: ProcessingRecord.Status) -> Retention.Item {
         Retention.Item(stenoID: UUID(), startedAt: now.addingTimeInterval(-daysAgo * day), status: status)
     }
 
@@ -15,7 +15,6 @@ struct RetentionTests {
     func expired() {
         let oldCompleted = item(8, .completed)
         let oldFailed = item(10, .failed(reason: "401"))
-        let oldWithoutRecord = item(30, nil)
         let recentCompleted = item(6.9, .completed)
         let oldQueued = item(9, .queued)
         let oldProcessing = item(9, .processing)
@@ -23,11 +22,11 @@ struct RetentionTests {
         let oldRegenerating = item(9, .regenerating)
 
         let expired = Retention.expired(
-            [oldCompleted, oldFailed, oldWithoutRecord, recentCompleted, oldQueued, oldProcessing, oldRecording, oldRegenerating],
+            [oldCompleted, oldFailed, recentCompleted, oldQueued, oldProcessing, oldRecording, oldRegenerating],
             now: now
         )
 
-        #expect(Set(expired) == [oldCompleted.stenoID, oldFailed.stenoID, oldWithoutRecord.stenoID])
+        #expect(Set(expired) == [oldCompleted.stenoID, oldFailed.stenoID])
     }
 
     @Test("the number of retention days can be changed")

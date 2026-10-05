@@ -12,33 +12,11 @@ extension ChatClient {
     }()
 
     init(profile: ProviderProfile) throws {
-        guard let url = URL(string: profile.baseURL.trimmingCharacters(in: .whitespaces)),
-              let scheme = url.scheme?.lowercased(), ["http", "https"].contains(scheme), let host = url.host()
-        else {
-            throw ProfileError.invalidURL(profile.baseURL)
-        }
-        // Plain HTTP only towards this Mac or the local network: otherwise key and Transcript would travel readable.
-        guard scheme == "https" || ["localhost", "127.0.0.1", "::1"].contains(host) || host.hasSuffix(".local") else {
-            throw ProfileError.insecureURL(profile.baseURL)
-        }
+        let url = try profile.validatedBaseURL()
         self.init(baseURL: url, apiKey: Keychain.apiKey(for: profile.id), model: profile.model) { request in
             let (data, response) = try await Self.session.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
             return (data, http)
-        }
-    }
-}
-
-enum ProfileError: LocalizedError {
-    case invalidURL(String)
-    case insecureURL(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .invalidURL(let url):
-            String(localized: "Invalid Profile URL: \"\(url)\" (http:// or https:// and an address are needed).")
-        case .insecureURL(let url):
-            String(localized: "Plain-text Profile URL: \"\(url)\". Use https://; http:// is allowed only for servers on this Mac.")
         }
     }
 }

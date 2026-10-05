@@ -3,11 +3,9 @@ import StenoCore
 
 /// Steno's settings, editable in the Settings window. Some only from the terminal, for example:
 /// `defaults write dev.mameli.steno language it` (or `en`, `auto`)
-/// `defaults write dev.mameli.steno echoCancellation -bool false`
 enum AppSettings {
     private static let vaultPathKey = "vaultPath"
     private static let languageKey = "language"
-    private static let echoCancellationKey = "echoCancellation"
     private static let openInObsidianKey = "openInObsidian"
     /// Also used by `@AppStorage` in the menu: it must follow Profiles added or deleted in Settings.
     static let summaryProfilesKey = "summaryProfiles"
@@ -18,7 +16,6 @@ enum AppSettings {
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
-            echoCancellationKey: true,
             languageKey: "auto",
             openInObsidianKey: true,
             defaultTemplateKey: Template.defaultName,
@@ -55,10 +52,6 @@ enum AppSettings {
         UserDefaults.standard.string(forKey: languageKey).flatMap {
             LocalTranscriber.supportedLanguages.contains($0) ? $0 : nil
         }
-    }
-
-    static var echoCancellation: Bool {
-        UserDefaults.standard.bool(forKey: echoCancellationKey)
     }
 
     /// Off only in automated tests, which write to a test Vault Obsidian does not know.

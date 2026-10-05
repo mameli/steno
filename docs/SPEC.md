@@ -34,10 +34,9 @@ Personal use, one machine (M3 Pro, 18 GB, macOS 26). Meetings in Italian or Engl
 ## Main flow
 
 1. **Start** (click or shortcut). Steno:
-   - creates the Meeting identifier and the Recording folder;
+   - creates the Meeting identifier and the Recording folder and starts capturing the two Tracks (first, so no audio is lost);
    - creates the Meeting note `<Vault>/Meetings/2026-10-04 1430 - Meeting.md` (see [structure](#meeting-note));
-   - opens it in Obsidian with `obsidian://open?path=<absolute path>`;
-   - starts capturing the two Tracks.
+   - opens it in Obsidian with `obsidian://open?path=<absolute path>`.
 2. **During the call**: the user writes **Personal notes** in the note. Segments already closed are transcribed in the background. The Template can be changed from the menu bar; the Summary Profile is the one active at the start.
 3. **Stop** (click or shortcut). The Meeting enters the Processing queue and another Meeting can start right away.
 4. **Processing** (one at a time, in arrival order):
@@ -53,7 +52,7 @@ Personal use, one machine (M3 Pro, 18 GB, macOS 26). Meetings in Italian or Engl
 ## Audio capture
 
 - **Others**: global Core Audio process tap (`CATapDescription`, all processes: Steno plays no audio, so there is no need to exclude it) + aggregate device containing **only the tap**. An aggregate with the speakers as main device stops receiving audio when the microphone's voice processing is active. It starts before the microphone. Requires `NSAudioCaptureUsageDescription`: the first time macOS shows the "System Audio Recording Only" prompt and the start waits for the answer.
-- **Me**: `AVAudioEngine` on the default microphone with `setVoiceProcessingEnabled(true)` for echo cancellation. With voice processing the microphone delivers 9 channels: only channel 0, already cleaned, is kept. The engine's output branch must not be connected, otherwise the start fails (-10875). Can be disabled with `defaults write dev.mameli.steno echoCancellation -bool false`. Requires `NSMicrophoneUsageDescription`. If the default microphone changes during a Meeting (AirPods connected or removed) the engine stops: Steno starts a new one on the new default microphone (at most 5 times a minute) and the hole, usually a second or two, is filled with silence so the Track stays aligned with Others. Any hole over half a second in a Track is filled the same way.
+- **Me**: `AVAudioEngine` on the default microphone with `setVoiceProcessingEnabled(true)` for echo cancellation. With voice processing the microphone delivers 9 channels: only channel 0, already cleaned, is kept. The engine's output branch must not be connected, otherwise the start fails (-10875). Requires `NSMicrophoneUsageDescription`. If the default microphone changes during a Meeting (AirPods connected or removed) the engine stops: Steno starts a new one on the new default microphone (at most 5 times a minute) and the hole, usually a second or two, is filled with silence so the Track stays aligned with Others. Any hole over half a second in a Track is filled the same way.
 - Each Track is written in **5-minute Segments** (`me-000.m4a`, `others-000.m4a`, …), AAC mono 16 kHz. Reasons: a crash loses at most one Segment; closed Segments are transcribed during the call; files stay under remote Providers' upload limits.
 - The two Tracks share the start clock: every Segment records its offset from the start of the Meeting. Each Track's Segment list (`me-segments.json`, `others-segments.json`) is updated whenever a Segment opens, so offsets survive a crash; at the stop it goes into `recording.json`, which is written even if a Track was interrupted.
 
@@ -92,7 +91,6 @@ date: 2026-10-04T14:30
 duration: 47m
 template: Notes
 language: it
-transcription_provider: Local
 summary_provider: Mistral EU
 transcript: "[[2026-10-04 1430 - Title (transcript)]]"
 tags: [meeting]
@@ -106,7 +104,7 @@ tags: [meeting]
 ```
 
 Rules:
-- Steno rewrites **only** the text between `%% steno:start %%` and `%% steno:end %%` and **its own** frontmatter keys (`duration`, `language`, `transcription_provider`, `summary_provider`, `template`, `transcript`). Keys added by the user stay. `date` and `tags` are written only at creation: from then on they belong to the user. `steno_id` is restored at every update if the user deleted it, otherwise the note could not be found again.
+- Steno rewrites **only** the text between `%% steno:start %%` and `%% steno:end %%` and **its own** frontmatter keys (`duration`, `language`, `summary_provider`, `template`, `transcript`). Keys added by the user stay. `date` and `tags` are written only at creation: from then on they belong to the user. `steno_id` is restored at every update if the user deleted it, otherwise the note could not be found again.
 - `steno_id` counts only in the frontmatter (the same text in the body does not identify the note). Managed section markers inside code blocks do not count. Notes with Windows line endings or a BOM are read correctly and rewritten with `\n` line endings.
 - Steno updates the note in place (it does not replace the file), checking that it did not change between read and write: if Obsidian saved it meanwhile, Steno reads it again and reapplies the change.
 - If Processing fails, the Managed section shows `⚠️ <reason>` instead of staying on "Recording in progress".
@@ -124,7 +122,7 @@ Rules:
 - Folder `<Vault>/Meetings/_Templates/`. The default Template is `Notes.md`, Granola style: topics in the order they were discussed, each with a `###` heading and bullets with sub-bullets (reasons, people, figures, links), then `### Next steps` with `- [ ] What to do (Who)` and the context below. No opening summary and no fixed sections. Steno creates it at app launch and when the Vault is chosen, if the folder is empty or if the default Template no longer exists (then the default goes back to Notes).
 - Format: frontmatter with `name` and `summary_language` (any language code such as `it`, `en`, `fr`, `de`; `auto` or missing = the Meeting's language). The body, i.e. free-form instructions and heading structure, is passed to the model as it is.
 - The Template is chosen at start (default from Settings) and can change until the stop.
-- In Settings, Templates section: list, default Template, "New Template" (name → file created from Notes and opened in Obsidian), "Open in Obsidian", "Delete" (moves the file to the Trash, with no message: the row disappearing is enough; if it was the default, Notes becomes the default again; Notes itself cannot be deleted). New files (Templates, Meeting notes) are opened in Obsidian after a second, otherwise Obsidian may not have noticed them yet and answers "file not found". The text is written in Obsidian: Steno has no editor.
+- In Settings, Templates section: list, default Template, "New Template" (name → file created from Notes and opened in Obsidian), "Open in Obsidian", "Delete" (asks for confirmation, then moves the file to the Trash with no further message: the row disappearing is enough; if it was the default, Notes becomes the default again; Notes itself cannot be deleted). A Meeting whose Template is gone uses the Vault's Notes, as the user edited it; only without it the built-in text. New files (Templates, Meeting notes) are opened in Obsidian after a second, otherwise Obsidian may not have noticed them yet and answers "file not found". The text is written in Obsidian: Steno has no editor.
 
 ## Summary
 
@@ -140,7 +138,7 @@ Rules:
 
 ## Profiles and settings
 
-**Profile** (v1: Summary only): name, base URL, API key (in the Keychain, optional for local servers), model, max context. Examples: "Local llama.cpp" (`http://localhost:8080/v1`), "Mistral EU" (`https://api.mistral.ai/v1`). Transcription is always local (WhisperKit). A Profile outside the EU (e.g. OpenRouter) is allowed only for development with test recordings: Steno does not prevent it, the choice stays with the user (exception recorded in ADR 0001). The Profile is fixed when the Meeting starts. The URL must be `https://`; `http://` is allowed only for servers on this Mac (`localhost`, `127.0.0.1`, `*.local`).
+**Profile** (v1: Summary only): name, base URL, API key (in the Keychain, optional for local servers), model, max context. Examples: "Local llama.cpp" (`http://localhost:8080/v1`), "Mistral EU" (`https://api.mistral.ai/v1`). Transcription is always local (WhisperKit). A Profile outside the EU (e.g. OpenRouter) is allowed only for development with test recordings: Steno does not prevent it, the choice stays with the user (exception recorded in ADR 0001). The Profile is fixed when the Meeting starts; if it is deleted before the Summary (its key goes with it), the Summary fails saying so, and Retry with another Profile fixes it. A new Profile is not made active by itself. The URL must be `https://`; `http://` is allowed only for servers on this Mac (`localhost`, `127.0.0.1`, `::1`): to any other machine, even on the local network, key and Transcript would travel readable.
 
 **Settings** (UserDefaults; secrets in the Keychain). In the v1 Settings window:
 - Vault path
@@ -148,9 +146,7 @@ Rules:
 - Summary Profiles and active Profile (with "Test connection")
 - Recordings: days the audio is kept (default 7), space used, "Show in Finder", "Delete audio" (all concluded Meetings, with confirmation). A shorter retention applies at the next cleanup, not on the spot.
 
-For now from the terminal only (`defaults write dev.mameli.steno …`), to move into the Settings window when they are needed:
-- language (`auto` | `it` | `en`)
-- echo cancellation on/off
+From the terminal only (`defaults write dev.mameli.steno language it`), to move into the Settings window if it is needed: the Meeting language (`auto` | `it` | `en`). Echo cancellation is always on.
 
 The global shortcut is fixed: ⌃⌥⌘R. If another app already uses it, the menu says so.
 
@@ -178,7 +174,7 @@ The interface is in English in the code and translated to Italian in `Steno/Loca
 ## Project structure
 
 - **Xcode app** `Steno` (SwiftUI, `MenuBarExtra`, macOS 15 target, Personal Team signing): audio capture, WhisperKit, notifications, shortcut, Keychain, UI.
-- **Local Swift package** `StenoCore`, testable with `swift test` and without AppKit or AVFoundation: Segments → Transcript merging, reading and writing the Meeting note (Managed section, frontmatter, lookup by `steno_id`), Template parsing, prompt building and chunking, OpenAI-compatible client, Meeting/queue state machine, retention rules.
+- **Local Swift package** `StenoCore`, testable with `swift test` and without AppKit or AVFoundation: Segments → Transcript merging, reading and writing the Meeting note (Managed section, frontmatter, lookup by `steno_id`), Template parsing, prompt building and chunking, OpenAI-compatible client, Profile URL check, queue states, retention rules.
 
 Tests: Swift Testing on `StenoCore`, TDD. Capture and transcription are verified by hand with test Recordings saved as fixtures. Automated runs of the app (DEBUG builds) refuse to start unless isolated with `-vaultPath`, `-testSummaryBaseURL` and `-dataDirectory`.
 

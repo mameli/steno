@@ -11,7 +11,8 @@ private let logger = Logger(subsystem: "dev.mameli.steno", category: "meeting")
 @MainActor
 @Observable
 final class MeetingController {
-    private var machine = MeetingStateMachine()
+    /// When the Meeting in progress started; `nil` when idle.
+    private var startedAt: Date?
     private let recorder = MeetingRecorder()
     private let transcriber = LocalTranscriber()
     let processor: MeetingProcessor
@@ -49,7 +50,7 @@ final class MeetingController {
         keepTimerLiveWithoutRebuildingMenus()
     }
 
-    var isInProgress: Bool { machine.state != .idle }
+    var isInProgress: Bool { startedAt != nil }
 
     /// The error to show in the menu: the recording's or the last Processing's.
     var lastError: String? { recordingError ?? processor.lastError }
@@ -58,7 +59,7 @@ final class MeetingController {
     var recordingMenuTitle: String? { recordingMenuTitle(at: now) }
 
     private func recordingMenuTitle(at date: Date) -> String? {
-        guard case .inProgress(let startedAt) = machine.state else { return nil }
+        guard let startedAt else { return nil }
         return Self.recordingMenuTitle(elapsedLabel(max(0, date.timeIntervalSince(startedAt))))
     }
 
@@ -89,7 +90,7 @@ final class MeetingController {
         let transcription = MeetingTranscription(transcriber: transcriber, language: AppSettings.forcedLanguage)
         let started: MeetingRecorder.Started
         do {
-            started = try recorder.start(at: now, echoCancellation: AppSettings.echoCancellation) { segment, directory in
+            started = try recorder.start(at: now) { segment, directory in
                 Task { await transcription.segmentClosed(segment, in: directory) }
             }
         } catch {
@@ -97,13 +98,7 @@ final class MeetingController {
             recordingError = error.localizedDescription
             return
         }
-        do {
-            try machine.start(at: now)
-        } catch {
-            assertionFailure("Start with a Meeting already in progress: \(error)")
-            _ = try? recorder.stop(at: now)
-            return
-        }
+        startedAt = now
         recordingError = nil
         currentStenoID = started.meetingID
         processor.meetingStarted(
@@ -127,18 +122,16 @@ final class MeetingController {
     }
 
     func stop() {
-        let interval: DateInterval
-        do {
-            interval = try machine.stop(at: Date())
-        } catch {
-            assertionFailure("Stop without a Meeting in progress: \(error)")
+        guard isInProgress else {
+            assertionFailure("Stop without a Meeting in progress")
             return
         }
+        startedAt = nil
         ticker?.cancel()
         ticker = nil
 
         do {
-            let stopped = try recorder.stop(at: interval.end)
+            let stopped = try recorder.stop(at: Date())
             lastRecordingDirectory = stopped.directory
             if !stopped.errors.isEmpty {
                 recordingError = String(localized: "Incomplete recording: \(stopped.errors.joined(separator: "; "))")

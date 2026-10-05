@@ -20,6 +20,36 @@ public struct ProviderProfile: Codable, Identifiable, Equatable, Hashable, Senda
         self.maxContextTokens = maxContextTokens
     }
 
+    public enum URLError: LocalizedError, Equatable {
+        case invalid(String)
+        case insecure(String)
+
+        public var errorDescription: String? {
+            switch self {
+            case .invalid(let url):
+                String(localized: "Invalid Profile URL: \"\(url)\" (http:// or https:// and an address are needed).")
+            case .insecure(let url):
+                String(localized: "Plain-text Profile URL: \"\(url)\". Use https://; http:// is allowed only for servers on this Mac.")
+            }
+        }
+    }
+
+    /// Plain HTTP only towards this Mac: to any other machine, even on the local network,
+    /// the key and the Transcript would travel readable.
+    private static let loopbackHosts: Set<String> = ["localhost", "127.0.0.1", "::1", "[::1]"]
+
+    /// The base URL to call, if it is usable.
+    public func validatedBaseURL() throws -> URL {
+        guard let url = URL(string: baseURL.trimmingCharacters(in: .whitespaces)),
+              let scheme = url.scheme?.lowercased(), ["http", "https"].contains(scheme),
+              let host = url.host(), !host.isEmpty
+        else { throw URLError.invalid(baseURL) }
+        guard scheme == "https" || Self.loopbackHosts.contains(host.lowercased()) else {
+            throw URLError.insecure(baseURL)
+        }
+        return url
+    }
+
     /// The name shown in menus, even when the user did not type one. "Untitled" is looked up
     /// in the app's string catalog (Bundle.main), so the app can translate it.
     public var displayName: String {

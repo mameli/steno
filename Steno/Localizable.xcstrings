@@ -272,6 +272,7 @@
       }
     },
     "Invalid Profile URL: \"%@\" (http:// or https:// and an address are needed).": {
+      "extractionState": "manual",
       "localizations": {
         "it": {
           "stringUnit": {
@@ -532,6 +533,7 @@
       }
     },
     "Plain-text Profile URL: \"%@\". Use https://; http:// is allowed only for servers on this Mac.": {
+      "extractionState": "manual",
       "localizations": {
         "it": {
           "stringUnit": {
@@ -1031,6 +1033,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "es. mistral-medium-latest"
+          }
+        }
+      }
+    },
+    "the Profile \"%@\" was deleted: choose another one in the menu and Retry.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "il Profilo \"%@\" è stato eliminato: scegline un altro dal menu e premi Riprova."
           }
         }
       }

@@ -86,9 +86,10 @@ struct SettingsView: View {
         let profile = ProviderProfile(
             name: "", baseURL: "", model: "", maxContextTokens: ProviderProfile.defaultMaxContextTokens
         )
+        // Not made active: an empty Profile would make every Meeting fail until it is filled in.
+        // The user activates it with "Use for Summaries" once it works.
         profiles.append(profile)
         selectedProfileID = profile.id
-        if activeProfileID.isEmpty { activeProfileID = profile.id.uuidString }
     }
 
     private func deleteSelectedProfile() {

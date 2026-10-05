@@ -44,7 +44,7 @@ Without your Team ID the app is signed ad hoc and macOS asks for the microphone 
 ## First setup
 
 1. **Permissions.** On the first meeting macOS asks for the microphone and for *System Audio Recording Only*: allow both.
-2. **Vault.** Steno menu → *Settings…* → *Obsidian Vault* → choose your vault folder. Steno creates `Meetings/`, `Meetings/Transcripts/` and `Meetings/_Templates/` with a default *Notes* Template.
+2. **Vault.** Steno menu → *Settings…* → *Obsidian Vault* → choose your vault folder. Steno creates `Meetings/_Templates/` with a default *Notes* Template; `Meetings/` and `Meetings/Transcripts/` fill up with the first meeting.
 3. **Summary Profile.** In *Summary Profiles* add a Profile: name, base URL, model, max context and, if the provider needs one, the API key (stored in the macOS Keychain). Press *Test connection*. Some examples:
 
    | Provider | Base URL | Model | Key |

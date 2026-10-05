@@ -50,7 +50,7 @@ final class MeetingRecorder {
     }
 
     func start(
-        at startedAt: Date, echoCancellation: Bool, onSegmentClosed: @escaping SegmentClosedHandler
+        at startedAt: Date, onSegmentClosed: @escaping SegmentClosedHandler
     ) throws -> Started {
         let meetingID = UUID()
         let directory = Self.recordingsDirectory.appending(path: meetingID.uuidString, directoryHint: .isDirectory)
@@ -73,7 +73,7 @@ final class MeetingRecorder {
             // System tap first, then the microphone: voice processing reconfigures
             // the audio devices when it starts.
             try systemAudio.start { buffer, time in others.write(buffer, hostTime: time) }
-            try microphone.start(echoCancellation: echoCancellation) { buffer, time in me.write(buffer, hostTime: time) }
+            try microphone.start { buffer, time in me.write(buffer, hostTime: time) }
         } catch {
             microphone.stop()
             systemAudio.stop()

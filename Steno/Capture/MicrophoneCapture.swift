@@ -8,50 +8,40 @@ private let logger = Logger(subsystem: "dev.mameli.steno", category: "capture")
 /// the new one. The writer fills the hole with silence, so the Track stays aligned.
 @MainActor
 final class MicrophoneCapture {
-    private struct Configuration {
-        let echoCancellation: Bool
-        let onBuffer: AudioBufferHandler
-    }
-
     /// Restarts within a minute after which Steno gives up: a device that keeps changing
     /// must not turn into a loop.
     private static let maxRestartsPerMinute = 5
 
     private var engine = AVAudioEngine()
-    private var configuration: Configuration?
+    /// Where buffers go while a Meeting is recorded; `nil` when stopped.
+    private var onBuffer: AudioBufferHandler?
     private var configurationObserver: NSObjectProtocol?
     private var restarts: [Date] = []
 
-    func start(
-        echoCancellation: Bool,
-        onBuffer: @escaping AudioBufferHandler
-    ) throws {
-        configuration = Configuration(echoCancellation: echoCancellation, onBuffer: onBuffer)
+    func start(onBuffer: @escaping AudioBufferHandler) throws {
+        self.onBuffer = onBuffer
         restarts = []
         try startEngine()
     }
 
     func stop() {
-        configuration = nil
+        onBuffer = nil
         stopEngine()
     }
 
     /// A new engine every time: it takes the current default microphone and its format.
     private func startEngine() throws {
-        guard let configuration else { return }
+        guard let onBuffer else { return }
         engine = AVAudioEngine()
         let input = engine.inputNode
-        try input.setVoiceProcessingEnabled(configuration.echoCancellation)
-        if configuration.echoCancellation {
-            // Keeps to a minimum the volume ducking of other apps, the call included.
-            input.voiceProcessingOtherAudioDuckingConfiguration = .init(
-                enableAdvancedDucking: false, duckingLevel: .min
-            )
-        }
+        // Echo cancellation: without it the microphone also records the others from the speakers.
+        try input.setVoiceProcessingEnabled(true)
+        // Keeps to a minimum the volume ducking of other apps, the call included.
+        input.voiceProcessingOtherAudioDuckingConfiguration = .init(enableAdvancedDucking: false, duckingLevel: .min)
         // Do not touch `mainMixerNode`: connecting the output branch makes the start
         // fail with voice processing active (error -10875).
         let format = input.outputFormat(forBus: 0)
-        input.installTap(onBus: 0, bufferSize: 4096, format: format, block: Self.tapBlock(configuration.onBuffer))
+        input.installTap(onBus: 0, bufferSize: 4096, format: format, block: Self.tapBlock(onBuffer))
         configurationObserver = NotificationCenter.default.addObserver(
             forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main
         ) { [weak self] _ in
@@ -82,7 +72,7 @@ final class MicrophoneCapture {
     }
 
     private func restartIfStopped() {
-        guard configuration != nil, !engine.isRunning else { return }
+        guard onBuffer != nil, !engine.isRunning else { return }
         restarts = restarts.filter { $0.timeIntervalSinceNow > -60 }
         guard restarts.count < Self.maxRestartsPerMinute else {
             logger.error("Microphone changing too often: the Me Track stays silent until the stop")

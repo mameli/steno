@@ -241,22 +241,17 @@ final class MeetingProcessor {
         var problems: [String] = []
         do {
             let (transcript, language) = Transcript.parse(vaultFile: transcriptFile)
-            let (summary, title) = await summarize(
-                transcript, language: language,
-                personalNotes: try vault.meetingNote(at: noteURL).personalNotes,
-                template: vault.template(named: record.templateName),
-                profile: record.summaryProfile,
-                wantsTitle: true
-            )
-            let rename = renameIfProvisional(noteURL, title: title, startedAt: record.startedAt, in: vault)
-            noteURL = rename.url
-            try vault.update(noteURL) {
-                $0.recordRegeneration(
-                    stenoID: stenoID, transcriptName: transcriptURL.deletingPathExtension().lastPathComponent, summary: summary
-                )
+            let summaryProblem: String?
+            (noteURL, summaryProblem) = try await writeSummary(
+                transcript, language: language, into: noteURL, record: record, vault: vault
+            ) { noteURL, summary in
+                try vault.update(noteURL) {
+                    $0.recordRegeneration(
+                        stenoID: stenoID, transcriptName: transcriptURL.deletingPathExtension().lastPathComponent, summary: summary
+                    )
+                }
             }
-            if rename.follow { RenamedNoteFollower.follow(noteURL, in: vault) }
-            if case .failed(let reason) = summary { problems.append(String(localized: "Summary not generated: \(reason)")) }
+            if let summaryProblem { problems.append(summaryProblem) }
             record.noteURL = noteURL
             lastNoteURL = noteURL
         } catch {
@@ -299,7 +294,7 @@ final class MeetingProcessor {
     private func writeToVault(
         _ vault: Vault, _ finished: MeetingTranscription.Finished?, recording: Recording, record: ProcessingRecord
     ) async throws -> (URL, String?) {
-        var noteURL = try vault.findMeetingNote(stenoID: record.stenoID, expected: record.noteURL)
+        let noteURL = try vault.findMeetingNote(stenoID: record.stenoID, expected: record.noteURL)
             ?? vault.createMeetingNote(stenoID: record.stenoID, startedAt: record.startedAt)
         guard let finished else {
             try vault.update(noteURL) {
@@ -311,37 +306,48 @@ final class MeetingProcessor {
             return (noteURL, nil)
         }
 
+        return try await writeSummary(
+            finished.transcript, language: finished.language, into: noteURL, record: record, vault: vault
+        ) { noteURL, summary in
+            // Written after the rename: a new Transcript is named after the note's final name.
+            let transcriptURL = try vault.writeTranscript(
+                finished.transcript,
+                stenoID: record.stenoID,
+                meetingNoteName: noteURL.deletingPathExtension().lastPathComponent,
+                language: finished.language
+            )
+            lastTranscriptURL = transcriptURL
+            try vault.update(noteURL) {
+                $0.recordProcessing(
+                    stenoID: record.stenoID,
+                    duration: recording.endedAt.timeIntervalSince(recording.startedAt),
+                    language: finished.language,
+                    transcriptName: transcriptURL.deletingPathExtension().lastPathComponent,
+                    summary: summary
+                )
+            }
+        }
+    }
+
+    /// Generates the Summary with the Meeting's Template and Profile, renames a note still
+    /// provisional with the title, lets `writeNote` write the note where it now is, and shows the
+    /// renamed note in Obsidian. Returns where the note is and the Summary problem, if any.
+    private func writeSummary(
+        _ transcript: Transcript, language: String?, into noteURL: URL, record: ProcessingRecord, vault: Vault,
+        writeNote: (URL, MeetingNote.SummaryOutcome) throws -> Void
+    ) async throws -> (URL, String?) {
         let (summary, title) = await summarize(
-            finished.transcript, language: finished.language,
+            transcript, language: language,
             personalNotes: try vault.meetingNote(at: noteURL).personalNotes,
-            template: vault.template(named: record.templateName), profile: record.summaryProfile,
-            wantsTitle: true
+            template: vault.template(named: record.templateName), profile: record.summaryProfile
         )
         let rename = renameIfProvisional(noteURL, title: title, startedAt: record.startedAt, in: vault)
-        noteURL = rename.url
-
-        let transcriptURL = try vault.writeTranscript(
-            finished.transcript,
-            stenoID: record.stenoID,
-            meetingNoteName: noteURL.deletingPathExtension().lastPathComponent,
-            language: finished.language
-        )
-        lastTranscriptURL = transcriptURL
-        try vault.update(noteURL) {
-            $0.recordProcessing(
-                stenoID: record.stenoID,
-                duration: recording.endedAt.timeIntervalSince(recording.startedAt),
-                language: finished.language,
-                transcriptionProvider: "Local",
-                transcriptName: transcriptURL.deletingPathExtension().lastPathComponent,
-                summary: summary
-            )
-        }
-        if rename.follow { RenamedNoteFollower.follow(noteURL, in: vault) }
+        try writeNote(rename.url, summary)
+        if rename.follow { RenamedNoteFollower.follow(rename.url, in: vault) }
         if case .failed(let reason) = summary {
-            return (noteURL, String(localized: "Summary not generated: \(reason)"))
+            return (rename.url, String(localized: "Summary not generated: \(reason)"))
         }
-        return (noteURL, nil)
+        return (rename.url, nil)
     }
 
     /// Renames with the title a note still in place and with its provisional name. Returns where
@@ -366,17 +372,26 @@ final class MeetingProcessor {
         }
     }
 
-    /// Summary and, when needed for the rename, title. A missing title is not an error:
-    /// the note keeps its provisional name.
+    /// Summary and title for the rename. A missing title is not an error: the note keeps its
+    /// provisional name.
     private func summarize(
         _ transcript: Transcript, language: String?, personalNotes: String, template: Template,
-        profile: ProviderProfile?, wantsTitle: Bool
+        profile: ProviderProfile?
     ) async -> (MeetingNote.SummaryOutcome, String?) {
+        var profile = profile
+        var isTestProfile = false
         #if DEBUG
-        let profile = AppSettings.testSummaryProfile ?? profile
+        if let testProfile = AppSettings.testSummaryProfile {
+            profile = testProfile
+            isTestProfile = true
+        }
         #endif
         // No Profile chosen ("Transcript" in the menu): no Summary and no Template, only the Transcript.
         guard let profile else { return (.transcriptOnly, nil) }
+        // A Profile deleted after the Meeting started has lost its key in the Keychain too.
+        guard isTestProfile || AppSettings.summaryProfiles.contains(where: { $0.id == profile.id }) else {
+            return (.failed(reason: String(localized: "the Profile \"\(profile.displayName)\" was deleted: choose another one in the menu and Retry.")), nil)
+        }
         guard !transcript.paragraphs.isEmpty else {
             return (.failed(reason: String(localized: "there is no speech in the Recording.")), nil)
         }
@@ -386,9 +401,7 @@ final class MeetingProcessor {
                 template: template, personalNotes: personalNotes, transcript: transcript, meetingLanguage: language
             )
             let text = try await Summarizer(client: client, maxContextTokens: profile.maxContextTokens).summarize(prompt)
-            let reply = wantsTitle
-                ? try? await client.complete(MeetingTitle.request(summary: text, language: prompt.summaryLanguage))
-                : nil
+            let reply = try? await client.complete(MeetingTitle.request(summary: text, language: prompt.summaryLanguage))
             return (.written(text: text, template: template.name, provider: profile.displayName), reply.flatMap(MeetingTitle.clean))
         } catch {
             logger.error("Summary not generated: \(error, privacy: .public)")
@@ -470,9 +483,8 @@ final class MeetingProcessor {
         )) ?? []
         let items = folders.compactMap { folder -> Retention.Item? in
             guard let stenoID = UUID(uuidString: folder.lastPathComponent) else { return nil }
-            let record = try? ProcessingRecord.load(fromFolder: folder)
-            guard let startedAt = record?.startedAt ?? (try? Recording.load(fromFolder: folder))?.startedAt else { return nil }
-            return Retention.Item(stenoID: stenoID, startedAt: startedAt, status: record?.status)
+            guard let record = try? ProcessingRecord.load(fromFolder: folder) else { return nil }
+            return Retention.Item(stenoID: stenoID, startedAt: record.startedAt, status: record.status)
         }
         let kept = Set([Recording.fileName, ProcessingRecord.fileName] + Track.allCases.map(Segment.listFileName(for:)))
         for stenoID in Retention.expired(items, now: Date(), days: days) {

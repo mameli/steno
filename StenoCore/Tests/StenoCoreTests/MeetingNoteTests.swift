@@ -266,7 +266,7 @@ struct MeetingNoteTests {
         var note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, timeZone: rome)
 
         note.recordProcessing(
-            stenoID: stenoID, duration: 47 * 60 + 10, language: "it", transcriptionProvider: "Local",
+            stenoID: stenoID, duration: 47 * 60 + 10, language: "it",
             transcriptName: "2026-10-04 1430 - Meeting (transcript)",
             summary: .written(text: "### Budget\n- Approved.", template: "Notes", provider: "Mistral EU")
         )
@@ -277,7 +277,6 @@ struct MeetingNoteTests {
             date: 2026-10-04T14:30
             tags: [meeting]
             duration: 47m
-            transcription_provider: Local
             transcript: "[[2026-10-04 1430 - Meeting (transcript)]]"
             language: it
             template: Notes
@@ -301,7 +300,7 @@ struct MeetingNoteTests {
         var note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, timeZone: rome)
 
         note.recordProcessing(
-            stenoID: stenoID, duration: 60, language: "it", transcriptionProvider: "Local", transcriptName: "T",
+            stenoID: stenoID, duration: 60, language: "it", transcriptName: "T",
             summary: .failed(reason: "The provider answered with error 401: invalid key")
         )
 
@@ -324,7 +323,7 @@ struct MeetingNoteTests {
         )
 
         note.recordProcessing(
-            stenoID: stenoID, duration: 60, language: "it", transcriptionProvider: "Local", transcriptName: "T",
+            stenoID: stenoID, duration: 60, language: "it", transcriptName: "T",
             summary: .transcriptOnly
         )
 
@@ -346,7 +345,7 @@ struct MeetingNoteTests {
         var note = MeetingNote(content: "")
 
         note.recordProcessing(
-            stenoID: stenoID, duration: seconds, language: nil, transcriptionProvider: "Local", transcriptName: "T",
+            stenoID: stenoID, duration: seconds, language: nil, transcriptName: "T",
             summary: .failed(reason: "-")
         )
 
@@ -359,7 +358,7 @@ struct MeetingNoteTests {
         var note = MeetingNote(content: "Just notes.")
 
         note.recordProcessing(
-            stenoID: stenoID, duration: 60, language: "it", transcriptionProvider: "Local", transcriptName: "T",
+            stenoID: stenoID, duration: 60, language: "it", transcriptName: "T",
             summary: .failed(reason: "-")
         )
 
@@ -384,7 +383,7 @@ struct MeetingNoteTests {
     func regeneration() {
         var note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, timeZone: rome)
         note.recordProcessing(
-            stenoID: stenoID, duration: 600, language: "it", transcriptionProvider: "Local", transcriptName: "T",
+            stenoID: stenoID, duration: 600, language: "it", transcriptName: "T",
             summary: .written(text: "Old.", template: "Notes", provider: "OpenRouter")
         )
 

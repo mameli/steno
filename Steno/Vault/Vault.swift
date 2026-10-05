@@ -57,12 +57,15 @@ struct Vault {
         templatesFolder.appending(path: name + ".md")
     }
 
-    /// The Template with that file name; if it is gone, the default one.
+    /// The Template with that file name; if it is gone, the Vault's Notes (as the user edited it),
+    /// and only without that the built-in text.
     func template(named name: String) -> Template {
-        guard let content = try? String(contentsOf: templateURL(name), encoding: .utf8) else {
-            return Template(fileName: Template.defaultName, content: Template.defaultFileContent)
+        for candidate in [name, Template.defaultName] {
+            if let content = try? String(contentsOf: templateURL(candidate), encoding: .utf8) {
+                return Template(fileName: candidate, content: content)
+            }
         }
-        return Template(fileName: name, content: content)
+        return Template(fileName: Template.defaultName, content: Template.defaultFileContent)
     }
 
     // MARK: - Meeting notes and Transcripts

@@ -33,6 +33,8 @@ Before starting: Steno running from the menu bar (waveform icon), Vault and a Su
 - [x] **Delete Template**: *Delete* → confirm → the row disappears with no message, the file is in the Mac Trash; if it was the default, Notes is back. Notes has no *Delete*.
 - [ ] **Retry with another Template**: choose another Template in the menu → *Recent meetings* → a Meeting → *Retry* → the Summary follows the new Template.
 - [ ] **Retry without audio**: Settings → *Recordings* → *Delete audio* → *Retry* on a Meeting → the Summary is made again from the Transcript in the Vault, duration and Transcript do not change.
+- [ ] **Deleted Profile**: start a Meeting with a Profile, delete that Profile in Settings before the Summary → the note says the Profile was deleted; choose another Profile and *Retry* → Summary written.
+- [ ] **New Profile**: *Add Profile* → the menu still shows the Profile active before (or *Transcript*) until *Use for Summaries*.
 - [ ] **Recordings in Settings**: the space used matches the folder opened by *Show in Finder*; *Delete audio* asks for confirmation and brings it to zero.
 - [x] **Retry**: turn off the internet connection, record a short Meeting → "Processing failed" and ⚠️ in the note and in the menu; reconnect and *Retry* → Summary generated.
 
