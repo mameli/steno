@@ -311,6 +311,7 @@ final class MeetingProcessor {
             template: vault.template(named: record.templateName), profile: record.summaryProfile,
             wantsTitle: true
         )
+        var isRenamed = false
         // Only a note still in place and with its provisional name is renamed. If the rename
         // fails the note stays as it is: the Summary must not be lost over a name.
         if let title, vault.isInMeetingsFolder(noteURL),
@@ -319,6 +320,7 @@ final class MeetingProcessor {
            ) {
             do {
                 noteURL = try vault.rename(noteURL, to: newName)
+                isRenamed = true
             } catch {
                 logger.error("Renaming the note failed: \(error, privacy: .public)")
             }
@@ -340,6 +342,13 @@ final class MeetingProcessor {
                 transcriptName: transcriptURL.deletingPathExtension().lastPathComponent,
                 summary: summary
             )
+        }
+        // Obsidian closes a note renamed under it and shows the previous one: if the user is in
+        // Obsidian, the note is opened again under its new name. Otherwise Obsidian is not brought
+        // forward in the middle of something else; the notification opens the note.
+        if isRenamed, AppSettings.openInObsidian,
+           NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "md.obsidian" {
+            Vault.openNewFileInObsidian(noteURL)
         }
         if case .failed(let reason) = summary {
             return (noteURL, String(localized: "Summary not generated: \(reason)"))
