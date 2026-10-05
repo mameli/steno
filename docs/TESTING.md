@@ -36,7 +36,7 @@ Before starting: Steno running from the menu bar (waveform icon), Vault and a Su
 
 ## 4. Edge cases
 
-- [ ] **Microphone change**: during a Meeting connect or remove the AirPods, then keep talking → your sentences after the change are in the Transcript, at the right time compared with the others'.
+- [x] **Microphone change**: during a Meeting connect or remove the AirPods, then keep talking → your sentences after the change are in the Transcript, at the right time compared with the others'.
 - [ ] **Transcript only**: *Summary Profile* → *Transcript* (the Template menu disappears), record a Meeting → the note holds only the "Full transcript" link, no warning, notification "Transcript ready". In Recent meetings there is only *Regenerate with Profile*: choosing a Profile writes the Summary.
 - [ ] **Quit during Processing**: stop a Meeting and quit Steno right away → at the next launch Processing resumes by itself.
 - [x] **Italian interface**: `defaults write dev.mameli.steno AppleLanguages -array it`, restart Steno → menu, Settings and notifications in Italian (`defaults delete dev.mameli.steno AppleLanguages` to go back).
