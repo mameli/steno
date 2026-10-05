@@ -30,7 +30,7 @@ Before starting: Steno running from the menu bar (waveform icon), Vault and a Su
 - [ ] **Recent meetings → Open note**: opens the right note, even if you renamed or moved it.
 - [ ] **New Template**: Settings → *Templates* → type a name → *Create and open* → it opens in Obsidian; change instructions and sections and save.
 - [ ] **Default Template**: choose the new Template as default → the next Meeting starts with it.
-- [ ] **Delete Template**: *Delete* → confirm → the file is in the Mac Trash; if it was the default, Notes is back.
+- [ ] **Delete Template**: *Delete* → confirm → the row disappears with no message, the file is in the Mac Trash; if it was the default, Notes is back. Notes has no *Delete*.
 - [ ] **Regenerate with Template**: *Recent meetings* → a Meeting → *Regenerate with Template* → your Template → the Summary changes, duration and Transcript do not.
 - [ ] **Retry**: turn off the internet connection, record a short Meeting → "Processing failed" and ⚠️ in the note and in the menu; reconnect and *Retry* → Summary generated.
 

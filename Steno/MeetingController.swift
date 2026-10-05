@@ -162,11 +162,7 @@ final class MeetingController {
         do {
             let url = try vault.createMeetingNote(stenoID: stenoID, startedAt: startedAt)
             if AppSettings.openInObsidian {
-                Task {
-                    // Obsidian must notice the new file first.
-                    try? await Task.sleep(for: .milliseconds(500))
-                    Vault.openInObsidian(url)
-                }
+                Vault.openNewFileInObsidian(url)
             }
             return url
         } catch {

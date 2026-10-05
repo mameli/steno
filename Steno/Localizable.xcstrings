@@ -1,16 +1,6 @@
 {
   "sourceLanguage": "en",
   "strings": {
-    "\"%@\" is in the Trash.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "\"%@\" è nel Cestino."
-          }
-        }
-      }
-    },
     "\"%@\" is not a valid file name.": {
       "localizations": {
         "it": {

@@ -124,7 +124,7 @@ Rules:
 - Folder `<Vault>/Meetings/_Templates/`. The default Template is `Notes.md`, Granola style: topics in the order they were discussed, each with a `###` heading and bullets with sub-bullets (reasons, people, figures, links), then `### Next steps` with `- [ ] What to do (Who)` and the context below. No opening summary and no fixed sections. Steno creates it at app launch and when the Vault is chosen, if the folder is empty or if the default Template no longer exists (then the default goes back to Notes).
 - Format: frontmatter with `name` and `summary_language` (any language code such as `it`, `en`, `fr`, `de`; `auto` or missing = the Meeting's language). The body, i.e. free-form instructions and heading structure, is passed to the model as it is.
 - The Template is chosen at start (default from Settings) and can change until the stop.
-- In Settings, Templates section: list, default Template, "New Template" (name → file created from Notes and opened in Obsidian), "Open in Obsidian", "Delete" (moves the file to the Trash; if it was the default, Notes becomes the default again). The text is written in Obsidian: Steno has no editor.
+- In Settings, Templates section: list, default Template, "New Template" (name → file created from Notes and opened in Obsidian), "Open in Obsidian", "Delete" (moves the file to the Trash, with no message: the row disappearing is enough; if it was the default, Notes becomes the default again; Notes itself cannot be deleted). New files (Templates, Meeting notes) are opened in Obsidian after a second, otherwise Obsidian may not have noticed them yet and answers "file not found". The text is written in Obsidian: Steno has no editor.
 
 ## Summary
 

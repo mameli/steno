@@ -151,6 +151,15 @@ struct Vault {
         NSWorkspace.shared.open(components.url!)
     }
 
+    /// Obsidian finds a file only once it has noticed it on disk: opened right after being
+    /// created, it sometimes answers "file not found".
+    static func openNewFileInObsidian(_ url: URL) {
+        Task {
+            try? await Task.sleep(for: .seconds(1))
+            openInObsidian(url)
+        }
+    }
+
     // MARK: - Private
 
     private static func belongs(_ url: URL, to stenoID: UUID) -> Bool {

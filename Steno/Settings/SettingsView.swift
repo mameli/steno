@@ -126,7 +126,10 @@ private struct TemplatesSection: View {
                         }
                         Spacer()
                         Button("Open in Obsidian") { open(name) }
-                        Button("Delete", role: .destructive) { pendingDeletion = name }
+                        // Notes cannot go: Steno would create it again as the fallback Template.
+                        if name != Template.defaultName {
+                            Button("Delete", role: .destructive) { pendingDeletion = name }
+                        }
                     }
                 }
 
@@ -172,7 +175,7 @@ private struct TemplatesSection: View {
             newName = ""
             reload()
             status = String(localized: "Created \"\(name)\": edit it in Obsidian.")
-            open(name)
+            Vault.openNewFileInObsidian(vault.templateURL(name))
         } catch {
             status = error.localizedDescription
         }
@@ -190,7 +193,8 @@ private struct TemplatesSection: View {
             if defaultTemplate == name { defaultTemplate = Template.defaultName }
             try? vault.ensureDefaultTemplate()
             reload()
-            status = String(localized: "\"\(name)\" is in the Trash.")
+            // The row disappearing is enough: no message, and none left over from before.
+            status = nil
         } catch {
             status = error.localizedDescription
         }
