@@ -1,6 +1,8 @@
-<img src="Steno/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png" alt="Steno icon" width="128">
+<p align="center">
+  <img src="Steno/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png" alt="Steno icon" width="128">
+</p>
 
-# Steno
+<h1 align="center">Steno</h1>
 
 A macOS menu bar app that records your meetings, transcribes them **on your Mac** and writes the Transcript and a Summary into your **Obsidian** vault. You choose who writes the Summary: a model running locally, or any OpenAI-compatible provider you trust (for example one hosted in the EU).
 

@@ -977,6 +977,16 @@
         }
       }
     },
+    "Version %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versione %@"
+          }
+        }
+      }
+    },
     "Writing to the Vault failed: %@": {
       "localizations": {
         "it": {

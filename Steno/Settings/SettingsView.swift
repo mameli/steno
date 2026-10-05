@@ -12,7 +12,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Obsidian Vault") {
+            Section {
                 LabeledContent("Folder") {
                     HStack {
                         Text(vaultPath.isEmpty ? String(localized: "None") : vaultPath)
@@ -21,6 +21,12 @@ struct SettingsView: View {
                             .foregroundStyle(vaultPath.isEmpty ? .secondary : .primary)
                         Button("Choose…", action: chooseVault)
                     }
+                }
+            } header: {
+                // The header of the first Section, so the icon scrolls away with the rest.
+                VStack(alignment: .leading, spacing: 16) {
+                    AppIdentity().frame(maxWidth: .infinity)
+                    Text("Obsidian Vault")
                 }
             }
 
@@ -98,6 +104,26 @@ struct SettingsView: View {
         profiles.removeAll { $0.id == id }
         if activeProfileID == id.uuidString { activeProfileID = "" }
         selectedProfileID = profiles.first?.id
+    }
+}
+
+/// Icon, name and version at the top of Settings.
+private struct AppIdentity: View {
+    private var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+    }
+
+    var body: some View {
+        VStack(spacing: 4) {
+            // From the asset catalog: the icon macOS caches for the app can be an old one.
+            Image(nsImage: NSImage(named: "AppIcon") ?? NSApp.applicationIconImage)
+                .resizable()
+                .frame(width: 72, height: 72)
+                .accessibilityHidden(true)
+            Text(verbatim: "Steno").font(.title2.bold()).foregroundStyle(.primary)
+            Text("Version \(version)").font(.caption).foregroundStyle(.secondary)
+        }
+        .padding(.top, 8)
     }
 }
 
