@@ -43,7 +43,7 @@ Personal use, one machine (M3 Pro, 18 GB, macOS 26). Meetings in Italian or Engl
 4. **Processing** (one at a time, in arrival order):
    1. completes the Transcript (the last Segments);
    2. reads the Meeting note again and extracts the Personal notes;
-   3. generates Summary and title with the Summary Profile;
+   3. generates Summary and title with the Summary Profile (with *Transcript* chosen instead of a Profile: no Summary, no Template, no title);
    4. renames the note with the title, if the user has not renamed or moved it (the Transcript is then named after the renamed note; an existing Transcript is never renamed);
    5. writes the Transcript file;
    6. rewrites the Managed section and Steno's frontmatter keys;
@@ -133,7 +133,7 @@ Rules:
   - **user message**: Template, Personal notes, Transcript.
 - **Summary language**: the Template's `summary_language` (any language), otherwise the Meeting's detected language, otherwise (no speech, or detection failed) Italian.
 - **Title**: a second short call on the Summary ("at most 6 words, no date", in the Summary language), cleaned of headings, "Title:" prefixes, quotes, bold and final punctuation. If no title comes back the note keeps its provisional name: it is not an error.
-- **Managed section**: the Summary followed by `Full transcript: [[…]]`. If the Summary fails (no active Profile, Provider error, Meeting without speech) it shows `⚠️ Summary not generated: <reason>` and the Transcript link, which stays usable. Managed section markers in the model's reply are removed.
+- **Managed section**: the Summary followed by `Full transcript: [[…]]`. With *Transcript* chosen as Summary Profile it holds only the `Full transcript: [[…]]` link, with no warning, and the note keeps its provisional name. If the Summary fails (Provider error, Meeting without speech) it shows `⚠️ Summary not generated: <reason>` and the Transcript link, which stays usable. Managed section markers in the model's reply are removed.
 - **Token estimate**: about 3 characters per token, with 4,096 tokens reserved for the reply; a block never splits a Transcript paragraph.
 - **Long Meetings**: every Summary Profile has a *max context* field. If Transcript + notes + Template exceed it, the Transcript is split into blocks, every block is summarised and the partial summaries are merged with the Template (in groups, if even the merge does not fit).
 - **Regeneration**: from "Recent meetings" → *Regenerate with* ▸ Template / Profile. Reads the current Transcript and Personal notes again and rewrites only the Managed section. It is available even after 7 days, because the Transcript is in the Vault.
@@ -158,7 +158,7 @@ The folders are fixed: `Meetings/`, `Meetings/Transcripts/`, `Meetings/_Template
 
 ## Menu bar
 
-- **Idle**: Start meeting (shortcut) · Template ▸ · Summary Profile ▸ · Recent meetings ▸ (Open note · Regenerate with ▸ · Retry) · Settings… · Quit
+- **Idle**: Start meeting (shortcut) · Template ▸ (hidden when the Summary Profile is *Transcript*) · Summary Profile ▸ (*Transcript* or a Profile) · Recent meetings ▸ (Open note · Regenerate with ▸ · Retry) · Settings… · Quit
 - **Recording**: only a red dot in the bar; in the menu "Recording · duration" · Stop · Template ▸ · Settings…
 - **Processing**: hourglass in the bar; in the menu "Processing… (N more queued)"
 
@@ -172,7 +172,7 @@ The interface is in English in the code and translated to Italian in `Steno/Loca
 - At app launch and every day: deletion of the audio (and transcription caches) of Meetings older than 7 days that are processed or failed, never of those recording, queued, processing or regenerating. `recording.json` and `processing.json` stay: the Meeting stays among the recent ones and can be Regenerated.
 - **Notifications**: "Summary ready" (click → note in Obsidian) or "Processing failed" with the reason.
 - **Global shortcut** ⌃⌥⌘R: starts or stops the Meeting from any app.
-- **Recent meetings** (the last 5): Open note · Retry (while the audio is there: redoes the whole Processing, Segments already transcribed come from the cache) · Regenerate with Template ▸ / with Profile ▸ (Summary only, from the Transcript in the Vault; does not rename the note and does not change the Meeting's saved Template and Profile, which Retry keeps using). Retry and Regenerate appear only for concluded Meetings (completed or failed), never for one recording or queued. A Regeneration interrupted by a restart is not repeated: the Meeting goes back to completed with the previous Summary.
+- **Recent meetings** (the last 5): Open note · Retry (while the audio is there: redoes the whole Processing, Segments already transcribed come from the cache) · Regenerate with Template ▸ (not for a Meeting recorded with *Transcript*) / with Profile ▸ (Summary only, from the Transcript in the Vault; does not rename the note and does not change the Meeting's saved Template and Profile, which Retry keeps using). Retry and Regenerate appear only for concluded Meetings (completed or failed), never for one recording or queued. A Regeneration interrupted by a restart is not repeated: the Meeting goes back to completed with the previous Summary.
 - Without a configured Vault Processing stops at the Transcript and the notification says "Transcript ready", not "Summary ready".
 
 ## Project structure

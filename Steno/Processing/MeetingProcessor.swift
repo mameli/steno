@@ -16,6 +16,8 @@ final class MeetingProcessor {
         let status: ProcessingRecord.Status
         /// The audio is still there: the full Processing can be retried.
         let hasAudio: Bool
+        /// False for a Transcript-only Meeting: there is no Profile to regenerate with another Template.
+        let hasSummaryProfile: Bool
     }
 
     private let transcriber: LocalTranscriber
@@ -257,7 +259,8 @@ final class MeetingProcessor {
                 )
             } else {
                 let body = warnings.isEmpty ? noteName : "\(noteName) (\(warnings.joined(separator: " ")))"
-                Notifications.shared.notify(title: String(localized: "Summary ready"), body: body, note: record.noteURL)
+                let title = record.summaryProfile == nil ? String(localized: "Transcript ready") : String(localized: "Summary ready")
+                Notifications.shared.notify(title: title, body: body, note: record.noteURL)
             }
         } else {
             let reason = problems.joined(separator: " ")
@@ -340,9 +343,8 @@ final class MeetingProcessor {
         #if DEBUG
         let profile = AppSettings.testSummaryProfile ?? profile
         #endif
-        guard let profile else {
-            return (.failed(reason: ProfileError.noActiveProfile.localizedDescription), nil)
-        }
+        // No Profile chosen ("Transcript" in the menu): no Summary and no Template, only the Transcript.
+        guard let profile else { return (.transcriptOnly, nil) }
         guard !transcript.paragraphs.isEmpty else {
             return (.failed(reason: String(localized: "there is no speech in the Recording.")), nil)
         }
@@ -395,7 +397,8 @@ final class MeetingProcessor {
                     ?? record.startedAt.formatted(date: .abbreviated, time: .shortened)
                 return RecentMeeting(
                     id: record.stenoID, title: title, status: record.status,
-                    hasAudio: Self.hasAudio(Self.directory(for: record.stenoID))
+                    hasAudio: Self.hasAudio(Self.directory(for: record.stenoID)),
+                    hasSummaryProfile: record.summaryProfile != nil
                 )
             }
     }

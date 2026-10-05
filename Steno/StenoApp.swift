@@ -40,6 +40,7 @@ private struct MenuBarLabel: View {
 private struct MeetingMenu: View {
     let controller: MeetingController
     @Environment(\.openSettings) private var openSettings
+    @AppStorage(AppSettings.activeProviderProfileKey) private var activeProfileID = ""
 
     var body: some View {
         if controller.isInProgress {
@@ -53,8 +54,11 @@ private struct MeetingMenu: View {
             Text("⌃⌥⌘R is already used by another app")
         }
 
-        Picker("Template", selection: Bindable(controller).templateName) {
-            ForEach(Vault.templateChoices(including: controller.templateName), id: \.self) { Text($0).tag($0) }
+        // With the "Transcript" Profile there is no Summary, so no Template to choose.
+        if !activeProfileID.isEmpty {
+            Picker("Template", selection: Bindable(controller).templateName) {
+                ForEach(Vault.templateChoices(including: controller.templateName), id: \.self) { Text($0).tag($0) }
+            }
         }
         // A Meeting's Profile is fixed at the start: changing it while recording would have no effect.
         if !controller.isInProgress {
@@ -149,9 +153,11 @@ private struct RegenerateMenus: View {
     let meeting: MeetingProcessor.RecentMeeting
 
     var body: some View {
-        Menu("Regenerate with Template") {
-            ForEach(Vault.templateChoices(including: AppSettings.defaultTemplate), id: \.self) { name in
-                Button(name) { processor.regenerate(meeting.id, templateName: name) }
+        if meeting.hasSummaryProfile {
+            Menu("Regenerate with Template") {
+                ForEach(Vault.templateChoices(including: AppSettings.defaultTemplate), id: \.self) { name in
+                    Button(name) { processor.regenerate(meeting.id, templateName: name) }
+                }
             }
         }
         Menu("Regenerate with Profile") {
@@ -178,7 +184,7 @@ private struct ProviderProfileMenu: View {
 
     var body: some View {
         Picker("Summary Profile", selection: $activeID) {
-            Text("None").tag("")
+            Text("Transcript").tag("")
             ForEach(AppSettings.summaryProfiles) { Text($0.displayName).tag($0.id.uuidString) }
         }
     }

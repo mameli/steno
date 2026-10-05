@@ -411,16 +411,6 @@
         }
       }
     },
-    "No Profile for the Summary: choose one in Settings.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nessun Profilo per il Riepilogo: scegline uno nelle Impostazioni."
-          }
-        }
-      }
-    },
     "No Profile yet. Add one to generate Summaries.": {
       "localizations": {
         "it": {
@@ -830,6 +820,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Da configurare"
+          }
+        }
+      }
+    },
+    "Transcript": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascrizione"
           }
         }
       }

@@ -315,6 +315,28 @@ struct MeetingNoteTests {
         #expect(!note.content.contains("summary_provider"))
     }
 
+    @Test("without a Summary Profile the managed section holds only the Transcript link, with no warning")
+    func transcriptOnly() {
+        var note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, timeZone: rome)
+        note.recordRegeneration(
+            stenoID: stenoID, transcriptName: "T",
+            summary: .written(text: "Old.", template: "Notes", provider: "OpenRouter")
+        )
+
+        note.recordProcessing(
+            stenoID: stenoID, duration: 60, language: "it", transcriptionProvider: "Local", transcriptName: "T",
+            summary: .transcriptOnly
+        )
+
+        #expect(note.content.contains("""
+            %% steno:start %%
+            Full transcript: [[T]]
+            %% steno:end %%
+            """))
+        #expect(!note.content.contains("template:"))
+        #expect(!note.content.contains("summary_provider"))
+    }
+
     @Test("the duration is written in minutes, with hours past 60 minutes", arguments: [
         (20.0, "1m"),
         (47.0 * 60 + 29, "47m"),

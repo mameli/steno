@@ -36,7 +36,7 @@ Before starting: Steno running from the menu bar (waveform icon), Vault and a Su
 
 ## 4. Edge cases
 
-- [ ] **No Profile**: *Summary Profile* → *None*, record a Meeting → the note says "⚠️ Summary not generated: No Profile…", the Transcript is there.
+- [ ] **Transcript only**: *Summary Profile* → *Transcript* (the Template menu disappears), record a Meeting → the note holds only the "Full transcript" link, no warning, notification "Transcript ready". In Recent meetings there is only *Regenerate with Profile*: choosing a Profile writes the Summary.
 - [ ] **Quit during Processing**: stop a Meeting and quit Steno right away → at the next launch Processing resumes by itself.
 - [ ] **Wrong key**: in Settings replace the key with a random one → *Test connection* shows the provider's error; then put the right one back.
 

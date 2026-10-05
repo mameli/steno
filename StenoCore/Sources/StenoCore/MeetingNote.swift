@@ -20,6 +20,8 @@ public struct MeetingNote: Equatable, Sendable {
     /// How the Summary of a Meeting went.
     public enum SummaryOutcome: Equatable, Sendable {
         case written(text: String, template: String, provider: String)
+        /// No Summary Profile chosen: the note holds only the Transcript link.
+        case transcriptOnly
         case failed(reason: String)
     }
 
@@ -153,35 +155,54 @@ public struct MeetingNote: Equatable, Sendable {
             markdown.lines.insert(contentsOf: ["---", "---"], at: 0)
         }
         for (key, value) in values {
-            let close = markdown.frontmatterClose!
             let entry = "\(key.rawValue): \(value)"
-            guard let line = markdown.lines[1..<close].firstIndex(where: { $0.hasPrefix("\(key.rawValue):") }) else {
-                markdown.lines.insert(entry, at: close)
+            guard let entryLines = Self.entryLines(key, in: markdown) else {
+                markdown.lines.insert(entry, at: markdown.frontmatterClose!)
                 continue
             }
-            var next = line + 1
-            while next < close, markdown.lines[next].first.map({ $0 == " " || $0 == "\t" || $0 == "-" }) == true {
-                next += 1
-            }
-            markdown.lines.replaceSubrange(line..<next, with: [entry])
+            markdown.lines.replaceSubrange(entryLines, with: [entry])
         }
         content = markdown.text
     }
 
     // MARK: - Private
 
+    private mutating func removeFrontmatter(_ keys: [StenoKey]) {
+        var markdown = MarkdownLines(content)
+        for key in keys {
+            if let entryLines = Self.entryLines(key, in: markdown) { markdown.lines.removeSubrange(entryLines) }
+        }
+        content = markdown.text
+    }
+
+    /// The lines of a frontmatter entry, including the indented lines of a multi-line value.
+    private static func entryLines(_ key: StenoKey, in markdown: MarkdownLines) -> Range<Int>? {
+        guard let close = markdown.frontmatterClose,
+              let line = markdown.lines[1..<close].firstIndex(where: { $0.hasPrefix("\(key.rawValue):") })
+        else { return nil }
+        var next = line + 1
+        while next < close, markdown.lines[next].first.map({ $0 == " " || $0 == "\t" || $0 == "-" }) == true {
+            next += 1
+        }
+        return line..<next
+    }
+
     private mutating func recordSummary(stenoID: UUID, transcriptName: String, summary: SummaryOutcome) {
         var values: [(key: StenoKey, value: String)] = [(.stenoID, stenoID.uuidString)]
-        let summaryText: String
+        let transcriptLink = "Full transcript: [[\(transcriptName)]]"
+        let body: String
         switch summary {
         case .written(let text, let template, let provider):
             values += [(.template, template), (.summaryProvider, provider)]
-            summaryText = text
+            body = "\(text)\n\n\(transcriptLink)"
+        case .transcriptOnly:
+            removeFrontmatter([.template, .summaryProvider])
+            body = transcriptLink
         case .failed(let reason):
-            summaryText = "⚠️ Summary not generated: \(reason)"
+            body = "⚠️ Summary not generated: \(reason)\n\n\(transcriptLink)"
         }
         setFrontmatter(values)
-        replaceManagedSection(with: "\(summaryText)\n\nFull transcript: [[\(transcriptName)]]")
+        replaceManagedSection(with: body)
     }
 
     /// `47m`, or `1h 05m` past the hour. Never less than a minute.

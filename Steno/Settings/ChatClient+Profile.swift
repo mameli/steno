@@ -32,7 +32,6 @@ extension ChatClient {
 enum ProfileError: LocalizedError {
     case invalidURL(String)
     case insecureURL(String)
-    case noActiveProfile
 
     var errorDescription: String? {
         switch self {
@@ -40,8 +39,6 @@ enum ProfileError: LocalizedError {
             String(localized: "Invalid Profile URL: \"\(url)\" (http:// or https:// and an address are needed).")
         case .insecureURL(let url):
             String(localized: "Plain-text Profile URL: \"\(url)\". Use https://; http:// is allowed only for servers on this Mac.")
-        case .noActiveProfile:
-            String(localized: "No Profile for the Summary: choose one in Settings.")
         }
     }
 }

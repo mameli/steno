@@ -36,10 +36,11 @@ enum AppSettings {
     }
 
     #if DEBUG
-    /// In automated tests every Summary goes to the fake server, even for Meetings saved with another Profile.
-    static var testSummaryProfile: ProviderProfile? {
+    /// In automated tests every Summary goes to the fake server, even for Meetings saved with another
+    /// Profile; `-testSummaryBaseURL none` tests the "Transcript" choice. `nil` outside tests.
+    static var testSummaryProfile: ProviderProfile?? {
         UserDefaults.standard.string(forKey: "testSummaryBaseURL").map {
-            ProviderProfile(
+            $0 == "none" ? nil : ProviderProfile(
                 name: "Test server", baseURL: $0, model: "test",
                 maxContextTokens: ProviderProfile.defaultMaxContextTokens
             )
