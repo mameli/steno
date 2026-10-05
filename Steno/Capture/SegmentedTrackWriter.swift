@@ -84,14 +84,34 @@ final class SegmentedTrackWriter: @unchecked Sendable {
         let converted = try convert(buffer)
         guard converted.frameLength > 0 else { return }
 
-        if segmenter == nil {
+        let start = secondsSinceMeetingStart(hostTime)
+        if let segmenter {
+            try appendSilence(frames: segmenter.silenceFrames(beforeBufferAt: start))
+        } else {
             segmenter = TrackSegmenter(
                 track: track,
                 sampleRate: Recording.sampleRate,
-                trackStart: secondsSinceMeetingStart(hostTime),
+                trackStart: start,
                 segmentDuration: segmentDuration
             )
         }
+        try append(converted)
+    }
+
+    /// Fills a hole in the audio (the source stopped for a while) in blocks of at most 10 seconds.
+    private func appendSilence(frames: Int) throws {
+        var remaining = frames
+        while remaining > 0 {
+            let count = AVAudioFrameCount(min(remaining, Int(10 * Recording.sampleRate)))
+            let silence = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: count)!
+            silence.frameLength = count
+            silence.floatChannelData![0].update(repeating: 0, count: Int(count))
+            try append(silence)
+            remaining -= Int(count)
+        }
+    }
+
+    private func append(_ converted: AVAudioPCMBuffer) throws {
         let previous = segmenter!.segments.last
         let segment = segmenter!.place(frameCount: Int(converted.frameLength))
         if segment.index != fileIndex {

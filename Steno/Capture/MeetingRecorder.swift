@@ -85,6 +85,12 @@ final class MeetingRecorder {
         return Started(meetingID: meetingID, directory: directory)
     }
 
+    #if DEBUG
+    func simulateMicrophoneChange() {
+        microphone.simulateDeviceChange()
+    }
+    #endif
+
     /// Stops the capture, closes the Segments and writes `recording.json` with what there is,
     /// even if a Track was interrupted.
     func stop(at endedAt: Date) throws -> Stopped {

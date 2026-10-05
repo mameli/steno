@@ -52,6 +52,19 @@ public struct TrackSegmenter: Sendable {
         self.framesPerSegment = Int(segmentDuration * sampleRate)
     }
 
+    /// Below this, a late buffer is ordinary audio timing jitter (or clock drift), not a hole.
+    private static let maxUnfilledGap: TimeInterval = 0.5
+
+    /// Frames of silence to write before a buffer that starts at `time` (seconds from the start
+    /// of the Meeting), so the Track stays aligned when the audio stopped for a while (e.g. the
+    /// microphone restarting after a device change). Otherwise later Utterances would shift earlier.
+    public func silenceFrames(beforeBufferAt time: TimeInterval) -> Int {
+        guard !segments.isEmpty else { return 0 }
+        let expected = trackStart + Double(framesBeforeCurrent + framesInCurrent) / sampleRate
+        let gap = time - expected
+        return gap > Self.maxUnfilledGap ? Int((gap * sampleRate).rounded()) : 0
+    }
+
     /// Accounts for a buffer of `frameCount` frames and returns the Segment it must be written to.
     public mutating func place(frameCount: Int) -> Segment {
         if let current = segments.last, framesInCurrent < framesPerSegment {

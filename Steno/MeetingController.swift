@@ -186,7 +186,8 @@ final class MeetingController {
     #if DEBUG
     /// Tests without touching the menu (the outcome goes to `smoke-test.txt` next to the data
     /// folder, because `log show` is not always readable):
-    /// - `open Steno.app --args -smokeTestSeconds 20` records for N seconds;
+    /// - `open Steno.app --args -smokeTestSeconds 20` records for N seconds (with
+    ///   `-simulateMicrophoneChangeAfter 5` the microphone restarts after 5 seconds, 2 of them silent);
     /// - `open Steno.app --args -transcribeRecording <folder>` reprocesses a Recording of the data folder;
     /// - `open Steno.app --args -regenerateMeeting <steno_id> -regenerateTemplate <name>` regenerates the Summary;
     /// - always together with `-vaultPath <folder>`, `-testSummaryBaseURL <url>` and `-dataDirectory <folder>`,
@@ -217,7 +218,14 @@ final class MeetingController {
         guard seconds > 0 else { return }
         await start()
         if isInProgress {
-            try? await Task.sleep(for: .seconds(seconds))
+            let changeAfter = UserDefaults.standard.integer(forKey: "simulateMicrophoneChangeAfter")
+            if changeAfter > 0, changeAfter < seconds {
+                try? await Task.sleep(for: .seconds(changeAfter))
+                recorder.simulateMicrophoneChange()
+                try? await Task.sleep(for: .seconds(seconds - changeAfter))
+            } else {
+                try? await Task.sleep(for: .seconds(seconds))
+            }
             stop()
         }
         writeSmokeTestOutcome(lastRecordingDirectory)
