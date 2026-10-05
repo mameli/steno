@@ -32,7 +32,9 @@ private struct MenuBarLabel: View {
         } else if controller.processor.pendingCount > 0 {
             Image(systemName: "hourglass")
         } else {
-            Image(systemName: "waveform")
+            Image("MenuBarIcon")
+                .renderingMode(.template)
+                .accessibilityLabel(Text(verbatim: "Steno"))
         }
     }
 }

@@ -8,6 +8,7 @@ MACOSX_DEPLOYMENT_TARGET = 15.0
 SWIFT_VERSION = 6.0
 
 INFOPLIST_FILE = Config/Info.plist
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
 
 // User-facing strings are in English in the code, translated in Steno/*.xcstrings.
 LOCALIZATION_PREFERS_STRING_CATALOGS = YES

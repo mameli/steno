@@ -2,7 +2,12 @@
 
 Manual checks to run before using Steno for real meetings. Each one says what to do and what must happen. Labels are the English ones; on a Mac set to Italian the app shows the Italian translation (e.g. *Start meeting* = *Avvia riunione*).
 
-Before starting: Steno running from the menu bar (waveform icon), Vault and a Summary Profile configured. **With a Profile outside the EU (e.g. OpenRouter) use test recordings only**: your own voice, public videos, never work meetings.
+Before starting: Steno running from the menu bar (notebook icon), Vault and a Summary Profile configured. **With a Profile outside the EU (e.g. OpenRouter) use test recordings only**: your own voice, public videos, never work meetings.
+
+## Icons
+
+- [ ] **App icon**: Finder and notifications show the orange notebook.
+- [ ] **Menu bar**: the notebook outline and handwriting are crisp on light and dark menu bars and when the menu is selected. Recording still shows a red dot; Processing still shows an hourglass.
 
 ## 1. Recording
 
