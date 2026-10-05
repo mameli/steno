@@ -145,7 +145,14 @@ struct Vault {
         throw VaultError.busy(noteURL.lastPathComponent)
     }
 
+    /// Any note Steno opens replaces a pending wait to show a renamed note.
+    @MainActor
     static func openInObsidian(_ url: URL) {
+        RenamedNoteFollower.cancel()
+        showInObsidian(url)
+    }
+
+    static func showInObsidian(_ url: URL) {
         var components = URLComponents(string: "obsidian://open")!
         components.queryItems = [URLQueryItem(name: "path", value: url.path(percentEncoded: false))]
         NSWorkspace.shared.open(components.url!)
@@ -153,11 +160,22 @@ struct Vault {
 
     /// Obsidian finds a file only once it has noticed it on disk: opened right after being
     /// created, it sometimes answers "file not found".
+    @MainActor
     static func openNewFileInObsidian(_ url: URL) {
+        RenamedNoteFollower.cancel()
         Task {
             try? await Task.sleep(for: .seconds(1))
-            openInObsidian(url)
+            showInObsidian(url)
         }
+    }
+
+    /// Whether Obsidian shows `note` in its active tab, read from `.obsidian/workspace.json`;
+    /// `nil` when that file cannot be read (another configuration folder, Vault never opened).
+    func isShownInObsidian(_ note: URL) -> Bool? {
+        let workspaceURL = root.appending(path: ".obsidian/workspace.json")
+        guard let data = try? Data(contentsOf: workspaceURL) else { return nil }
+        guard let path = ObsidianWorkspace.activeFile(in: data) else { return false }
+        return root.appending(path: path).standardizedFileURL.path == note.standardizedFileURL.path
     }
 
     // MARK: - Private

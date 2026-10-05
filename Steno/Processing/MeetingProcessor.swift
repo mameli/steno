@@ -312,6 +312,8 @@ final class MeetingProcessor {
             wantsTitle: true
         )
         var isRenamed = false
+        // Read before the rename: afterwards Obsidian may already show another note.
+        let wasShownInObsidian = vault.isShownInObsidian(noteURL) ?? true
         // Only a note still in place and with its provisional name is renamed. If the rename
         // fails the note stays as it is: the Summary must not be lost over a name.
         if let title, vault.isInMeetingsFolder(noteURL),
@@ -343,12 +345,8 @@ final class MeetingProcessor {
                 summary: summary
             )
         }
-        // Obsidian closes a note renamed under it and shows the previous one: if the user is in
-        // Obsidian, the note is opened again under its new name. Otherwise Obsidian is not brought
-        // forward in the middle of something else; the notification opens the note.
-        if isRenamed, AppSettings.openInObsidian,
-           NSWorkspace.shared.frontmostApplication?.bundleIdentifier == "md.obsidian" {
-            Vault.openNewFileInObsidian(noteURL)
+        if isRenamed, wasShownInObsidian, AppSettings.openInObsidian {
+            RenamedNoteFollower.follow(noteURL, in: vault)
         }
         if case .failed(let reason) = summary {
             return (noteURL, String(localized: "Summary not generated: \(reason)"))
