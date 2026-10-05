@@ -50,6 +50,16 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 - [ ] **Recordings in Settings**: the space used matches the folder opened by *Show in Finder*; *Delete audio* asks for confirmation and brings it to zero.
 - [x] **Retry**: turn off the internet connection, record a short Meeting → "Processing failed" and ⚠️ in the note and in the menu; reconnect and *Retry* → Summary generated.
 
+## Vocabulary
+
+- [ ] **Open Vocabulary**: Settings → *Vocabulary* → *Open Vocabulary* → `Meetings/_Vocabulary.md` is created with the explanation text and opens in Obsidian; *Entries* says 0. Add `- Scaleway = scale uai | our EU cloud provider`, go back to the Settings window → *Entries* says 1.
+- [ ] **Variants in the Transcript**: add a term with a variant Parakeet really gets wrong in your voice, record a short Meeting saying it → in the Transcript file the term is written right; the Meeting note's Summary writes it right too.
+- [ ] **Terms in the Summary**: say a term that is in the Vocabulary but write no variant for it, with recognition getting it wrong → the Summary spells the term right when the context makes it clear, and leaves other doubtful words alone.
+- [ ] **Short terms**: a term that sounds like common words (like "Steno" next to "meno", "sono") → ordinary sentences with "meno" or "sono" are not changed, in the Transcript or in the Summary.
+- [ ] **Retry with a new variant**: add a variant for a word that is wrong in an older Meeting still having its audio → *Retry* → the Transcript file has the term. Without the audio, *Retry* does not touch the Transcript text.
+- [ ] **Transcript only**: *Summary Profile* → *Transcript*, record a Meeting saying a word that has a variant → the variant is replaced in the Transcript even with no Summary.
+- [ ] **No Vocabulary file**: delete `_Vocabulary.md` → Meetings are processed as before, *Entries* says 0.
+
 ## 4. Edge cases
 
 - [x] **AirPods from the start**: AirPods connected before starting, not in a call → the Me Track records (there is a `me-000.m4a`), even though macOS switches them to call mode.

@@ -68,6 +68,24 @@ struct Vault {
         return Template(fileName: Template.defaultName, content: Template.defaultFileContent)
     }
 
+    // MARK: - Vocabulary
+
+    var vocabularyURL: URL { meetingsFolder.appending(path: "_Vocabulary.md") }
+
+    /// The Vocabulary written in the Vault: empty if the file is missing or unreadable.
+    func vocabulary() -> Vocabulary {
+        (try? String(contentsOf: vocabularyURL, encoding: .utf8)).map(Vocabulary.init(fileContent:)) ?? .empty
+    }
+
+    /// Creates the Vocabulary file with the example text if it does not exist; says whether it did.
+    @discardableResult
+    func ensureVocabularyFile() throws -> Bool {
+        guard !FileManager.default.fileExists(atPath: vocabularyURL.path(percentEncoded: false)) else { return false }
+        try FileManager.default.createDirectory(at: meetingsFolder, withIntermediateDirectories: true)
+        try Vocabulary.exampleFileContent.write(to: vocabularyURL, atomically: true, encoding: .utf8)
+        return true
+    }
+
     // MARK: - Meeting notes and Transcripts
 
     /// Creates the Meeting note with the provisional title. Never creates the Vault folder:

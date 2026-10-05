@@ -54,7 +54,7 @@ actor MeetingTranscription {
 
     /// Transcribes the missing Segments, waits for those in progress and writes the Transcript.
     /// A failing Segment does not block the others: the Transcript comes out with a gap.
-    func finish(_ recording: Recording, in directory: URL) async throws -> Finished {
+    func finish(_ recording: Recording, in directory: URL, vocabulary: Vocabulary) async throws -> Finished {
         for segment in recording.segments {
             startIfNeeded(segment, in: directory)
         }
@@ -83,10 +83,11 @@ actor MeetingTranscription {
             }
         }
 
-        // Applied here and not to the cache: Retry on an old Recording benefits too.
+        // The echo removal and the Vocabulary variants are applied here and not to the cache:
+        // Retry on an old Recording benefits too.
         let utterances = removingEcho(recording.segments.flatMap { bySegment[$0.fileName] ?? [] })
         let url = directory.appending(path: Transcript.recordingCopyFileName)
-        let transcript = Transcript(utterances: utterances)
+        let transcript = Transcript(utterances: utterances, vocabulary: vocabulary)
         try transcript.markdown.write(to: url, atomically: true, encoding: .utf8)
         let language = locked ?? provisionalSegments.values.first?.language
         return Finished(url: url, transcript: transcript, language: language, failedSegments: failed)

@@ -58,6 +58,10 @@ The part of the Meeting note that Steno may rewrite. Everything else belongs to 
 A file in the Vault that defines the structure and instructions of the Summary for a kind of Meeting.
 _Avoid_: model (ambiguous with the AI model), prompt
 
+**Vocabulary** (`Vocabulary`):
+A file in the Vault listing the terms (names, acronyms, technical words) that speech recognition tends to get wrong. Each entry is the correct term, optionally with the variants usually heard instead and a short description of what it is. It applies to every Meeting.
+_Avoid_: dictionary, glossary
+
 **Regeneration** (`Regeneration`):
 Producing a new Summary for a Meeting already processed from its Transcript in the Vault, without the audio. It is what Retry does once the audio is deleted.
 

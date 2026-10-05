@@ -48,6 +48,37 @@ struct SummaryPromptTests {
         #expect(system.contains("personal notes"))
     }
 
+    let vocabulary = Vocabulary(fileContent: """
+        - Steno = absteno, steno | our app for recording meetings
+        - Scaleway = scale uai
+        - Mameli
+        """)
+
+    @Test("the Vocabulary goes into the system message, with the rule to correct only what is certain")
+    func vocabularyInSystemMessage() {
+        let messages = SummaryPrompt(
+            template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it", vocabulary: vocabulary
+        ).singleRequest()
+
+        let system = messages[0].content
+        #expect(system.contains("- Steno: our app for recording meetings (may be written as \"absteno\", \"steno\")"))
+        #expect(system.contains("- Scaleway (may be written as \"scale uai\")"))
+        #expect(system.contains("\n- Mameli\n"))
+        #expect(system.contains("automatic speech recognition"))
+        #expect(system.contains("only when you are sure"))
+        // The Vocabulary is not part of what the user message carries.
+        #expect(!messages[1].content.contains("Scaleway"))
+    }
+
+    @Test("without a Vocabulary the system message has no trace of it")
+    func noVocabulary() {
+        let system = SummaryPrompt(template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it")
+            .singleRequest()[0].content
+
+        #expect(!system.contains("Vocabulary"))
+        #expect(system.hasSuffix("without preambles."))
+    }
+
     @Test("Summary language: the Template's, else the Meeting's, else Italian; any language can be named", arguments: [
         ("en", "it", "Write the summary in English"),
         (nil, "en", "Write the summary in English"),

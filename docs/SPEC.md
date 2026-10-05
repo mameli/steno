@@ -18,6 +18,7 @@ Personal use, one machine (M3 Pro, 18 GB, macOS 26). Meetings in Italian or Engl
 - **Provider profiles** for the Summary, OpenAI-compatible adapter, keys in the Keychain, minimal Settings window
 - **Meeting note** created at start and opened in Obsidian; **Managed section**; Transcript in a separate file
 - Templates read from the Vault, **Regeneration**, Retry
+- **Vocabulary** in the Vault: variants replaced in the Transcript, terms in the Summary prompt ([ADR 0005](adr/0005-vocabulary-without-llm-pass-or-engine-biasing.md))
 - Recording kept for 7 days, **Processing** queue
 - English user interface with Italian translation (string catalogs); English Vault format
 
@@ -30,6 +31,8 @@ Personal use, one machine (M3 Pro, 18 GB, macOS 26). Meetings in Italian or Engl
 6. Ready-made Provider presets
 7. Notarized distribution (paid Developer ID). v1 is distributed as a zip on GitHub Releases, signed with a self-signed certificate (`scripts/release.sh`): other Macs open it with "Open Anyway"
 8. Automatic stop on silence at the end of the call (was phase 6)
+9. Vocabulary for the recognition engines (a prompt for Whisper; CTC boosting for Parakeet, tried and not usable in Italian). See ADR 0005.
+10. An LLM pass that corrects the Transcript before the Summary (only if the variants and the Summary prompt prove not enough)
 
 ## Main flow
 
@@ -64,6 +67,7 @@ Personal use, one machine (M3 Pro, 18 GB, macOS 26). Meetings in Italian or Engl
 - A Segment that cannot be transcribed does not block the others: the Transcript is written with a gap and the error is reported.
 - Whisper only gets the **speech ranges** of each Segment: half-second windows with RMS above 0.004, pauses under 2 seconds absorbed, a quarter of a second of margin on each side. On silence, echo residue and distant voices Whisper makes up sentences ("Grazie.", dozens of times in the phase 1 test). Annotations such as `[BLANK_AUDIO]` or sentences in parentheses are dropped anyway. A speech range with at most 3 seconds of sound (pauses and margins excluded) whose whole text is a stock subtitle sentence ("Grazie.", "Thank you.", "Sottotitoli creati dalla comunità Amara.org"…) is dropped too: it is Whisper's reaction to a short noise such as a notification sound. A real isolated "Grazie." from the others is lost with it. Echo leaked into the microphone (speakers without headphones, while echo cancellation is still adapting) is removed when the Transcript is built: a run of Me Utterances (pauses under 2 seconds) of at least 3 words, 80% of which appear in the same order in what Others say within 5 seconds, is dropped. It is applied when the Transcript is built, not to the cache, so Retry cleans older Recordings too.
 - A Transcript paragraph joins consecutive Utterances of the same Track, but breaks after a pause longer than 30 seconds or when an Utterance starts more than 60 seconds after the paragraph's start: a new timestamp about every minute (a Whisper Utterance is at most 30 seconds long).
+- The **Vocabulary** variants are replaced with the term in the paragraph text, once the Utterances are merged (so a variant that crosses two Utterances of the same paragraph is found), when the Transcript is built, not in the cache: like the echo removal, a Retry with the audio uses the Vocabulary of that moment. A variant matches as a whole word (letters and digits on either side stop a match, an apostrophe or punctuation does not: `l'absteno` → `l'Steno`), ignoring case; the longest variant wins; the replacement is the term as written in the Vocabulary. It also applies with *Transcript* chosen as Summary Profile. A Regeneration does not touch the text already in the Vault.
 - The result of each Segment (language and Utterances) is saved next to the audio (`me-000.m4a.json`), so a new Processing does not transcribe again what is done.
 - **Models**: Large v3 Turbo (`openai_whisper-large-v3-v20240930_turbo_632MB`, 646 MB, default), Large v3 Turbo full (`…_turbo`, 1.6 GB) Small (`openai_whisper-small_216MB`, 217 MB) and NVIDIA Parakeet TDT 0.6B v3 (through FluidAudio, about 490 MB), all multilingual. Parakeet cannot be held to a language: it picks one per stretch of speech and on short, unclear replies can switch (e.g. to English or Portuguese); the Meeting language is read from its text with macOS's language recogniser. Its tokens are joined into sentences at final punctuation or after a 1.5 s pause. Settings → *Transcription* downloads them (with a percentage, then "Preparing…" while Parakeet is compiled), chooses the one in use and deletes the others; the model is changed rarely, so the menu bar does not offer it. A Meeting keeps the model it started with; Retry uses the one in use. The per-Segment cache records the model: Segments transcribed by another model are transcribed again.
 - **Local**: WhisperKit; the model in use is downloaded on first use to `~/Library/Application Support/Steno/Models` and prepared while the first Meeting is in progress. The menu shows "Downloading transcription model… N%", then "Preparing transcription model, first time only" (macOS compiles it for the Neural Engine: a few minutes, once) or, on later launches, "Loading transcription model…". A marker file written after the download makes an interrupted download resume instead of loading a partial model.
@@ -125,11 +129,29 @@ Rules:
 - The Template is chosen at start (default from Settings) and can change until the stop.
 - In Settings, Templates section: list, default Template, "New Template" (name → file created from Notes and opened in Obsidian), "Open in Obsidian", "Delete" (asks for confirmation, then moves the file to the Trash with no further message: the row disappearing is enough; if it was the default, Notes becomes the default again; Notes itself cannot be deleted). A Meeting whose Template is gone uses the Vault's Notes, as the user edited it; only without it the built-in text. New files (Templates, Meeting notes) are opened in Obsidian after a second, otherwise Obsidian may not have noticed them yet and answers "file not found". The text is written in Obsidian: Steno has no editor.
 
+## Vocabulary
+
+The names, acronyms and technical words that recognition gets wrong, in the file `<Vault>/Meetings/_Vocabulary.md`, written in Obsidian like the Templates. It is global (it applies to every Meeting) and is read at every Processing: a change counts from the next Meeting, or from a Retry with the audio. If the file is missing or empty everything works as before; without a Vault there is no Vocabulary. Why it works this way and not through the engines or an LLM pass: [ADR 0005](adr/0005-vocabulary-without-llm-pass-or-engine-biasing.md).
+
+One entry per line, as a Markdown list item:
+
+```markdown
+- Steno = absteno, steno | our app for recording meetings
+- Scaleway = scale uai
+- Mameli
+```
+
+- `Term` is the correct form. After `=`, comma-separated, the variants usually heard instead (optional). After `|` a short description (optional). Extra spaces are ignored.
+- Lines that do not start with `- ` (headings, notes, blank lines) are ignored, so the file can hold free text.
+- Two entries with the same term: the first one counts. The same variant in two entries: the first one counts. A variant equal to its own term is ignored.
+- The variants are used for the substitution in the Transcript ([Transcription](#transcription)). The terms, variants and descriptions go to the Summary prompt ([Summary](#summary)). The recognition engines get nothing.
+
 ## Summary
 
 - `POST {baseURL}/chat/completions` with:
   - **fixed system prompt** (in English): write the summary in the language stated explicitly ("Write the summary in Italian", whatever language the Template is written in), follow the Template's structure and instructions, do not invent, attribute to Me/Others, actions as a checklist in the Template's format (otherwise `- [ ] who: what (when)`), give priority to the topics of the Personal notes;
   - **user message**: Template, Personal notes, Transcript.
+  - **Vocabulary**, if there is one: a block in the system prompt in every request (single, partial, group, merge and title) with each term, its variants ("may be written as …") and its description. The prompt says the Transcript comes from automatic speech recognition and may spell names and technical terms wrong; the model uses the Vocabulary and the context to write them right, and corrects only when it is sure, otherwise it leaves the text as it is. It does not turn the Transcript into something else: the existing rule *do not invent* still holds.
 - **Summary language**: the Template's `summary_language` (any language), otherwise the Meeting's detected language, otherwise (no speech, or detection failed) Italian.
 - **Title**: a second short call on the Summary ("at most 6 words, no date", in the Summary language), cleaned of headings, "Title:" prefixes, quotes, bold and final punctuation. If no title comes back the note keeps its provisional name: it is not an error.
 - **Managed section**: the Summary followed by `Full transcript: [[…]]`. With *Transcript* chosen as Summary Profile it holds only the `Full transcript: [[…]]` link, with no warning, and the note keeps its provisional name. If the Summary fails (Provider error, Meeting without speech) it shows `⚠️ Summary not generated: <reason>` and the Transcript link, which stays usable. Managed section markers in the model's reply are removed.
@@ -146,6 +168,7 @@ Rules:
 - Vault path
 - Templates and default Template
 - Summary Profiles and active Profile (with "Test connection")
+- Vocabulary: number of entries and "Open Vocabulary" (creates the file with an example if it is missing, then opens it in Obsidian)
 - Transcription: models (Download, Use, Delete; the one in use cannot be deleted)
 - Recordings: days the audio is kept (default 7), space used, "Show in Finder", "Delete audio" (all concluded Meetings, with confirmation). A shorter retention applies at the next cleanup, not on the spot.
 
@@ -153,7 +176,7 @@ From the terminal only (`defaults write dev.mameli.steno language it`), to move 
 
 The global shortcut is fixed: ⌃⌥⌘R. If another app already uses it, the menu says so.
 
-The folders are fixed: `Meetings/`, `Meetings/Transcripts/`, `Meetings/_Templates/`. The Italian format of earlier development versions is not supported: those notes and Recordings were deleted.
+The folders are fixed: `Meetings/`, `Meetings/Transcripts/`, `Meetings/_Templates/`; the Vocabulary is the fixed file `Meetings/_Vocabulary.md`. The Italian format of earlier development versions is not supported: those notes and Recordings were deleted.
 
 ## Menu bar
 
@@ -204,4 +227,5 @@ Every phase closes with a concrete check.
 - **Words cut between Segments**: the 5-minute boundary can split a word. Phase 2: with 5-second Segments a sentence across two Segments comes back together correctly; in the real call no words were lost at the boundaries. If it matters, add a short overlap between Segments.
 - **Whisper non-deterministic on degraded audio**: with temperature fallback, the same range can give different texts in two Processings. In the phase 2 test (voice picked up by a phone in another room, through Meet and played by the speakers) the first sentence was lost in one run out of three. Disabling the fallback makes the result stable but worse; Whisper's "no speech" threshold is disabled because it dropped exactly these ranges. To reassess if it happens with normal call audio.
 - **Renaming with the note open in Obsidian**: Obsidian does not follow the rename: it closes the note and shows the previous one. Steno reads in `.obsidian/workspace.json` which note Obsidian shows. If, before the rename, it was the Meeting note, Steno waits 3 seconds for Obsidian to notice the rename and then, if Obsidian does not show the renamed note, opens it and checks again (up to 3 times). If Obsidian is not the frontmost app it waits (up to an hour) for the user to come back to it instead of bringing it forward. A note Steno opens meanwhile (a new Meeting, a notification) cancels the wait. If the user was looking at another note, nothing happens. Correctness over speed: the note may appear a few seconds after the notification.
+- **Short Vocabulary terms and variants**: a variant is replaced everywhere it appears as a whole word, so a variant that is also a real word ("acne" for "Acme") would corrupt correct text; whoever writes the Vocabulary chooses the variants. Short terms that sound like common words ("Steno" next to "meno", "sono") are one more reason there is no engine biasing: the Summary prompt resolves them from context instead.
 - **Whisper model download**: WhisperKit downloads the weights from Hugging Face. It is not Meeting data and does not affect ADR 0001, but it needs the network on first launch.

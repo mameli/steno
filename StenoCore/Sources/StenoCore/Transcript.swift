@@ -41,7 +41,8 @@ public struct Transcript: Sendable {
 
     public let paragraphs: [Paragraph]
 
-    public init(utterances: [Utterance]) {
+    /// `vocabulary`: the variants it knows are replaced by their term in the text of the paragraphs.
+    public init(utterances: [Utterance], vocabulary: Vocabulary = .empty) {
         var paragraphs: [Paragraph] = []
         var lastEnd: TimeInterval = 0
         let spoken = utterances.compactMap { utterance -> Utterance? in
@@ -61,7 +62,10 @@ public struct Transcript: Sendable {
                 paragraphs.append(Paragraph(track: utterance.track, start: utterance.start, text: utterance.text))
             }
         }
-        self.paragraphs = paragraphs
+        let replaceVariants = vocabulary.variantReplacer()
+        self.paragraphs = paragraphs.map {
+            Paragraph(track: $0.track, start: $0.start, text: replaceVariants($0.text))
+        }
     }
 
     private init(paragraphs: [Paragraph]) {

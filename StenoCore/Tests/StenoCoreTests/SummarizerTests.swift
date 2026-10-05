@@ -79,6 +79,27 @@ struct SummarizerTests {
         #expect(stub.message(stub.requests.count - 1, "user")?.contains("### Topics\n### Next steps") == true)
     }
 
+    @Test("the Vocabulary is in every request: blocks, groups and the final merge, all within the context")
+    func vocabularyInEveryRequest() async throws {
+        let longPartial = String(repeating: "important detail ", count: 185)
+        let stub = StubTransport { _ in longPartial }
+        let prompt = SummaryPrompt(
+            template: template, personalNotes: "", transcript: transcript(paragraphs: 120), meetingLanguage: "it",
+            vocabulary: Vocabulary(fileContent: "- Scaleway = scale uai | our EU cloud provider\n- Mameli")
+        )
+
+        _ = try await Summarizer(client: client(stub), maxContextTokens: 8_192).summarize(prompt)
+
+        #expect(stub.requests.count > 3)
+        for index in stub.requests.indices {
+            let system = try #require(stub.message(index, "system"))
+            #expect(system.contains("- Scaleway: our EU cloud provider (may be written as \"scale uai\")"), "request \(index)")
+            #expect(system.contains("- Mameli"), "request \(index)")
+            let characters = system.count + (stub.message(index, "user") ?? "").count
+            #expect(characters / 3 + SummaryPrompt.replyReserveTokens <= 8_192, "request \(index) is too large")
+        }
+    }
+
     @Test("a context that is too small is raised to the usable minimum")
     func minimumContext() async throws {
         let stub = StubTransport { _ in "ok" }

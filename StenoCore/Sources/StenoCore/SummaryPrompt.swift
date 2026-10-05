@@ -9,12 +9,17 @@ public struct SummaryPrompt: Sendable {
     private let personalNotes: String
     private let transcript: Transcript
     private let meetingLanguage: String?
+    private let vocabulary: Vocabulary
 
-    public init(template: Template, personalNotes: String, transcript: Transcript, meetingLanguage: String?) {
+    public init(
+        template: Template, personalNotes: String, transcript: Transcript, meetingLanguage: String?,
+        vocabulary: Vocabulary = .empty
+    ) {
         self.template = template
         self.personalNotes = personalNotes
         self.transcript = transcript
         self.meetingLanguage = meetingLanguage
+        self.vocabulary = vocabulary
     }
 
     /// Language code: the Template's, else the Meeting's, else Italian.
@@ -124,7 +129,12 @@ public struct SummaryPrompt: Sendable {
         - The personal notes say what matters to the person who wrote them: give those topics priority.
         - Write actions as a `- [ ]` checklist, in the format the Template asks for; if it asks for none, `- [ ] who: what (when)`. Leave out who or when if they are not clear.
         - Reply with the summary in Markdown only, without preambles.
-        """
+        """ + vocabularyBlock
+    }
+
+    /// The Vocabulary for the system prompt of any request, with a blank line before it; empty without one.
+    private var vocabularyBlock: String {
+        vocabulary.promptBlock.map { "\n\n" + $0 } ?? ""
     }
 
     private func partialRequest(part: Int, of count: Int, transcript: String) -> [ChatMessage] {
@@ -134,7 +144,7 @@ public struct SummaryPrompt: Sendable {
                 Summarise it faithfully and compactly, in \(languageName): topics, decisions, actions (who, what, when) and open questions, with timestamps.
                 In the Transcript "Me" is the person who took the personal notes, "Others" are the other participants.
                 Do not invent. Reply with the summary only.
-                """),
+                """ + vocabularyBlock),
             ChatMessage(role: .user, content: """
                 # Personal notes
                 \(notesOrNone)
@@ -151,7 +161,7 @@ public struct SummaryPrompt: Sendable {
                 You are Steno. You receive the summaries of consecutive parts of the same meeting.
                 Merge them into a single faithful and compact summary, in \(languageName): topics, decisions, actions (who, what, when) and open questions, with timestamps.
                 Do not invent. Reply with the summary only.
-                """),
+                """ + vocabularyBlock),
             ChatMessage(role: .user, content: """
                 # Personal notes
                 \(notesOrNone)

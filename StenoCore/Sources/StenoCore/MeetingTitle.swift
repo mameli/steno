@@ -4,13 +4,15 @@ import Foundation
 public enum MeetingTitle {
     public static let maxWords = 6
 
-    public static func request(summary: String, language: String) -> [ChatMessage] {
-        [
+    public static func request(summary: String, language: String, vocabulary: Vocabulary = .empty) -> [ChatMessage] {
+        let terms = vocabulary.entries.isEmpty
+            ? "" : "\nSpell these names and terms exactly like this: \(vocabulary.entries.map(\.term).joined(separator: ", "))."
+        return [
             ChatMessage(role: .system, content: """
                 Write the title of a meeting from its summary: at most \(maxWords) words, \
                 in \(Language.name(language)), no date, no quotes and no final period. \
                 Reply with the title only.
-                """),
+                """ + terms),
             ChatMessage(role: .user, content: summary),
         ]
     }

@@ -271,6 +271,16 @@
         }
       }
     },
+    "Entries": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voci"
+          }
+        }
+      }
+    },
     "Folder": {
       "localizations": {
         "it": {
@@ -532,6 +542,16 @@
         }
       }
     },
+    "Names and technical words that recognition gets wrong, in Meetings/_Vocabulary.md in the Vault. The Summary uses them; the variants you list are fixed in the Transcript.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nomi e parole tecniche che il riconoscimento sbaglia, in Meetings/_Vocabulary.md nel Vault. Il Summary li usa; le varianti che elenchi vengono corrette nel Transcript."
+          }
+        }
+      }
+    },
     "New Template": {
       "localizations": {
         "it": {
@@ -618,6 +638,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apri nota"
+          }
+        }
+      }
+    },
+    "Open Vocabulary": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri il Vocabolario"
           }
         }
       }
@@ -1153,6 +1183,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Molto veloce e preciso; sulle risposte brevi può cambiare lingua."
+          }
+        }
+      }
+    },
+    "Vocabulary": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vocabolario"
           }
         }
       }

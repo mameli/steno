@@ -36,6 +36,23 @@ struct MeetingTitleTests {
         #expect(messages.first?.content.contains("6 words") == true)
     }
 
+    @Test("the title request lists the Vocabulary terms to spell as they are")
+    func requestWithVocabulary() {
+        let vocabulary = Vocabulary(fileContent: "- Steno = absteno | our app\n- Scaleway = scale uai\n- Mameli")
+
+        let system = MeetingTitle.request(summary: "### Budget", language: "it", vocabulary: vocabulary)[0].content
+
+        #expect(system.contains("Spell these names and terms exactly like this: Steno, Scaleway, Mameli."))
+    }
+
+    @Test("without a Vocabulary the title request is the one it always was")
+    func requestWithoutVocabulary() {
+        let system = MeetingTitle.request(summary: "### Budget", language: "it")[0].content
+
+        #expect(!system.contains("Spell these"))
+        #expect(system == MeetingTitle.request(summary: "### Budget", language: "it", vocabulary: .empty)[0].content)
+    }
+
     @Test("the note is renamed only while it still has its provisional name")
     func rename() {
         func renamed(_ current: String) -> String? {

@@ -195,13 +195,15 @@ final class MeetingProcessor {
             return
         }
 
+        // Read once per Processing: a change counts from the next Meeting, or from a Retry.
+        let vocabulary = Vault.configured?.vocabulary() ?? .empty
         var problems: [String] = []
         // An unreadable Segment (e.g. the one open during a crash) leaves a gap in the
         // Transcript but does not prevent the Summary: it is a warning, not a failure.
         var warnings: [String] = []
         let finished: MeetingTranscription.Finished?
         do {
-            finished = try await transcription.finish(recording, in: directory)
+            finished = try await transcription.finish(recording, in: directory, vocabulary: vocabulary)
             if let failedSegments = finished?.failedSegments, !failedSegments.isEmpty {
                 warnings.append(String(localized: "Incomplete transcript: \(failedSegments.joined(separator: "; "))"))
             }
@@ -213,7 +215,9 @@ final class MeetingProcessor {
 
         if let vault = Vault.configured {
             do {
-                let (noteURL, summaryProblem) = try await writeToVault(vault, finished, recording: recording, record: record)
+                let (noteURL, summaryProblem) = try await writeToVault(
+                    vault, finished, recording: recording, record: record, vocabulary: vocabulary
+                )
                 record.noteURL = noteURL
                 lastNoteURL = noteURL
                 if let summaryProblem { problems.append(summaryProblem) }
@@ -243,7 +247,7 @@ final class MeetingProcessor {
             let (transcript, language) = Transcript.parse(vaultFile: transcriptFile)
             let summaryProblem: String?
             (noteURL, summaryProblem) = try await writeSummary(
-                transcript, language: language, into: noteURL, record: record, vault: vault
+                transcript, language: language, into: noteURL, record: record, vault: vault, vocabulary: vault.vocabulary()
             ) { noteURL, summary in
                 try vault.update(noteURL) {
                     $0.recordRegeneration(
@@ -292,7 +296,8 @@ final class MeetingProcessor {
     /// Writes the outcome of Processing into the Vault: Summary, title and rename, Transcript,
     /// Meeting note. Returns the note and, if there was one, the Summary problem.
     private func writeToVault(
-        _ vault: Vault, _ finished: MeetingTranscription.Finished?, recording: Recording, record: ProcessingRecord
+        _ vault: Vault, _ finished: MeetingTranscription.Finished?, recording: Recording, record: ProcessingRecord,
+        vocabulary: Vocabulary
     ) async throws -> (URL, String?) {
         let noteURL = try vault.findMeetingNote(stenoID: record.stenoID, expected: record.noteURL)
             ?? vault.createMeetingNote(stenoID: record.stenoID, startedAt: record.startedAt)
@@ -307,7 +312,8 @@ final class MeetingProcessor {
         }
 
         return try await writeSummary(
-            finished.transcript, language: finished.language, into: noteURL, record: record, vault: vault
+            finished.transcript, language: finished.language, into: noteURL, record: record, vault: vault,
+            vocabulary: vocabulary
         ) { noteURL, summary in
             // Written after the rename: a new Transcript is named after the note's final name.
             let transcriptURL = try vault.writeTranscript(
@@ -334,12 +340,13 @@ final class MeetingProcessor {
     /// renamed note in Obsidian. Returns where the note is and the Summary problem, if any.
     private func writeSummary(
         _ transcript: Transcript, language: String?, into noteURL: URL, record: ProcessingRecord, vault: Vault,
+        vocabulary: Vocabulary,
         writeNote: (URL, MeetingNote.SummaryOutcome) throws -> Void
     ) async throws -> (URL, String?) {
         let (summary, title) = await summarize(
             transcript, language: language,
             personalNotes: try vault.meetingNote(at: noteURL).personalNotes,
-            template: vault.template(named: record.templateName), profile: record.summaryProfile
+            template: vault.template(named: record.templateName), profile: record.summaryProfile, vocabulary: vocabulary
         )
         let rename = renameIfProvisional(noteURL, title: title, startedAt: record.startedAt, in: vault)
         try writeNote(rename.url, summary)
@@ -376,7 +383,7 @@ final class MeetingProcessor {
     /// provisional name.
     private func summarize(
         _ transcript: Transcript, language: String?, personalNotes: String, template: Template,
-        profile: ProviderProfile?
+        profile: ProviderProfile?, vocabulary: Vocabulary
     ) async -> (MeetingNote.SummaryOutcome, String?) {
         var profile = profile
         var isTestProfile = false
@@ -398,10 +405,11 @@ final class MeetingProcessor {
         do {
             let client = try ChatClient(profile: profile)
             let prompt = SummaryPrompt(
-                template: template, personalNotes: personalNotes, transcript: transcript, meetingLanguage: language
+                template: template, personalNotes: personalNotes, transcript: transcript, meetingLanguage: language,
+                vocabulary: vocabulary
             )
             let text = try await Summarizer(client: client, maxContextTokens: profile.maxContextTokens).summarize(prompt)
-            let reply = try? await client.complete(MeetingTitle.request(summary: text, language: prompt.summaryLanguage))
+            let reply = try? await client.complete(MeetingTitle.request(summary: text, language: prompt.summaryLanguage, vocabulary: vocabulary))
             return (.written(text: text, template: template.name, provider: profile.displayName), reply.flatMap(MeetingTitle.clean))
         } catch {
             logger.error("Summary not generated: \(error, privacy: .public)")
