@@ -1036,16 +1036,6 @@
         }
       }
     },
-    "Transcription Model": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modello di trascrizione"
-          }
-        }
-      }
-    },
     "Transcription failed: %@": {
       "localizations": {
         "it": {
