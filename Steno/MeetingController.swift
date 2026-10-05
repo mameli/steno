@@ -28,6 +28,11 @@ final class MeetingController {
     private var hotKey: GlobalHotKey?
     /// False if another app already uses ⌃⌥⌘R.
     var isHotKeyAvailable: Bool { hotKey?.isRegistered ?? false }
+    /// The transcription model while it is downloading or loading, as the menu shows it.
+    private(set) var modelMenuTitle: String?
+    /// The latest phase, also while a menu is open (the observed title waits for it to close).
+    @ObservationIgnored private var modelPhase = LocalTranscriber.ModelPhase.notLoaded
+    @ObservationIgnored private var latestModelMenuTitle: String?
     private(set) var microphoneDenied = false
     private(set) var recordingError: String?
     private(set) var lastRecordingDirectory: URL?
@@ -48,6 +53,11 @@ final class MeetingController {
         processor.resumeAfterLaunch()
         startDailyCleanUp()
         keepTimerLiveWithoutRebuildingMenus()
+        Task { [transcriber] in
+            await transcriber.setPhaseHandler { [weak self] phase in
+                Task { @MainActor in self?.modelPhaseChanged(phase) }
+            }
+        }
     }
 
     var isInProgress: Bool { startedAt != nil }
@@ -259,6 +269,7 @@ final class MeetingController {
                 self.openMenus = max(0, self.openMenus - 1)
                 if self.openMenus == 0 { self.openMenu = nil }
                 self.now = Date()
+                if self.modelMenuTitle != self.latestModelMenuTitle { self.modelMenuTitle = self.latestModelMenuTitle }
             }
         }
     }
@@ -275,6 +286,43 @@ final class MeetingController {
                     self.updateOpenMenuTimer()
                 }
             }
+        }
+    }
+
+    /// Like the timer, the model's progress changes the open menu's item in place: rebuilding the
+    /// menu at every percent would make it blink. An item appearing or disappearing waits for the
+    /// menu to close.
+    private func modelPhaseChanged(_ phase: LocalTranscriber.ModelPhase) {
+        // Progress reports can arrive after the download is over.
+        if case .downloading = phase {
+            switch modelPhase {
+            case .loading, .ready: return
+            case .notLoaded, .downloading: break
+            }
+        }
+        modelPhase = phase
+        let title = Self.modelMenuTitle(phase)
+        // Whole percents only: the download reports progress many times a second.
+        guard title != latestModelMenuTitle else { return }
+        logger.info("Transcription model: \(title ?? "ready or not loaded", privacy: .public)")
+        if openMenus == 0 {
+            modelMenuTitle = title
+        } else if let shown = latestModelMenuTitle, let title {
+            openMenu?.items.first { $0.title == shown }?.title = title
+        }
+        latestModelMenuTitle = title
+    }
+
+    private static func modelMenuTitle(_ phase: LocalTranscriber.ModelPhase) -> String? {
+        switch phase {
+        case .notLoaded, .ready:
+            nil
+        case .downloading(let fraction):
+            String(localized: "Downloading transcription model… \(Int(fraction * 100))%")
+        case .loading(firstTime: true):
+            String(localized: "Preparing transcription model, first time only: a few minutes…")
+        case .loading(firstTime: false):
+            String(localized: "Loading transcription model…")
         }
     }
 

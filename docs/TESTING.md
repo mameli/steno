@@ -11,6 +11,8 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 
 - [ ] **Open at login**: Settings → *General* → *Open at login* on → Steno is in System Settings → General → Login Items; log out and back in → Steno is in the menu bar. Turn it off → it disappears from Login Items.
 
+- [ ] **First use**: move `~/Library/Application Support/Steno/Models` to the Trash, start a Meeting → the menu shows "Downloading transcription model… N%" rising, then "Preparing transcription model, first time only", then nothing; the Meeting is transcribed. The menu does not blink while the percentage changes.
+
 ## 1. Recording
 
 - [x] **Start from the menu**: *Start meeting* → the red dot appears in the bar, Obsidian opens `Meetings/<date> <time> - Meeting.md`.

@@ -241,6 +241,16 @@
         }
       }
     },
+    "Downloading transcription model… %lld%%": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scaricamento del modello di trascrizione… %lld%%"
+          }
+        }
+      }
+    },
     "Folder": {
       "localizations": {
         "it": {
@@ -358,6 +368,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Portachiavi: %@"
+          }
+        }
+      }
+    },
+    "Loading transcription model…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caricamento del modello di trascrizione…"
           }
         }
       }
@@ -579,6 +599,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "URL del Profilo in chiaro: \"%@\". Usa https://; http:// è ammesso solo per i server su questo Mac."
+          }
+        }
+      }
+    },
+    "Preparing transcription model, first time only: a few minutes…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparazione del modello di trascrizione, solo la prima volta: qualche minuto…"
           }
         }
       }

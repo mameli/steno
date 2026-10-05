@@ -67,6 +67,10 @@ private struct MeetingMenu: View {
             ProviderProfileMenu()
         }
 
+        if let modelMenuTitle = controller.modelMenuTitle {
+            Divider()
+            Text(verbatim: modelMenuTitle)
+        }
         if controller.processor.pendingCount > 0 {
             Divider()
             if controller.processor.pendingCount == 1 {

@@ -11,6 +11,17 @@ actor LocalTranscriber {
         let text: String
     }
 
+    /// Where the model is, shown in the menu while it is not ready.
+    enum ModelPhase: Equatable, Sendable {
+        case notLoaded
+        /// First use: the model (about 630 MB) is being downloaded.
+        case downloading(fraction: Double)
+        /// `firstTime` right after the download: macOS then prepares the model for the Neural
+        /// Engine, which takes a few minutes once. Otherwise loading takes seconds.
+        case loading(firstTime: Bool)
+        case ready
+    }
+
     static let model = "openai_whisper-large-v3-v20240930_turbo_632MB"
 
     static var modelsDirectory: URL {
@@ -21,9 +32,24 @@ actor LocalTranscriber {
     /// (a Template can still ask for a Summary in any language).
     static let supportedLanguages = ["it", "en"]
 
+    /// Written next to the model once it is fully downloaded: a download interrupted halfway
+    /// is resumed instead of being loaded.
+    private static let downloadedMarker = ".steno-downloaded"
+
+    /// Where WhisperKit puts the model under `modelsDirectory`.
+    private static var modelFolder: URL {
+        modelsDirectory.appending(path: "models/argmaxinc/whisperkit-coreml/\(model)", directoryHint: .isDirectory)
+    }
+
+    private var onPhase: @Sendable (ModelPhase) -> Void = { _ in }
     private var whisperKit: WhisperKit?
     private var isBusy = false
     private var waiting: [CheckedContinuation<Void, Never>] = []
+
+    /// `handler` is called from any thread whenever the model changes phase.
+    func setPhaseHandler(_ handler: @escaping @Sendable (ModelPhase) -> Void) {
+        onPhase = handler
+    }
 
     /// Downloads the model on first use and loads it in memory. Later calls are immediate.
     func prepare() async throws {
@@ -61,16 +87,36 @@ actor LocalTranscriber {
 
     private func loadedWhisperKit() async throws -> WhisperKit {
         if let whisperKit { return whisperKit }
-        try FileManager.default.createDirectory(at: Self.modelsDirectory, withIntermediateDirectories: true)
-        let loaded = try await WhisperKit(WhisperKitConfig(
-            model: Self.model,
-            downloadBase: Self.modelsDirectory,
-            verbose: false,
-            logLevel: .error,
-            download: true
-        ))
-        whisperKit = loaded
-        return loaded
+        do {
+            var folder = Self.modelFolder
+            let marker = folder.appending(path: Self.downloadedMarker)
+            let needsDownload = !FileManager.default.fileExists(atPath: marker.path(percentEncoded: false))
+            if needsDownload {
+                try FileManager.default.createDirectory(at: Self.modelsDirectory, withIntermediateDirectories: true)
+                onPhase(.downloading(fraction: 0))
+                let onPhase = onPhase
+                folder = try await WhisperKit.download(variant: Self.model, downloadBase: Self.modelsDirectory) {
+                    onPhase(.downloading(fraction: $0.fractionCompleted))
+                }
+                try Data().write(to: folder.appending(path: Self.downloadedMarker))
+            }
+            onPhase(.loading(firstTime: needsDownload))
+            // The tokenizer is downloaded the first time too, into `downloadBase`.
+            let loaded = try await WhisperKit(WhisperKitConfig(
+                model: Self.model,
+                downloadBase: Self.modelsDirectory,
+                modelFolder: folder.path(percentEncoded: false),
+                verbose: false,
+                logLevel: .error,
+                download: false
+            ))
+            whisperKit = loaded
+            onPhase(.ready)
+            return loaded
+        } catch {
+            onPhase(.notLoaded)
+            throw error
+        }
     }
 
     // WhisperKit does not guarantee safe concurrent requests: one at a time, in arrival order.
