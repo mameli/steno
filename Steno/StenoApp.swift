@@ -164,11 +164,13 @@ private extension NSImage {
 /// Quick switch of the Summary Profile (e.g. from a test one to an EU one).
 private struct ProviderProfileMenu: View {
     @AppStorage(AppSettings.activeProviderProfileKey) private var activeID = ""
+    /// Observed, not read once: Profiles added, renamed or deleted in Settings show up at once.
+    @AppStorage(AppSettings.summaryProfilesKey) private var profilesData: Data?
 
     var body: some View {
         Picker("Summary Profile", selection: $activeID) {
             Text("Transcript").tag("")
-            ForEach(AppSettings.summaryProfiles) { Text($0.displayName).tag($0.id.uuidString) }
+            ForEach(AppSettings.decodeProfiles(profilesData)) { Text($0.displayName).tag($0.id.uuidString) }
         }
     }
 }

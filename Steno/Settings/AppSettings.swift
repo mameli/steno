@@ -9,7 +9,8 @@ enum AppSettings {
     private static let languageKey = "language"
     private static let echoCancellationKey = "echoCancellation"
     private static let openInObsidianKey = "openInObsidian"
-    private static let summaryProfilesKey = "summaryProfiles"
+    /// Also used by `@AppStorage` in the menu: it must follow Profiles added or deleted in Settings.
+    static let summaryProfilesKey = "summaryProfiles"
     private static let defaultTemplateKey = "defaultTemplate"
     private static let retentionDaysKey = "retentionDays"
     /// Also used by `@AppStorage` in the menu and in Settings, so the two stay in sync.
@@ -67,10 +68,13 @@ enum AppSettings {
 
     static var summaryProfiles: [ProviderProfile] {
         get {
-            UserDefaults.standard.data(forKey: summaryProfilesKey)
-                .flatMap { try? JSONDecoder().decode([ProviderProfile].self, from: $0) } ?? []
+            decodeProfiles(UserDefaults.standard.data(forKey: summaryProfilesKey))
         }
         set { UserDefaults.standard.set(try? JSONEncoder().encode(newValue), forKey: summaryProfilesKey) }
+    }
+
+    static func decodeProfiles(_ data: Data?) -> [ProviderProfile] {
+        data.flatMap { try? JSONDecoder().decode([ProviderProfile].self, from: $0) } ?? []
     }
 
     static var activeProviderProfileID: UUID? {
