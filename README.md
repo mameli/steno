@@ -17,7 +17,6 @@ It was built as an alternative to Granola for people whose company does not allo
 ## Requirements
 
 - A Mac with Apple Silicon and macOS 15 or later
-- Xcode 16 or later, to build it (see [Install](#install))
 - An Obsidian vault (any folder works, Obsidian is only needed to open the notes)
 - About 650 MB of disk for the transcription model, downloaded on first use
 
@@ -25,17 +24,23 @@ Meetings can be in Italian or English, one language per meeting; the Summary can
 
 ## Install
 
-Steno is not signed with a paid Apple Developer ID, so there is no ready-made download: you build it yourself with a free Apple account. It takes a few minutes.
+### Download
 
-1. Install Xcode from the App Store and open it once.
-2. In Xcode → Settings → Accounts, add your Apple ID. This creates a free *Personal Team*.
-3. Clone the repository and set your Team ID (Xcode → Settings → Accounts → your team; or [developer.apple.com/account](https://developer.apple.com/account) → Membership):
+1. Download the zip of the latest version from [Releases](https://github.com/mameli/steno/releases), open it and move **Steno** to **Applications**.
+2. Open Steno. macOS says it cannot verify the app: Steno is signed, but not notarized by Apple, which needs a paid developer account. Press **Done**.
+3. Go to **System Settings → Privacy & Security**, scroll down and press **Open Anyway** next to Steno, then confirm with your password. Alternatively, run `xattr -dr com.apple.quarantine /Applications/Steno.app` in Terminal before opening it.
+
+Do this again for every new version you download. On Macs managed by your company, IT may not allow apps that are not notarized.
+
+### Build from source
+
+1. Install Xcode 16 or later from the App Store and open it once.
+2. Clone the repository:
    ```sh
    git clone https://github.com/mameli/steno.git
    cd steno
-   cp Config/Local.xcconfig.example Config/Local.xcconfig
-   # edit Config/Local.xcconfig and replace XXXXXXXXXX with your Team ID
    ```
+3. Choose how to sign it (see [Signing](#signing)) and copy `Config/Local.xcconfig.example` to `Config/Local.xcconfig`.
 4. Build and copy it to Applications:
    ```sh
    xcodebuild -project Steno.xcodeproj -scheme Steno -configuration Release -derivedDataPath build/DerivedData build
@@ -43,7 +48,14 @@ Steno is not signed with a paid Apple Developer ID, so there is no ready-made do
    open /Applications/Steno.app
    ```
 
-Without your Team ID the app is signed ad hoc and macOS asks for the microphone and audio permissions again after every build.
+### Signing
+
+macOS ties the microphone and system audio permissions to the app's signature: with a stable signature they are asked once, otherwise again after every build. Two free options:
+
+- **A self-signed certificate.** Keychain Access → Certificate Assistant → Create a Certificate…: name `Steno`, Identity Type *Self-Signed Root*, Certificate Type *Code Signing*; tick *Let me override defaults* and set a validity of 3650 days. Then double-click the certificate, and under *Trust* set *Code Signing* to *Always Trust*. The first build asks to use the key: choose *Always Allow*.
+- **Your Apple ID's free Personal Team.** Add your Apple ID in Xcode → Settings → Accounts, then in `Config/Local.xcconfig` use the second option with your Team ID.
+
+Without `Config/Local.xcconfig` the app is signed ad hoc and the permissions are asked again after every build.
 
 ## First setup
 
@@ -94,6 +106,7 @@ cd StenoCore && swift test   # domain logic tests
 - `Steno/` is the app (capture, transcription, Vault, Settings, menu); `StenoCore/` is a Swift package with the domain logic and its tests, without AppKit or AVFoundation.
 - [docs/SPEC.md](docs/SPEC.md) describes how everything works, [CONTEXT.md](CONTEXT.md) is the glossary, [docs/adr](docs/adr/) records the main decisions, and [docs/TESTING.md](docs/TESTING.md) lists the checks to run by hand.
 - User-facing strings are written in English in the code and translated in `Steno/Localizable.xcstrings` (Italian). Error messages raised in `StenoCore` are looked up in the app's catalog too and must be added to it by hand. To try the Italian interface: `defaults write dev.mameli.steno AppleLanguages -array it`.
+- `scripts/release.sh` builds a Release signed with the `Steno` certificate, zips it and publishes it as a GitHub Release tagged with `MARKETING_VERSION` from `Config/Base.xcconfig` (`--dry-run` stops after the zip).
 - Debug builds accept launch arguments for automated tests (`-smokeTestSeconds`, `-transcribeRecording`, …): see `runSmokeTestIfRequested()` in `Steno/MeetingController.swift`. They refuse to run unless pointed at a test vault, a test data folder and a test Summary server.
 
 ## License

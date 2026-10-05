@@ -28,7 +28,7 @@ Personal use, one machine (M3 Pro, 18 GB, macOS 26). Meetings in Italian or Engl
 4. "Looks like a call" notification when an app grabs the microphone
 5. Real diarization (Person 1, 2…)
 6. Ready-made Provider presets
-7. Distribution to others (Developer ID signing, notarization)
+7. Notarized distribution (paid Developer ID). v1 is distributed as a zip on GitHub Releases, signed with a self-signed certificate (`scripts/release.sh`): other Macs open it with "Open Anyway"
 8. Automatic stop on silence at the end of the call (was phase 6)
 
 ## Main flow

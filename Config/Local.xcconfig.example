@@ -1,6 +1,12 @@
-// Copy to Config/Local.xcconfig (ignored by git) and fill in the Team ID of
-// your Personal Team: the signature stays stable and permissions are not
-// requested again after every build.
-CODE_SIGN_STYLE = Automatic
-CODE_SIGN_IDENTITY = Apple Development
-DEVELOPMENT_TEAM = XXXXXXXXXX
+// Copy to Config/Local.xcconfig (ignored by git) to sign with a stable identity: macOS then
+// keeps the microphone and audio permissions across builds. See "Signing" in the README.
+//
+// Option 1: a self-signed "Steno" code signing certificate in your login keychain.
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = Steno
+DEVELOPMENT_TEAM =
+//
+// Option 2: the free Personal Team of your Apple ID in Xcode.
+// CODE_SIGN_STYLE = Automatic
+// CODE_SIGN_IDENTITY = Apple Development
+// DEVELOPMENT_TEAM = XXXXXXXXXX
