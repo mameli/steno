@@ -16,6 +16,12 @@ SWIFT_EMIT_LOC_STRINGS = YES
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/../Frameworks
 COMBINE_HIDPI_IMAGES = YES
 
+// Another process cannot inject code into Steno (DYLD_INSERT_LIBRARIES) to use its
+// microphone and audio permissions. Release only: in Debug, the self-signed certificate has
+// no Team ID and library validation would refuse Xcode's Steno.debug.dylib.
+ENABLE_HARDENED_RUNTIME[config=Release] = YES
+CODE_SIGN_ENTITLEMENTS = Config/Steno.entitlements
+
 // Without Local.xcconfig the app is signed ad hoc: it builds, but macOS may
 // ask for the permissions again after every build.
 CODE_SIGN_STYLE = Manual
