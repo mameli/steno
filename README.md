@@ -4,58 +4,39 @@
 
 <h1 align="center">Steno</h1>
 
+<p align="center"><a href="https://github.com/mameli/steno/releases/latest"><b>Download the latest version</b></a> · macOS 15+ · Apple Silicon</p>
+
 A macOS menu bar app that records your meetings, transcribes them **on your Mac** and writes the Transcript and a Summary into your **Obsidian** vault. You choose who writes the Summary: a model running locally, or any OpenAI-compatible provider you trust (for example one hosted in the EU).
 
 It was built as an alternative to Granola for people whose company does not allow meeting audio and text to leave the EU.
 
 - **Records both sides of a call**: your microphone and the system audio (Meet, Zoom, Teams, any app), with echo cancellation.
-- **Transcribes locally** with Whisper ([WhisperKit](https://github.com/argmaxinc/WhisperKit)): the audio never leaves the Mac. Choose between Whisper Large v3 Turbo (default), its full version, Small and NVIDIA Parakeet v3 in *Settings → Transcription*.
+- **Transcribes locally** with OpenAI Whisper or NVIDIA Parakeet: the audio never leaves the Mac. Choose between Whisper Large v3 Turbo (default), its full version, Small and Parakeet v3 in *Settings → Transcription*.
 - **Summarises with a provider you pick**: llama.cpp, Ollama or LM Studio on your Mac, or a remote OpenAI-compatible API. You can also skip the Summary and keep only the Transcript.
 - **Writes Markdown into Obsidian**: one note per meeting, opened when the meeting starts so you can take notes, plus a separate Transcript file. Your own notes are kept and used to steer the Summary.
 - **Templates are notes in your vault**: write the structure and instructions of the Summary in Obsidian.
+- **A Vocabulary for your jargon**: names and technical terms that recognition gets wrong are fixed in the Transcript and spelled right in the Summary.
 
 ## Requirements
 
 - A Mac with Apple Silicon and macOS 15 or later
 - An Obsidian vault (any folder works, Obsidian is only needed to open the notes)
-- About 650 MB of disk for the transcription model, downloaded on first use
+- Disk space for the transcription model, downloaded on first use: about 650 MB for the default one (from 220 MB to 1.6 GB depending on the model)
 
 Meetings can be in Italian or English, one language per meeting; the Summary can be written in any language.
 
 ## Install
 
-### Download
+1. Download `Steno-<version>.zip` from the [latest release](https://github.com/mameli/steno/releases/latest). Safari unzips it on its own; otherwise double-click it.
+2. Move **Steno** to **Applications**.
+3. Open Steno. macOS says it cannot verify the app: Steno is signed, but not notarized by Apple, which needs a paid developer account. Press **Done**.
+4. Go to **System Settings → Privacy & Security**, scroll down and press **Open Anyway** next to Steno, then confirm with your password. Alternatively, run `xattr -dr com.apple.quarantine /Applications/Steno.app` in Terminal before opening it.
 
-1. Download the zip of the latest version from [Releases](https://github.com/mameli/steno/releases), open it and move **Steno** to **Applications**.
-2. Open Steno. macOS says it cannot verify the app: Steno is signed, but not notarized by Apple, which needs a paid developer account. Press **Done**.
-3. Go to **System Settings → Privacy & Security**, scroll down and press **Open Anyway** next to Steno, then confirm with your password. Alternatively, run `xattr -dr com.apple.quarantine /Applications/Steno.app` in Terminal before opening it.
+Steno appears in the menu bar, not in the Dock. Continue with [First setup](#first-setup).
 
-Do this again for every new version you download. On Macs managed by your company, IT may not allow apps that are not notarized.
+**Updating**: quit Steno, replace it in Applications with the new version and repeat steps 3 and 4. Settings, Profiles, API keys, permissions and downloaded models are kept.
 
-### Build from source
-
-1. Install Xcode 16 or later from the App Store and open it once.
-2. Clone the repository:
-   ```sh
-   git clone https://github.com/mameli/steno.git
-   cd steno
-   ```
-3. Choose how to sign it (see [Signing](#signing)) and copy `Config/Local.xcconfig.example` to `Config/Local.xcconfig`.
-4. Build and copy it to Applications:
-   ```sh
-   xcodebuild -project Steno.xcodeproj -scheme Steno -configuration Release -derivedDataPath build/DerivedData build
-   cp -R build/DerivedData/Build/Products/Release/Steno.app /Applications/
-   open /Applications/Steno.app
-   ```
-
-### Signing
-
-macOS ties the microphone and system audio permissions to the app's signature: with a stable signature they are asked once, otherwise again after every build. Two free options:
-
-- **A self-signed certificate.** Keychain Access → Certificate Assistant → Create a Certificate…: name `Steno`, Identity Type *Self-Signed Root*, Certificate Type *Code Signing*; tick *Let me override defaults* and set a validity of 3650 days. Then double-click the certificate, and under *Trust* set *Code Signing* to *Always Trust*. The first build asks to use the key: choose *Always Allow*.
-- **Your Apple ID's free Personal Team.** Add your Apple ID in Xcode → Settings → Accounts, then in `Config/Local.xcconfig` use the second option with your Team ID.
-
-Without `Config/Local.xcconfig` the app is signed ad hoc and the permissions are asked again after every build.
+On Macs managed by your company, IT may not allow apps that are not notarized. To build Steno yourself instead, see [Build from source](#build-from-source).
 
 ## First setup
 
@@ -87,9 +68,21 @@ Without `Config/Local.xcconfig` the app is signed ad hoc and the permissions are
 
 A Template is a note in `Meetings/_Templates/`: its text tells the model what to write and how. Create one from *Settings → Templates*, then edit it in Obsidian. Add `summary_language: en` (or `it`, `fr`, …) to its frontmatter to always get the Summary in that language; otherwise it follows the language of the meeting.
 
+### Vocabulary
+
+Names, acronyms and technical words that recognition gets wrong go in `Meetings/_Vocabulary.md`: open it from *Settings → Vocabulary*. One entry per line: the correct term, then after `=` what is usually heard instead, then after `|` a short description, the last two optional:
+
+```markdown
+- Kubernetes = cubernetes, kubernetis
+- dbt = di bi ti | data transformation tool
+- Holacracy
+```
+
+The variants are replaced with the term in the Transcript, as whole words: do not list a variant that is also an ordinary word, or it is replaced everywhere. All the terms are passed to the model, which spells them right in the Summary when the context makes it clear. Changes count from the next meeting, or from a Retry while the audio of that meeting is kept.
+
 ### Where your data is
 
-- **Notes and Transcripts**: in your vault, as plain Markdown.
+- **Notes, Transcripts, Templates and Vocabulary**: in your vault, as plain Markdown.
 - **Audio**: in `~/Library/Application Support/Steno/Recordings/`, about 20 MB per hour of meeting. It is deleted after 7 days (*Settings → Recordings*); after that, Retry rebuilds the Summary from the Transcript in the vault.
 - **API keys**: in the macOS Keychain.
 - **Transcription model**: in `~/Library/Application Support/Steno/Models/`, downloaded once from Hugging Face. Only the model is downloaded; no audio or text is sent.
@@ -97,6 +90,33 @@ A Template is a note in `Meetings/_Templates/`: its text tells the model what to
 Recording a meeting may require the consent of the other participants: tell them, and follow the rules that apply to you.
 
 ## Development
+
+### Build from source
+
+1. Install Xcode 16 or later from the App Store and open it once.
+2. Clone the repository:
+   ```sh
+   git clone https://github.com/mameli/steno.git
+   cd steno
+   ```
+3. Choose how to sign it (see [Signing](#signing)) and copy `Config/Local.xcconfig.example` to `Config/Local.xcconfig`.
+4. Build and copy it to Applications:
+   ```sh
+   xcodebuild -project Steno.xcodeproj -scheme Steno -configuration Release -derivedDataPath build/DerivedData build
+   cp -R build/DerivedData/Build/Products/Release/Steno.app /Applications/
+   open /Applications/Steno.app
+   ```
+
+### Signing
+
+macOS ties the microphone and system audio permissions to the app's signature: with a stable signature they are asked once, otherwise again after every build. Two free options:
+
+- **A self-signed certificate.** Keychain Access → Certificate Assistant → Create a Certificate…: name `Steno`, Identity Type *Self-Signed Root*, Certificate Type *Code Signing*; tick *Let me override defaults* and set a validity of 3650 days. Then double-click the certificate, and under *Trust* set *Code Signing* to *Always Trust*. The first build asks to use the key: choose *Always Allow*.
+- **Your Apple ID's free Personal Team.** Add your Apple ID in Xcode → Settings → Accounts, then in `Config/Local.xcconfig` use the second option with your Team ID.
+
+Without `Config/Local.xcconfig` the app is signed ad hoc and the permissions are asked again after every build.
+
+### Working on the code
 
 ```sh
 xcodebuild -project Steno.xcodeproj -scheme Steno -derivedDataPath build/DerivedData build
