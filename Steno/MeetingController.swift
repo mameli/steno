@@ -19,6 +19,9 @@ final class MeetingController {
     private var now = Date()
     private var isRequestingPermission = false
     private var ticker: Task<Void, Never>?
+    /// Menus being tracked: while the menu is open the timer stands still, otherwise every
+    /// tick rebuilds its items (open submenus blink, the highlighted item loses its colour).
+    @ObservationIgnored private var openMenus = 0
     private var hotKey: GlobalHotKey?
     /// False if another app already uses ⌃⌥⌘R.
     var isHotKeyAvailable: Bool { hotKey?.isRegistered ?? false }
@@ -41,6 +44,7 @@ final class MeetingController {
         hotKey = GlobalHotKey { [weak self] in self?.toggle() }
         processor.resumeAfterLaunch()
         startDailyCleanUp()
+        pauseTimerWhileMenusAreOpen()
     }
 
     var isInProgress: Bool { machine.state != .idle }
@@ -229,13 +233,27 @@ final class MeetingController {
         NSWorkspace.shared.open(url)
     }
 
+    private func pauseTimerWhileMenusAreOpen() {
+        let center = NotificationCenter.default
+        center.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.openMenus += 1 }
+        }
+        center.addObserver(forName: NSMenu.didEndTrackingNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.openMenus = max(0, self.openMenus - 1)
+                self.now = Date()
+            }
+        }
+    }
+
     private func startTicker() {
         ticker?.cancel()
         ticker = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
                 guard let self else { return }
-                self.now = Date()
+                if self.openMenus == 0 { self.now = Date() }
             }
         }
     }
