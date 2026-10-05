@@ -59,7 +59,7 @@ A file in the Vault that defines the structure and instructions of the Summary f
 _Avoid_: model (ambiguous with the AI model), prompt
 
 **Regeneration** (`Regeneration`):
-Producing a new Summary for a Meeting already processed, typically with another Template or Profile.
+Producing a new Summary for a Meeting already processed from its Transcript in the Vault, without the audio. It is what Retry does once the audio is deleted.
 
 ### Providers
 

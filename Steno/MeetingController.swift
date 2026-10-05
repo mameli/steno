@@ -189,7 +189,8 @@ final class MeetingController {
     /// - `open Steno.app --args -smokeTestSeconds 20` records for N seconds (with
     ///   `-simulateMicrophoneChangeAfter 5` the microphone restarts after 5 seconds, 2 of them silent);
     /// - `open Steno.app --args -transcribeRecording <folder>` reprocesses a Recording of the data folder;
-    /// - `open Steno.app --args -regenerateMeeting <steno_id> -regenerateTemplate <name>` regenerates the Summary;
+    /// - `open Steno.app --args -regenerateMeeting <steno_id> -regenerateTemplate <name>` retries a Meeting
+    ///   (only the Summary if its audio is deleted) with that Template and the active Profile;
     /// - always together with `-vaultPath <folder>`, `-testSummaryBaseURL <url>` and `-dataDirectory <folder>`,
     ///   otherwise the test refuses to start; `-openInObsidian NO` does not open Obsidian.
     func runSmokeTestIfRequested() async {
@@ -203,7 +204,10 @@ final class MeetingController {
             return
         }
         if let id = UserDefaults.standard.string(forKey: "regenerateMeeting").flatMap(UUID.init(uuidString:)) {
-            processor.regenerate(id, templateName: UserDefaults.standard.string(forKey: "regenerateTemplate"))
+            processor.retry(
+                id, templateName: UserDefaults.standard.string(forKey: "regenerateTemplate") ?? templateName,
+                profile: AppSettings.activeProviderProfile
+            )
             await processor.waitUntilIdle()
             writeSmokeTestOutcome(processor.lastNoteURL)
             return

@@ -61,6 +61,16 @@
         }
       }
     },
+    "About 20 MB per hour of Meeting. Notes and Transcripts stay in the Vault: without the audio, Retry makes only the Summary again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Circa 20 MB per ora di riunione. Note e trascrizioni restano nel Vault: senza l'audio, Riprova rifà solo il riepilogo."
+          }
+        }
+      }
+    },
     "Add Profile": {
       "localizations": {
         "it": {
@@ -77,6 +87,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Qualsiasi server con API compatibile OpenAI. Per le riunioni di lavoro usa solo Provider locali o con sede e dati in UE."
+          }
+        }
+      }
+    },
+    "Audio on this Mac": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio su questo Mac"
           }
         }
       }
@@ -191,6 +211,26 @@
         }
       }
     },
+    "Delete audio": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancella audio"
+          }
+        }
+      }
+    },
+    "Delete the audio of all concluded Meetings?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancellare l'audio di tutte le riunioni concluse?"
+          }
+        }
+      }
+    },
     "Folder": {
       "localizations": {
         "it": {
@@ -241,12 +281,32 @@
         }
       }
     },
+    "It cannot be undone. Meetings being recorded or processed are not touched.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non si può annullare. Le riunioni in registrazione o in elaborazione non vengono toccate."
+          }
+        }
+      }
+    },
     "It works. Reply: %@": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Funziona. Risposta: %@"
+          }
+        }
+      }
+    },
+    "Keep audio for %lld days": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conserva l'audio per %lld giorni"
           }
         }
       }
@@ -571,42 +631,12 @@
         }
       }
     },
-    "Regenerate with Profile": {
+    "Recordings": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Rigenera con Profilo"
-          }
-        }
-      }
-    },
-    "Regenerate with Template": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rigenera con Template"
-          }
-        }
-      }
-    },
-    "Regeneration failed: %@": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rigenerazione non riuscita: %@"
-          }
-        }
-      }
-    },
-    "Regeneration not possible: Meeting note or Transcript not found in the Vault.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rigenerazione non possibile: Nota della Riunione o Trascrizione non trovate nel Vault."
+            "value": "Registrazioni"
           }
         }
       }
@@ -627,6 +657,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Riprova"
+          }
+        }
+      }
+    },
+    "Retry failed: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprova non riuscita: %@"
+          }
+        }
+      }
+    },
+    "Retry not possible: the audio is deleted and the Meeting note or Transcript is not in the Vault.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile riprovare: l'audio è stato cancellato e la nota della riunione o la trascrizione non sono nel Vault."
           }
         }
       }
@@ -667,6 +717,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impostazioni…"
+          }
+        }
+      }
+    },
+    "Show in Finder": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra nel Finder"
           }
         }
       }

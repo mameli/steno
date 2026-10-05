@@ -136,7 +136,7 @@ Rules:
 - **Managed section**: the Summary followed by `Full transcript: [[…]]`. With *Transcript* chosen as Summary Profile it holds only the `Full transcript: [[…]]` link, with no warning, and the note keeps its provisional name. If the Summary fails (Provider error, Meeting without speech) it shows `⚠️ Summary not generated: <reason>` and the Transcript link, which stays usable. Managed section markers in the model's reply are removed.
 - **Token estimate**: about 3 characters per token, with 4,096 tokens reserved for the reply; a block never splits a Transcript paragraph.
 - **Long Meetings**: every Summary Profile has a *max context* field. If Transcript + notes + Template exceed it, the Transcript is split into blocks, every block is summarised and the partial summaries are merged with the Template (in groups, if even the merge does not fit).
-- **Regeneration**: from "Recent meetings" → *Regenerate with* ▸ Template / Profile. Reads the current Transcript and Personal notes again and rewrites only the Managed section. It is available even after 7 days, because the Transcript is in the Vault.
+- **Regeneration**: what Retry does once the audio is deleted. Reads the current Transcript and Personal notes again from the Vault and rewrites only the Managed section; a note still with its provisional name gets the title. To summarise again with another Template or Profile, choose them in the menu and Retry.
 
 ## Profiles and settings
 
@@ -146,11 +146,11 @@ Rules:
 - Vault path
 - Templates and default Template
 - Summary Profiles and active Profile (with "Test connection")
+- Recordings: days the audio is kept (default 7), space used, "Show in Finder", "Delete audio" (all concluded Meetings, with confirmation). A shorter retention applies at the next cleanup, not on the spot.
 
 For now from the terminal only (`defaults write dev.mameli.steno …`), to move into the Settings window when they are needed:
 - language (`auto` | `it` | `en`)
 - echo cancellation on/off
-- audio retention days (`retentionDays`, default 7)
 
 The global shortcut is fixed: ⌃⌥⌘R. If another app already uses it, the menu says so.
 
@@ -158,7 +158,7 @@ The folders are fixed: `Meetings/`, `Meetings/Transcripts/`, `Meetings/_Template
 
 ## Menu bar
 
-- **Idle**: Start meeting (shortcut) · Template ▸ (hidden when the Summary Profile is *Transcript*) · Summary Profile ▸ (*Transcript* or a Profile) · Recent meetings ▸ (Open note · Regenerate with ▸ · Retry) · Settings… · Quit
+- **Idle**: Start meeting (shortcut) · Template ▸ (hidden when the Summary Profile is *Transcript*) · Summary Profile ▸ (*Transcript* or a Profile) · Recent meetings ▸ (Open note · Retry) · Settings… · Quit
 - **Recording**: only a red dot in the bar; in the menu "Recording · duration" · Stop · Template ▸ · Settings…
 - **Processing**: hourglass in the bar; in the menu "Processing… (N more queued)"
 
@@ -169,10 +169,10 @@ The interface is in English in the code and translated to Italian in `Steno/Loca
 - `~/Library/Application Support/Steno/Recordings/<steno_id>/`: audio Segments, per-Segment transcription cache (language, whether it was reliable, Utterances), `recording.json` (start, end, Segments) and `processing.json` (status: recording, queued, processing, regenerating, completed, failed with reason; Template; Profile fixed at start; note path).
 - Persistent Processing queue, one Meeting at a time: at app restart queued or in-progress Processing resumes, oldest first. A Recording interrupted by a crash is rebuilt from the Segment lists and queued: only the Segment open at the crash is lost (an unclosed AAC file is unreadable).
 - An unreadable Segment is a warning ("Incomplete transcript"), not a failure: the Summary is generated with what there is.
-- At app launch and every day: deletion of the audio (and transcription caches) of Meetings older than 7 days that are processed or failed, never of those recording, queued, processing or regenerating. `recording.json` and `processing.json` stay: the Meeting stays among the recent ones and can be Regenerated.
+- At app launch and every day: deletion of the audio (and transcription caches) of Meetings older than 7 days that are processed or failed, never of those recording, queued, processing or regenerating. `recording.json` and `processing.json` stay: the Meeting stays among the recent ones and Retry makes the Summary again from the Transcript in the Vault. About 20 MB of audio per hour of Meeting (AAC mono 16 kHz, about 180 KB per minute for each Track with sound).
 - **Notifications**: "Summary ready" (click → note in Obsidian) or "Processing failed" with the reason.
 - **Global shortcut** ⌃⌥⌘R: starts or stops the Meeting from any app.
-- **Recent meetings** (the last 5): Open note · Retry (while the audio is there: redoes the whole Processing, Segments already transcribed come from the cache) · Regenerate with Template ▸ (not for a Meeting recorded with *Transcript*) / with Profile ▸ (Summary only, from the Transcript in the Vault; does not rename the note and does not change the Meeting's saved Template and Profile, which Retry keeps using). Retry and Regenerate appear only for concluded Meetings (completed or failed), never for one recording or queued. A Regeneration interrupted by a restart is not repeated: the Meeting goes back to completed with the previous Summary.
+- **Recent meetings** (the last 5): Open note · Retry. Retry uses the Template and Summary Profile chosen in the menu at that moment, which become the Meeting's. While the audio is there it redoes the whole Processing (Segments already transcribed come from the cache); without it, it is a Regeneration from the Transcript in the Vault. Retry appears only for concluded Meetings (completed or failed), never for one recording or queued. A Regeneration interrupted by a restart is not repeated: the Meeting goes back to completed with the previous Summary.
 - Without a configured Vault Processing stops at the Transcript and the notification says "Transcript ready", not "Summary ready".
 
 ## Project structure

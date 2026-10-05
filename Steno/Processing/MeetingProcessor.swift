@@ -7,7 +7,7 @@ private let logger = Logger(subsystem: "dev.mameli.steno", category: "processing
 
 /// Meeting Processing: one at a time, in arrival order, with the state saved in the Recording
 /// folder (`processing.json`) so it resumes after a restart or a crash. Also handles Retry,
-/// Regeneration, notifications and audio retention.
+/// notifications and audio retention.
 @MainActor
 @Observable
 final class MeetingProcessor {
@@ -15,10 +15,6 @@ final class MeetingProcessor {
         let id: UUID
         let title: String
         let status: ProcessingRecord.Status
-        /// The audio is still there: the full Processing can be retried.
-        let hasAudio: Bool
-        /// False for a Transcript-only Meeting: there is no Profile to regenerate with another Template.
-        let hasSummaryProfile: Bool
     }
 
     private let transcriber: LocalTranscriber
@@ -117,21 +113,24 @@ final class MeetingProcessor {
         }
     }
 
-    /// Redoes the whole Processing (Segments already transcribed come from the cache).
-    /// Only for concluded Meetings: one being recorded or already queued is left alone.
-    func retry(_ stenoID: UUID) {
-        guard var record = record(stenoID), (try? record.queueForRetry()) != nil else { return }
-        save(record)
-        enqueueProcessing(record)
-    }
-
-    /// New Summary with another Template or Profile, from the Transcript in the Vault:
-    /// works even after the audio has been deleted. The Template and Profile chosen at the
-    /// start remain the Meeting's (Retry uses them).
-    func regenerate(_ stenoID: UUID, templateName: String? = nil, profile: ProviderProfile? = nil) {
-        guard var record = record(stenoID), (try? record.beginRegeneration()) != nil else { return }
-        save(record)
-        enqueue { await self.runRegeneration(record, templateName: templateName, profile: profile) }
+    /// Retry, with the Template and Profile chosen in the menu now: they become the Meeting's.
+    /// With the audio still there the whole Processing is redone (Segments already transcribed
+    /// come from the cache); once the audio is deleted, only the Summary is made again from the
+    /// Transcript in the Vault (a Regeneration). Only for concluded Meetings: one being recorded
+    /// or already queued is left alone.
+    func retry(_ stenoID: UUID, templateName: String, profile: ProviderProfile?) {
+        guard var record = record(stenoID) else { return }
+        record.templateName = templateName
+        record.summaryProfile = profile
+        if Self.hasAudio(Self.directory(for: stenoID)) {
+            guard (try? record.queueForRetry()) != nil else { return }
+            save(record)
+            enqueueProcessing(record)
+        } else {
+            guard (try? record.beginRegeneration()) != nil else { return }
+            save(record)
+            enqueue { await self.runRegeneration(record) }
+        }
     }
 
     #if DEBUG
@@ -149,7 +148,11 @@ final class MeetingProcessor {
                 templateName: AppSettings.defaultTemplate, summaryProfile: AppSettings.activeProviderProfile, noteURL: nil
             ))
         }
-        retry(recording.meetingID)
+        retry(
+            recording.meetingID,
+            templateName: record(recording.meetingID)?.templateName ?? AppSettings.defaultTemplate,
+            profile: AppSettings.activeProviderProfile
+        )
         await waitUntilIdle()
         return lastTranscriptURL
     }
@@ -223,38 +226,41 @@ final class MeetingProcessor {
         finish(&record, problems: problems, warnings: warnings)
     }
 
-    private func runRegeneration(_ queued: ProcessingRecord, templateName: String?, profile: ProviderProfile?) async {
+    private func runRegeneration(_ queued: ProcessingRecord) async {
         var record = queued
         let stenoID = record.stenoID
         guard let vault = Vault.configured,
-              let noteURL = vault.findMeetingNote(stenoID: stenoID, expected: record.noteURL),
+              var noteURL = vault.findMeetingNote(stenoID: stenoID, expected: record.noteURL),
               let transcriptURL = vault.findTranscript(stenoID: stenoID),
               let transcriptFile = try? String(contentsOf: transcriptURL, encoding: .utf8)
         else {
-            finish(&record, problems: [String(localized: "Regeneration not possible: Meeting note or Transcript not found in the Vault.")], warnings: [])
+            finish(&record, problems: [String(localized: "Retry not possible: the audio is deleted and the Meeting note or Transcript is not in the Vault.")], warnings: [])
             return
         }
 
         var problems: [String] = []
         do {
             let (transcript, language) = Transcript.parse(vaultFile: transcriptFile)
-            let (summary, _) = await summarize(
+            let (summary, title) = await summarize(
                 transcript, language: language,
                 personalNotes: try vault.meetingNote(at: noteURL).personalNotes,
-                template: vault.template(named: templateName ?? record.templateName),
-                profile: profile ?? record.summaryProfile,
-                wantsTitle: false
+                template: vault.template(named: record.templateName),
+                profile: record.summaryProfile,
+                wantsTitle: true
             )
+            let rename = renameIfProvisional(noteURL, title: title, startedAt: record.startedAt, in: vault)
+            noteURL = rename.url
             try vault.update(noteURL) {
                 $0.recordRegeneration(
                     stenoID: stenoID, transcriptName: transcriptURL.deletingPathExtension().lastPathComponent, summary: summary
                 )
             }
+            if rename.follow { RenamedNoteFollower.follow(noteURL, in: vault) }
             if case .failed(let reason) = summary { problems.append(String(localized: "Summary not generated: \(reason)")) }
             record.noteURL = noteURL
             lastNoteURL = noteURL
         } catch {
-            problems.append(String(localized: "Regeneration failed: \(error.localizedDescription)"))
+            problems.append(String(localized: "Retry failed: \(error.localizedDescription)"))
         }
         finish(&record, problems: problems, warnings: [])
     }
@@ -311,22 +317,8 @@ final class MeetingProcessor {
             template: vault.template(named: record.templateName), profile: record.summaryProfile,
             wantsTitle: true
         )
-        var isRenamed = false
-        // Read before the rename: afterwards Obsidian may already show another note.
-        let wasShownInObsidian = vault.isShownInObsidian(noteURL) ?? true
-        // Only a note still in place and with its provisional name is renamed. If the rename
-        // fails the note stays as it is: the Summary must not be lost over a name.
-        if let title, vault.isInMeetingsFolder(noteURL),
-           let newName = VaultNaming.renamedNoteName(
-               current: noteURL.deletingPathExtension().lastPathComponent, startedAt: record.startedAt, title: title
-           ) {
-            do {
-                noteURL = try vault.rename(noteURL, to: newName)
-                isRenamed = true
-            } catch {
-                logger.error("Renaming the note failed: \(error, privacy: .public)")
-            }
-        }
+        let rename = renameIfProvisional(noteURL, title: title, startedAt: record.startedAt, in: vault)
+        noteURL = rename.url
 
         let transcriptURL = try vault.writeTranscript(
             finished.transcript,
@@ -345,13 +337,33 @@ final class MeetingProcessor {
                 summary: summary
             )
         }
-        if isRenamed, wasShownInObsidian, AppSettings.openInObsidian {
-            RenamedNoteFollower.follow(noteURL, in: vault)
-        }
+        if rename.follow { RenamedNoteFollower.follow(noteURL, in: vault) }
         if case .failed(let reason) = summary {
             return (noteURL, String(localized: "Summary not generated: \(reason)"))
         }
         return (noteURL, nil)
+    }
+
+    /// Renames with the title a note still in place and with its provisional name. Returns where
+    /// the note is and whether Obsidian must be shown the renamed note (it was showing it). If the
+    /// rename fails the note stays as it is: the Summary must not be lost over a name.
+    private func renameIfProvisional(
+        _ noteURL: URL, title: String?, startedAt: Date, in vault: Vault
+    ) -> (url: URL, follow: Bool) {
+        guard let title, vault.isInMeetingsFolder(noteURL),
+              let newName = VaultNaming.renamedNoteName(
+                  current: noteURL.deletingPathExtension().lastPathComponent, startedAt: startedAt, title: title
+              )
+        else { return (noteURL, false) }
+        // Read before the rename: afterwards Obsidian may already show another note.
+        let wasShownInObsidian = vault.isShownInObsidian(noteURL) ?? true
+        do {
+            let renamed = try vault.rename(noteURL, to: newName)
+            return (renamed, wasShownInObsidian && AppSettings.openInObsidian)
+        } catch {
+            logger.error("Renaming the note failed: \(error, privacy: .public)")
+            return (noteURL, false)
+        }
     }
 
     /// Summary and, when needed for the rename, title. A missing title is not an error:
@@ -415,11 +427,7 @@ final class MeetingProcessor {
             .map { record in
                 let title = record.noteURL?.deletingPathExtension().lastPathComponent
                     ?? record.startedAt.formatted(date: .abbreviated, time: .shortened)
-                return RecentMeeting(
-                    id: record.stenoID, title: title, status: record.status,
-                    hasAudio: Self.hasAudio(Self.directory(for: record.stenoID)),
-                    hasSummaryProfile: record.summaryProfile != nil
-                )
+                return RecentMeeting(id: record.stenoID, title: title, status: record.status)
             }
     }
 
@@ -446,24 +454,47 @@ final class MeetingProcessor {
             .save(inFolder: directory)
     }
 
-    /// Deletes the audio files of expired Recordings, with the transcription caches and the
-    /// `transcript.md` copy. The manifests stay: the Meeting stays among the recent ones and
-    /// can be Regenerated from the Transcript in the Vault.
+    /// Deletes the audio of expired Recordings (see `deleteAudio(olderThanDays:)`).
     func cleanUpExpiredRecordings() {
-        let items = recordingFolders().compactMap { folder -> Retention.Item? in
+        Self.deleteAudio(olderThanDays: AppSettings.retentionDays)
+        refreshRecent()
+    }
+
+    /// Deletes the audio files of concluded Recordings older than `days` days (0: all of them),
+    /// with the transcription caches and the `transcript.md` copy. Meetings still pending are
+    /// kept. The manifests stay: the Meeting stays among the recent ones and Retry makes the
+    /// Summary again from the Transcript in the Vault.
+    static func deleteAudio(olderThanDays days: Int) {
+        let folders = (try? FileManager.default.contentsOfDirectory(
+            at: MeetingRecorder.recordingsDirectory, includingPropertiesForKeys: nil
+        )) ?? []
+        let items = folders.compactMap { folder -> Retention.Item? in
             guard let stenoID = UUID(uuidString: folder.lastPathComponent) else { return nil }
             let record = try? ProcessingRecord.load(fromFolder: folder)
             guard let startedAt = record?.startedAt ?? (try? Recording.load(fromFolder: folder))?.startedAt else { return nil }
             return Retention.Item(stenoID: stenoID, startedAt: startedAt, status: record?.status)
         }
         let kept = Set([Recording.fileName, ProcessingRecord.fileName] + Track.allCases.map(Segment.listFileName(for:)))
-        for stenoID in Retention.expired(items, now: Date(), days: AppSettings.retentionDays) {
-            let folder = Self.directory(for: stenoID)
+        for stenoID in Retention.expired(items, now: Date(), days: days) {
+            let folder = directory(for: stenoID)
             let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
             for file in files where !kept.contains(file.lastPathComponent) {
                 try? FileManager.default.removeItem(at: file)
             }
         }
-        refreshRecent()
+    }
+
+    /// Bytes of audio kept, shown in Settings.
+    static func audioSize() -> Int64 {
+        let enumerator = FileManager.default.enumerator(
+            at: MeetingRecorder.recordingsDirectory, includingPropertiesForKeys: [.fileSizeKey]
+        )
+        var total: Int64 = 0
+        while let file = enumerator?.nextObject() as? URL {
+            if file.pathExtension == "m4a" {
+                total += Int64((try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+            }
+        }
+        return total
     }
 }

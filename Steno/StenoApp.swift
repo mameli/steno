@@ -81,7 +81,7 @@ private struct MeetingMenu: View {
 
         if !controller.processor.recent.isEmpty {
             Divider()
-            RecentMeetingsMenu(processor: controller.processor)
+            RecentMeetingsMenu(controller: controller)
         }
 
         #if DEBUG
@@ -117,21 +117,24 @@ private struct MeetingMenu: View {
     }
 }
 
-/// The last five Meetings: open the note, Retry, Regenerate with another Template or Profile.
+/// The last five Meetings: open the note, Retry.
 private struct RecentMeetingsMenu: View {
-    let processor: MeetingProcessor
+    let controller: MeetingController
 
     var body: some View {
         Menu("Recent meetings") {
-            ForEach(processor.recent) { meeting in
+            ForEach(controller.processor.recent) { meeting in
                 Menu(label(meeting)) {
-                    Button("Open note") { processor.openNote(meeting.id) }
-                    // Retry and Regenerate only for a concluded Meeting: one being recorded or queued is left alone.
+                    Button("Open note") { controller.processor.openNote(meeting.id) }
+                    // Only for a concluded Meeting: one being recorded or queued is left alone.
+                    // It uses the Template and Summary Profile chosen in this menu.
                     if meeting.status.canRetry {
-                        if meeting.hasAudio {
-                            Button("Retry") { processor.retry(meeting.id) }
+                        Button("Retry") {
+                            controller.processor.retry(
+                                meeting.id, templateName: controller.templateName,
+                                profile: AppSettings.activeProviderProfile
+                            )
                         }
-                        RegenerateMenus(processor: processor, meeting: meeting)
                     }
                 }
             }
@@ -144,26 +147,6 @@ private struct RecentMeetingsMenu: View {
         case .queued, .processing, .regenerating: "⏳ \(meeting.title)"
         case .completed: meeting.title
         case .failed: "⚠️ \(meeting.title)"
-        }
-    }
-}
-
-private struct RegenerateMenus: View {
-    let processor: MeetingProcessor
-    let meeting: MeetingProcessor.RecentMeeting
-
-    var body: some View {
-        if meeting.hasSummaryProfile {
-            Menu("Regenerate with Template") {
-                ForEach(Vault.templateChoices(including: AppSettings.defaultTemplate), id: \.self) { name in
-                    Button(name) { processor.regenerate(meeting.id, templateName: name) }
-                }
-            }
-        }
-        Menu("Regenerate with Profile") {
-            ForEach(AppSettings.summaryProfiles) { profile in
-                Button(profile.displayName) { processor.regenerate(meeting.id, profile: profile) }
-            }
         }
     }
 }

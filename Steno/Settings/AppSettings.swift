@@ -30,9 +30,10 @@ enum AppSettings {
         set { UserDefaults.standard.set(newValue, forKey: vaultPathKey) }
     }
 
-    /// Days the audio is kept: `defaults write dev.mameli.steno retentionDays -int 14`.
+    /// Days the audio is kept.
     static var retentionDays: Int {
-        max(1, UserDefaults.standard.integer(forKey: retentionDaysKey))
+        get { max(1, UserDefaults.standard.integer(forKey: retentionDaysKey)) }
+        set { UserDefaults.standard.set(max(1, newValue), forKey: retentionDaysKey) }
     }
 
     #if DEBUG

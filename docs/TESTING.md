@@ -31,20 +31,22 @@ Before starting: Steno running from the menu bar (waveform icon), Vault and a Su
 - [x] **New Template**: Settings → *Templates* → type a name → *Create and open* → it opens in Obsidian; change instructions and sections and save.
 - [x] **Default Template**: choose the new Template as default → the next Meeting starts with it.
 - [x] **Delete Template**: *Delete* → confirm → the row disappears with no message, the file is in the Mac Trash; if it was the default, Notes is back. Notes has no *Delete*.
-- [x] **Regenerate with Template**: *Recent meetings* → a Meeting → *Regenerate with Template* → your Template → the Summary changes, duration and Transcript do not.
+- [ ] **Retry with another Template**: choose another Template in the menu → *Recent meetings* → a Meeting → *Retry* → the Summary follows the new Template.
+- [ ] **Retry without audio**: Settings → *Recordings* → *Delete audio* → *Retry* on a Meeting → the Summary is made again from the Transcript in the Vault, duration and Transcript do not change.
+- [ ] **Recordings in Settings**: the space used matches the folder opened by *Show in Finder*; *Delete audio* asks for confirmation and brings it to zero.
 - [x] **Retry**: turn off the internet connection, record a short Meeting → "Processing failed" and ⚠️ in the note and in the menu; reconnect and *Retry* → Summary generated.
 
 ## 4. Edge cases
 
 - [x] **Microphone change**: during a Meeting connect or remove the AirPods, then keep talking → your sentences after the change are in the Transcript, at the right time compared with the others'.
-- [x] **Transcript only**: *Summary Profile* → *Transcript* (the Template menu disappears), record a Meeting → the note holds only the "Full transcript" link, no warning, notification "Transcript ready". In Recent meetings there is only *Regenerate with Profile*: choosing a Profile writes the Summary.
+- [x] **Transcript only**: *Summary Profile* → *Transcript* (the Template menu disappears), record a Meeting → the note holds only the "Full transcript" link, no warning, notification "Transcript ready". Then choose a Profile in the menu and *Retry* → the Summary is written.
 - [x] **Quit during Processing**: stop a Meeting and quit Steno right away → at the next launch Processing resumes by itself.
 - [x] **Italian interface**: `defaults write dev.mameli.steno AppleLanguages -array it`, restart Steno → menu, Settings and notifications in Italian (`defaults delete dev.mameli.steno AppleLanguages` to go back).
 - [x] **Wrong key**: in Settings replace the key with a random one → *Test connection* shows the provider's error; then put the right one back.
 
 ## 5. When you set them up
 
-- [ ] **EU Provider** (e.g. Mistral): new Profile with key → *Test connection* → a test Meeting → *Regenerate with Profile* on an older Meeting to compare the Summaries.
+- [ ] **EU Provider** (e.g. Mistral): new Profile with key → *Test connection* → a test Meeting → choose it in the menu and *Retry* on an older Meeting to compare the Summaries.
 - [x] **Local server** (llama.cpp): new Profile without key, `http://localhost:8080/v1`, max context equal to the server's (`llama-server -c 32768`).
 
 If something goes wrong: the ⚠️ message in the menu and in the note says why; copy it as it is.
