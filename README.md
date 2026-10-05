@@ -27,14 +27,17 @@ Meetings can be in Italian or English, one language per meeting; the Summary can
 
 ## Install
 
-1. Download `Steno-<version>.zip` from the [latest release](https://github.com/mameli/steno/releases/latest). Safari unzips it on its own; otherwise double-click it.
-2. Move **Steno** to **Applications**.
-3. Open Steno. macOS says it cannot verify the app: Steno is signed, but not notarized by Apple, which needs a paid developer account. Press **Done**.
-4. Go to **System Settings → Privacy & Security**, scroll down and press **Open Anyway** next to Steno, then confirm with your password. Alternatively, run `xattr -dr com.apple.quarantine /Applications/Steno.app` in Terminal before opening it.
+1. Install it with [Homebrew](https://brew.sh):
+   ```sh
+   brew install --cask mameli/steno/steno
+   ```
+   Or without Homebrew: download `Steno-<version>.zip` from the [latest release](https://github.com/mameli/steno/releases/latest) (Safari unzips it on its own) and move **Steno** to **Applications**.
+2. Open Steno. macOS says it cannot verify the app: Steno is signed, but not notarized by Apple, which needs a paid developer account. Press **Done**.
+3. Go to **System Settings → Privacy & Security**, scroll down and press **Open Anyway** next to Steno, then confirm with your password. Alternatively, run `xattr -dr com.apple.quarantine /Applications/Steno.app` in Terminal before opening it.
 
 Steno appears in the menu bar, not in the Dock. Continue with [First setup](#first-setup).
 
-**Updating**: quit Steno, replace it in Applications with the new version and repeat steps 3 and 4. Settings, Profiles, API keys, permissions and downloaded models are kept.
+**Updating**: `brew upgrade --cask steno`, or quit Steno and replace it in Applications with the new version; then repeat steps 2 and 3. Settings, Profiles, API keys, permissions and downloaded models are kept. `brew uninstall --cask --zap steno` also deletes Steno's settings, Recordings and models; your vault is not touched.
 
 On Macs managed by your company, IT may not allow apps that are not notarized. To build Steno yourself instead, see [Build from source](#build-from-source).
 
@@ -127,7 +130,7 @@ cd StenoCore && swift test   # domain logic tests
 - `Steno/` is the app (capture, transcription, Vault, Settings, menu); `StenoCore/` is a Swift package with the domain logic and its tests, without AppKit or AVFoundation.
 - [docs/SPEC.md](docs/SPEC.md) describes how everything works, [CONTEXT.md](CONTEXT.md) is the glossary, [docs/adr](docs/adr/) records the main decisions, and [docs/TESTING.md](docs/TESTING.md) lists the checks to run by hand.
 - User-facing strings are written in English in the code and translated in `Steno/Localizable.xcstrings` (Italian). Error messages raised in `StenoCore` are looked up in the app's catalog too and must be added to it by hand. To try the Italian interface: `defaults write dev.mameli.steno AppleLanguages -array it`.
-- `scripts/release.sh` builds a Release signed with the `Steno` certificate, zips it and publishes it as a GitHub Release tagged with `MARKETING_VERSION` from `Config/Base.xcconfig` (`--dry-run` stops after the zip).
+- `scripts/release.sh` builds a Release signed with the `Steno` certificate, zips it, publishes it as a GitHub Release tagged with `MARKETING_VERSION` from `Config/Base.xcconfig` and updates the cask in the Homebrew tap ([mameli/homebrew-steno](https://github.com/mameli/homebrew-steno), cloned next to this repository). Every release needs a new version: a published one is never replaced, because Homebrew checks the zip's SHA-256. `--dry-run` stops after the zip.
 - Debug builds accept launch arguments for automated tests (`-smokeTestSeconds`, `-transcribeRecording`, …): see `runSmokeTestIfRequested()` in `Steno/MeetingController.swift`. They refuse to run unless pointed at a test vault, a test data folder and a test Summary server.
 
 ## License
