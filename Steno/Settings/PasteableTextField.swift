@@ -55,6 +55,7 @@ struct PasteableTextField: NSViewRepresentable {
 }
 
 /// Forwards the editing shortcuts to the field editor, in place of the missing Edit menu.
+@MainActor
 private func handleEditingShortcut(_ event: NSEvent, in field: NSTextField) -> Bool {
     guard event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
           let key = event.charactersIgnoringModifiers?.lowercased(),
