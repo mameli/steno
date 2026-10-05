@@ -52,7 +52,7 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 
 ## 4. Edge cases
 
-- [ ] **AirPods from the start**: AirPods connected before starting, not in a call → the Me Track records (there is a `me-000.m4a`), even though macOS switches them to call mode.
+- [x] **AirPods from the start**: AirPods connected before starting, not in a call → the Me Track records (there is a `me-000.m4a`), even though macOS switches them to call mode.
 - [ ] **Microphone change**: during a Meeting connect or remove the AirPods, then keep talking → your sentences after the change are in the Transcript, at the right time compared with the others'.
 - [x] **Transcript only**: *Summary Profile* → *Transcript* (the Template menu disappears), record a Meeting → the note holds only the "Full transcript" link, no warning, notification "Transcript ready". Then choose a Profile in the menu and *Retry* → the Summary is written.
 - [x] **Quit during Processing**: stop a Meeting and quit Steno right away → at the next launch Processing resumes by itself.
