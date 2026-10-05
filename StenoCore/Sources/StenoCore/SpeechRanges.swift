@@ -24,8 +24,7 @@ public func speechRanges(in samples: [Float], sampleRate: Double) -> [Range<Int>
     var ranges: [Range<Int>] = []
     for start in stride(from: 0, to: samples.count, by: frame) {
         let end = min(samples.count, start + frame)
-        let meanSquare = samples[start..<end].reduce(0) { $0 + $1 * $1 } / Float(end - start)
-        guard meanSquare.squareRoot() > SpeechDetection.threshold else { continue }
+        guard isLoud(samples[start..<end]) else { continue }
 
         if let last = ranges.last, start - last.upperBound < maxPause {
             ranges[ranges.count - 1] = last.lowerBound..<end
@@ -34,4 +33,21 @@ public func speechRanges(in samples: [Float], sampleRate: Double) -> [Range<Int>
         }
     }
     return ranges.map { max(0, $0.lowerBound - padding)..<min(samples.count, $0.upperBound + padding) }
+}
+
+/// Seconds of actual sound in `range` (a range returned by `speechRanges`): only the windows
+/// above the threshold count, not the pauses absorbed into the range nor its margins.
+public func speechSeconds(in samples: [Float], range: Range<Int>, sampleRate: Double) -> TimeInterval {
+    let frame = Int(SpeechDetection.frameDuration * sampleRate)
+    // Same windows as `speechRanges`: they start at multiples of `frame`.
+    let firstWindow = (range.lowerBound + frame - 1) / frame * frame
+    let loudWindows = stride(from: firstWindow, to: range.upperBound, by: frame).filter { start in
+        isLoud(samples[start..<min(samples.count, start + frame)])
+    }
+    return Double(loudWindows.count) * SpeechDetection.frameDuration
+}
+
+private func isLoud(_ window: ArraySlice<Float>) -> Bool {
+    let meanSquare = window.reduce(0) { $0 + $1 * $1 } / Float(window.count)
+    return meanSquare.squareRoot() > SpeechDetection.threshold
 }

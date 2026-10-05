@@ -42,4 +42,14 @@ struct SpeechRangesTests {
 
         #expect(speechRanges(in: samples, sampleRate: sampleRate) == [475..<625])
     }
+
+    @Test("the speech in a range counts only the windows above the threshold, not the pauses")
+    func speechSecondsSkipPauses() {
+        // Three short bursts with pauses: one 4-second range, but only 1.5 seconds of sound.
+        let samples = signal(seconds: 10, loud: [2.0...2.49, 3.5...3.99, 5.0...5.49])
+        let range = speechRanges(in: samples, sampleRate: sampleRate)[0]
+
+        #expect(range == 175..<575)
+        #expect(speechSeconds(in: samples, range: range, sampleRate: sampleRate) == 1.5)
+    }
 }

@@ -8,11 +8,11 @@ private let stockSentences: Set<String> = [
     "thank you", "thank you very much", "thanks for watching", "thank you for watching", "you", "bye",
 ]
 
-/// Speech ranges longer than this are real speech even when the text is a stock sentence.
+/// More sound than this (pauses excluded) is real speech even when the text is a stock sentence.
 private let maxHallucinationSeconds: TimeInterval = 3
 
-/// True when everything recognised in a speech range is one stock sentence and the range is
-/// short: a real "Grazie." from the others is lost, a made-up one on a noise no longer appears.
+/// True when everything recognised in a speech range is one stock sentence and the range has
+/// little sound in it (`speechDuration`, from `speechSeconds`): a real "Grazie." from the others is lost, a made-up one on a noise no longer appears.
 public func isLikelyHallucination(_ texts: [String], speechDuration: TimeInterval) -> Bool {
     guard speechDuration <= maxHallucinationSeconds else { return false }
     let text = texts.joined(separator: " ")

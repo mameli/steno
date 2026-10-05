@@ -133,7 +133,8 @@ actor MeetingTranscription {
         for range in ranges {
             let offset = segment.start + Double(range.lowerBound) / sampleRate
             let recognized = try await transcriber.transcribe(Array(samples[range]), language: language)
-            if isLikelyHallucination(recognized.map(\.text), speechDuration: Double(range.count) / sampleRate) { continue }
+            let speech = speechSeconds(in: samples, range: range, sampleRate: sampleRate)
+            if isLikelyHallucination(recognized.map(\.text), speechDuration: speech) { continue }
             utterances += recognized.map {
                 Utterance(track: segment.track, start: offset + $0.start, end: offset + $0.end, text: $0.text)
             }
