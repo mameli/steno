@@ -77,7 +77,8 @@ actor MeetingTranscription {
             }
         }
 
-        let utterances = recording.segments.flatMap { bySegment[$0.fileName] ?? [] }
+        // Applied here and not to the cache: Retry on an old Recording benefits too.
+        let utterances = removingEcho(recording.segments.flatMap { bySegment[$0.fileName] ?? [] })
         let url = directory.appending(path: Transcript.recordingCopyFileName)
         let transcript = Transcript(utterances: utterances)
         try transcript.markdown.write(to: url, atomically: true, encoding: .utf8)
