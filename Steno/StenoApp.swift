@@ -44,7 +44,7 @@ private struct MeetingMenu: View {
 
     var body: some View {
         if controller.isInProgress {
-            Text("Recording · \(controller.elapsedText ?? "")")
+            Text(verbatim: controller.recordingMenuTitle ?? "")
             // The shortcut is global (GlobalHotKey): shown here as a reminder only, not as a menu key.
             Button("Stop meeting    ⌃⌥⌘R") { controller.stop() }
         } else {

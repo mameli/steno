@@ -19,9 +19,11 @@ final class MeetingController {
     private var now = Date()
     private var isRequestingPermission = false
     private var ticker: Task<Void, Never>?
-    /// Menus being tracked: while the menu is open the timer stands still, otherwise every
-    /// tick rebuilds its items (open submenus blink, the highlighted item loses its colour).
+    /// Menus being tracked. While the menu is open the timer does not touch observed state,
+    /// otherwise every tick rebuilds its items (open submenus blink, the highlighted item loses
+    /// its colour): it changes the title of the timer item in place instead.
     @ObservationIgnored private var openMenus = 0
+    @ObservationIgnored private weak var openMenu: NSMenu?
     private var hotKey: GlobalHotKey?
     /// False if another app already uses ⌃⌥⌘R.
     var isHotKeyAvailable: Bool { hotKey?.isRegistered ?? false }
@@ -44,7 +46,7 @@ final class MeetingController {
         hotKey = GlobalHotKey { [weak self] in self?.toggle() }
         processor.resumeAfterLaunch()
         startDailyCleanUp()
-        pauseTimerWhileMenusAreOpen()
+        keepTimerLiveWithoutRebuildingMenus()
     }
 
     var isInProgress: Bool { machine.state != .idle }
@@ -52,10 +54,16 @@ final class MeetingController {
     /// The error to show in the menu: the recording's or the last Processing's.
     var lastError: String? { recordingError ?? processor.lastError }
 
-    /// Timer of the Meeting in progress, `nil` if there is none.
-    var elapsedText: String? {
+    /// Menu item with the timer of the Meeting in progress, `nil` if there is none.
+    var recordingMenuTitle: String? { recordingMenuTitle(at: now) }
+
+    private func recordingMenuTitle(at date: Date) -> String? {
         guard case .inProgress(let startedAt) = machine.state else { return nil }
-        return elapsedLabel(max(0, now.timeIntervalSince(startedAt)))
+        return Self.recordingMenuTitle(elapsedLabel(max(0, date.timeIntervalSince(startedAt))))
+    }
+
+    private static func recordingMenuTitle(_ elapsed: String) -> String {
+        String(localized: "Recording · \(elapsed)")
     }
 
     /// ⌃⌥⌘R: starts or stops the Meeting from any app.
@@ -233,15 +241,22 @@ final class MeetingController {
         NSWorkspace.shared.open(url)
     }
 
-    private func pauseTimerWhileMenusAreOpen() {
+    private func keepTimerLiveWithoutRebuildingMenus() {
         let center = NotificationCenter.default
-        center.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.openMenus += 1 }
+        center.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main) { [weak self] note in
+            // Delivered on the main queue, where the menu lives.
+            nonisolated(unsafe) let menu = note.object as? NSMenu
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if self.openMenus == 0 { self.openMenu = menu }
+                self.openMenus += 1
+            }
         }
         center.addObserver(forName: NSMenu.didEndTrackingNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
                 self.openMenus = max(0, self.openMenus - 1)
+                if self.openMenus == 0 { self.openMenu = nil }
                 self.now = Date()
             }
         }
@@ -253,8 +268,19 @@ final class MeetingController {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
                 guard let self else { return }
-                if self.openMenus == 0 { self.now = Date() }
+                if self.openMenus == 0 {
+                    self.now = Date()
+                } else {
+                    self.updateOpenMenuTimer()
+                }
             }
         }
+    }
+
+    /// Another open menu (e.g. a picker in Settings) has no timer item: nothing changes.
+    private func updateOpenMenuTimer() {
+        guard let title = recordingMenuTitle(at: Date()) else { return }
+        let prefix = Self.recordingMenuTitle("")
+        openMenu?.items.first { $0.title.hasPrefix(prefix) }?.title = title
     }
 }
