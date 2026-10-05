@@ -6,8 +6,8 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 
 ## Icons
 
-- [ ] **App icon**: Finder and notifications show the orange notebook.
-- [ ] **Menu bar**: the notebook outline and handwriting are crisp on light and dark menu bars and when the menu is selected. Recording still shows a red dot; Processing still shows an hourglass.
+- [x] **App icon**: Finder and notifications show the orange notebook.
+- [x] **Menu bar**: the notebook outline and handwriting are crisp on light and dark menu bars and when the menu is selected. Recording still shows a red dot; Processing still shows an hourglass.
 
 ## 1. Recording
 
