@@ -226,7 +226,8 @@ private struct ProfileEditor: View {
     let isActive: Bool
     let activate: () -> Void
     @State private var apiKey = ""
-    @State private var hasStoredKey = false
+    /// Last characters of the saved key, so the user can tell which key is stored; `nil` if none.
+    @State private var storedKeySuffix: String?
     @State private var status: String?
     @State private var isTesting = false
 
@@ -243,26 +244,28 @@ private struct ProfileEditor: View {
             }
             TextField("Max context (tokens)", value: $profile.maxContextTokens, format: .number)
 
-            // The only place where the key is entered: it is saved to the Keychain as soon as it is pasted.
+            // The only place where the key is entered. It is saved only on Return or with the
+            // button, never while typing: a stray keystroke must not replace a working key.
             LabeledContent("API key") {
                 HStack {
                     PasteableTextField(
-                        placeholder: hasStoredKey
-                            ? String(localized: "Saved in the Keychain · paste here to replace it")
-                            : String(localized: "Paste the key here"),
+                        placeholder: storedKeySuffix.map { String(localized: "Saved in the Keychain (…\($0)) · paste here to replace it") }
+                            ?? String(localized: "Paste the key here"),
                         text: $apiKey,
-                        isSecure: true
+                        isSecure: true,
+                        onSubmit: saveKey
                     )
-                    if hasStoredKey && apiKey.isEmpty {
+                    if !apiKey.isEmpty {
+                        Button("Save key", action: saveKey)
+                    } else if storedKeySuffix != nil {
                         Button("Remove", role: .destructive) {
                             Keychain.deleteAPIKey(for: profile.id)
-                            hasStoredKey = false
+                            storedKeySuffix = nil
                             status = String(localized: "Key removed.")
                         }
                     }
                 }
             }
-            .onChange(of: apiKey) { saveKey() }
 
             HStack {
                 Button("Test connection") { Task { await test() } }
@@ -281,21 +284,26 @@ private struct ProfileEditor: View {
         } header: {
             Text("Profile: \(profile.displayName)")
         } footer: {
-            Text("Changes are saved as you type. The key goes to the Keychain as soon as you paste it.")
+            Text("Changes are saved as you type. The key goes to the Keychain when you press Return or Save key.")
                 .foregroundStyle(.secondary)
         }
-        .onAppear { hasStoredKey = Keychain.apiKey(for: profile.id) != nil }
+        .onAppear { refreshStoredKey() }
     }
 
     private func saveKey() {
         guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         do {
             try Keychain.setAPIKey(apiKey, for: profile.id)
-            hasStoredKey = true
+            apiKey = ""
+            refreshStoredKey()
             status = String(localized: "Key saved in the Keychain.")
         } catch {
             status = error.localizedDescription
         }
+    }
+
+    private func refreshStoredKey() {
+        storedKeySuffix = Keychain.apiKey(for: profile.id).map { String($0.suffix(4)) }
     }
 
     private func test() async {

@@ -7,6 +7,8 @@ struct PasteableTextField: NSViewRepresentable {
     let placeholder: String
     @Binding var text: String
     var isSecure = false
+    /// Called on Return.
+    var onSubmit: () -> Void = {}
 
     func makeNSView(context: Context) -> NSTextField {
         let field: NSTextField = isSecure ? ShortcutSecureTextField() : ShortcutTextField()
@@ -28,15 +30,26 @@ struct PasteableTextField: NSViewRepresentable {
         field.placeholderString = placeholder
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
+    func makeCoordinator() -> Coordinator { Coordinator(text: $text, onSubmit: onSubmit) }
 
     final class Coordinator: NSObject, NSTextFieldDelegate {
         let text: Binding<String>
-        init(text: Binding<String>) { self.text = text }
+        let onSubmit: () -> Void
+        init(text: Binding<String>, onSubmit: @escaping () -> Void) {
+            self.text = text
+            self.onSubmit = onSubmit
+        }
 
         func controlTextDidChange(_ notification: Notification) {
             guard let field = notification.object as? NSTextField else { return }
             text.wrappedValue = field.stringValue
+        }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+            guard selector == #selector(NSResponder.insertNewline(_:)) else { return false }
+            text.wrappedValue = control.stringValue
+            onSubmit()
+            return true
         }
     }
 }

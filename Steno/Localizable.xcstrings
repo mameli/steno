@@ -111,12 +111,12 @@
         }
       }
     },
-    "Changes are saved as you type. The key goes to the Keychain as soon as you paste it.": {
+    "Changes are saved as you type. The key goes to the Keychain when you press Return or Save key.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le modifiche si salvano da sole mentre scrivi. La chiave va nel Portachiavi appena la incolli."
+            "value": "Le modifiche si salvano mentre scrivi. La chiave va nel Portachiavi quando premi Invio o Salva chiave."
           }
         }
       }
@@ -651,12 +651,22 @@
         }
       }
     },
-    "Saved in the Keychain · paste here to replace it": {
+    "Save key": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Salvata nel Portachiavi · incolla qui per sostituirla"
+            "value": "Salva chiave"
+          }
+        }
+      }
+    },
+    "Saved in the Keychain (…%@) · paste here to replace it": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvata nel Portachiavi (…%@) · incolla qui per sostituirla"
           }
         }
       }
