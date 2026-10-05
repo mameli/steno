@@ -62,8 +62,13 @@ final class MeetingController {
         }
         // Downloads started from Settings show in the menu too, only for the model in use.
         models.onProgress = { [weak self] model, percent in
-            guard model == .selected else { return }
-            self?.modelPhaseChanged(.downloading(percent: percent))
+            guard let self, model == .selected else { return }
+            if let percent {
+                modelPhaseChanged(.downloading(percent: percent))
+            } else if case .downloading = modelPhase {
+                // Downloaded from Settings: nothing loads it until the next Meeting.
+                modelPhaseChanged(ModelMenuPhase.notLoaded)
+            }
         }
     }
 
@@ -333,9 +338,9 @@ final class MeetingController {
         switch phase {
         case .notLoaded, .ready:
             nil
-        case .downloading(let percent):
+        case .downloading(let percent) where percent < 100:
             String(localized: "Downloading transcription model… \(percent)%")
-        case .loading(firstTime: true):
+        case .downloading, .loading(firstTime: true):
             String(localized: "Preparing transcription model, first time only: a few minutes…")
         case .loading(firstTime: false):
             String(localized: "Loading transcription model…")

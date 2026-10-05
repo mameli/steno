@@ -45,7 +45,7 @@ struct TranscriptionModel: Identifiable, Hashable, Sendable {
     static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
 
-    /// The model chosen in Settings or in the menu; the default if the saved one is no longer offered.
+    /// The model chosen in Settings; the default if the saved one is no longer offered.
     static var selected: TranscriptionModel {
         all.first { $0.id == AppSettings.transcriptionModelID } ?? .default
     }
@@ -65,12 +65,14 @@ final class TranscriptionModels {
     /// resumed instead of being loaded.
     private static let downloadedMarker = ".steno-downloaded"
 
-    /// Whole percent of the downloads in progress, by model.
+    /// Whole percent of the downloads in progress, by model. 100 while the model is still being
+    /// prepared: FluidAudio reports the end before macOS has compiled all of Parakeet.
     private(set) var progress: [String: Int] = [:]
     /// Changes whenever a model is downloaded or deleted, so views read the disk again.
     private(set) var revision = 0
-    /// Called with every whole-percent step of a download (the menu updates its item in place).
-    @ObservationIgnored var onProgress: (TranscriptionModel, Int) -> Void = { _, _ in }
+    /// Called with every whole-percent step of a download, and with `nil` when it ends, also on
+    /// failure (the menu updates its item in place).
+    @ObservationIgnored var onProgress: (TranscriptionModel, Int?) -> Void = { _, _ in }
     @ObservationIgnored private var downloads: [String: Task<URL, Error>] = [:]
 
     static func folder(of model: TranscriptionModel) -> URL {
@@ -126,6 +128,7 @@ final class TranscriptionModels {
                 progress[model.id] = nil
                 downloads[model.id] = nil
                 revision += 1
+                onProgress(model, nil)
             }
             try FileManager.default.createDirectory(at: Self.directory, withIntermediateDirectories: true)
             let report: @Sendable (Double) -> Void = { fraction in

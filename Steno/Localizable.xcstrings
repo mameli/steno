@@ -653,6 +653,16 @@
         }
       }
     },
+    "Preparing…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparazione…"
+          }
+        }
+      }
+    },
     "Processing failed": {
       "localizations": {
         "it": {

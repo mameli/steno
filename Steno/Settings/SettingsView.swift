@@ -323,8 +323,13 @@ private struct TranscriptionSection: View {
             }
             Spacer()
             if let percent = models.progress[model.id] {
-                ProgressView(value: Double(percent), total: 100).frame(width: 80)
-                Text(verbatim: "\(percent)%").monospacedDigit().frame(width: 40, alignment: .trailing)
+                if percent < 100 {
+                    ProgressView(value: Double(percent), total: 100).frame(width: 80)
+                    Text(verbatim: "\(percent)%").monospacedDigit().frame(width: 40, alignment: .trailing)
+                } else {
+                    ProgressView().controlSize(.small)
+                    Text("Preparing…").foregroundStyle(.secondary)
+                }
             } else if models.isDownloaded(model) {
                 if !isSelected {
                     Button("Use") { selectedID = model.id }
