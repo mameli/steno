@@ -13,6 +13,7 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 
 - [ ] **First use**: move `~/Library/Application Support/Steno/Models` to the Trash, start a Meeting → the menu shows "Downloading transcription model… N%" rising, then "Preparing transcription model, first time only", then nothing; the Meeting is transcribed. The menu does not blink while the percentage changes.
 
+- [ ] **Parakeet**: Settings → *Transcription* → *Download* and *Use* on Parakeet v3, record a Meeting with long and short replies → the Transcript is in the Meeting language, with sentences and times; note any reply in the wrong language.
 - [ ] **Transcription models**: Settings → *Transcription* → *Download* on Small → percentage, then *Use* and *Delete* appear; *Use* → "In use" moves to Small and the menu offers *Transcription Model* with both; a Meeting is transcribed with Small; *Retry* on an older Meeting with Large v3 Turbo in use transcribes it again with Large. *Delete* on Small removes it from the menu.
 
 ## 1. Recording

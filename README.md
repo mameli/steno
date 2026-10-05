@@ -9,7 +9,7 @@ A macOS menu bar app that records your meetings, transcribes them **on your Mac*
 It was built as an alternative to Granola for people whose company does not allow meeting audio and text to leave the EU.
 
 - **Records both sides of a call**: your microphone and the system audio (Meet, Zoom, Teams, any app), with echo cancellation.
-- **Transcribes locally** with Whisper ([WhisperKit](https://github.com/argmaxinc/WhisperKit)): the audio never leaves the Mac. Choose between Large v3 Turbo (default), its full version and Small in *Settings → Transcription*.
+- **Transcribes locally** with Whisper ([WhisperKit](https://github.com/argmaxinc/WhisperKit)): the audio never leaves the Mac. Choose between Whisper Large v3 Turbo (default), its full version, Small and NVIDIA Parakeet v3 in *Settings → Transcription*.
 - **Summarises with a provider you pick**: llama.cpp, Ollama or LM Studio on your Mac, or a remote OpenAI-compatible API. You can also skip the Summary and keep only the Transcript.
 - **Writes Markdown into Obsidian**: one note per meeting, opened when the meeting starts so you can take notes, plus a separate Transcript file. Your own notes are kept and used to steer the Summary.
 - **Templates are notes in your vault**: write the structure and instructions of the Summary in Obsidian.
@@ -113,3 +113,5 @@ cd StenoCore && swift test   # domain logic tests
 ## License
 
 MIT, see [LICENSE](LICENSE).
+
+Steno downloads and runs third-party models: OpenAI Whisper through [WhisperKit](https://github.com/argmaxinc/WhisperKit) (MIT), and [NVIDIA Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) (CC BY 4.0) converted by FluidInference and run through [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache 2.0).

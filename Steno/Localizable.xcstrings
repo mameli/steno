@@ -1147,6 +1147,16 @@
         }
       }
     },
+    "Very fast and accurate; on short replies it can switch language.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Molto veloce e preciso; sulle risposte brevi può cambiare lingua."
+          }
+        }
+      }
+    },
     "Writing to the Vault failed: %@": {
       "localizations": {
         "it": {

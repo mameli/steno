@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		A10000000000000000000022 /* StenoCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000021 /* StenoCore */; };
 		A10000000000000000000025 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000024 /* WhisperKit */; };
+		A10000000000000000000028 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = A10000000000000000000027 /* FluidAudio */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,7 @@
 			files = (
 				A10000000000000000000022 /* StenoCore in Frameworks */,
 				A10000000000000000000025 /* WhisperKit in Frameworks */,
+				A10000000000000000000028 /* FluidAudio in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -82,6 +84,7 @@
 			packageProductDependencies = (
 				A10000000000000000000021 /* StenoCore */,
 				A10000000000000000000024 /* WhisperKit */,
+				A10000000000000000000027 /* FluidAudio */,
 			);
 			productName = Steno;
 			productReference = A10000000000000000000005 /* Steno.app */;
@@ -110,6 +113,7 @@
 			packageReferences = (
 				A10000000000000000000020 /* XCLocalSwiftPackageReference "StenoCore" */,
 				A10000000000000000000023 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+				A10000000000000000000026 /* XCRemoteSwiftPackageReference "FluidAudio" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A10000000000000000000002 /* Products */;
@@ -226,6 +230,14 @@
 				minimumVersion = 1.1.0;
 			};
 		};
+		A10000000000000000000026 /* XCRemoteSwiftPackageReference "FluidAudio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/FluidInference/FluidAudio";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 0.17.5;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -237,6 +249,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A10000000000000000000023 /* XCRemoteSwiftPackageReference "WhisperKit" */;
 			productName = WhisperKit;
+		};
+		A10000000000000000000027 /* FluidAudio */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10000000000000000000026 /* XCRemoteSwiftPackageReference "FluidAudio" */;
+			productName = FluidAudio;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
