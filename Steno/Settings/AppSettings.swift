@@ -12,6 +12,8 @@ enum AppSettings {
     private static let defaultTemplateKey = "defaultTemplate"
     private static let retentionDaysKey = "retentionDays"
     /// Also used by `@AppStorage` in the menu and in Settings, so the two stay in sync.
+    static let transcriptionModelKey = "transcriptionModel"
+    /// Also used by `@AppStorage` in the menu and in Settings, so the two stay in sync.
     static let activeProviderProfileKey = "activeProviderProfile"
 
     static func registerDefaults() {
@@ -26,6 +28,11 @@ enum AppSettings {
     static var vaultPath: String? {
         get { UserDefaults.standard.string(forKey: vaultPathKey).flatMap { $0.isEmpty ? nil : $0 } }
         set { UserDefaults.standard.set(newValue, forKey: vaultPathKey) }
+    }
+
+    /// The WhisperKit variant used for new Meetings and Retry; see `TranscriptionModel.selected`.
+    static var transcriptionModelID: String? {
+        UserDefaults.standard.string(forKey: transcriptionModelKey)
     }
 
     /// Days the audio is kept.

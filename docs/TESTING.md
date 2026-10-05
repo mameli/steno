@@ -13,6 +13,8 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 
 - [ ] **First use**: move `~/Library/Application Support/Steno/Models` to the Trash, start a Meeting → the menu shows "Downloading transcription model… N%" rising, then "Preparing transcription model, first time only", then nothing; the Meeting is transcribed. The menu does not blink while the percentage changes.
 
+- [ ] **Transcription models**: Settings → *Transcription* → *Download* on Small → percentage, then *Use* and *Delete* appear; *Use* → "In use" moves to Small and the menu offers *Transcription Model* with both; a Meeting is transcribed with Small; *Retry* on an older Meeting with Large v3 Turbo in use transcribes it again with Large. *Delete* on Small removes it from the menu.
+
 ## 1. Recording
 
 - [x] **Start from the menu**: *Start meeting* → the red dot appears in the bar, Obsidian opens `Meetings/<date> <time> - Meeting.md`.

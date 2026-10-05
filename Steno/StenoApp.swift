@@ -16,7 +16,7 @@ struct StenoApp: App {
         }
 
         Settings {
-            SettingsView()
+            SettingsView(models: controller.models)
         }
     }
 }
@@ -65,6 +65,7 @@ private struct MeetingMenu: View {
         // A Meeting's Profile is fixed at the start: changing it while recording would have no effect.
         if !controller.isInProgress {
             ProviderProfileMenu()
+            TranscriptionModelMenu(models: controller.models)
         }
 
         if let modelMenuTitle = controller.modelMenuTitle {
@@ -165,6 +166,22 @@ private extension NSImage {
         image.isTemplate = false
         return image
     }()
+}
+
+/// Quick switch between the transcription models already downloaded (they are downloaded in
+/// Settings). Hidden while recording: a Meeting keeps the model it started with.
+private struct TranscriptionModelMenu: View {
+    let models: TranscriptionModels
+    @AppStorage(AppSettings.transcriptionModelKey) private var selectedID = TranscriptionModel.default.id
+
+    var body: some View {
+        let downloaded = models.downloaded
+        if downloaded.count > 1 {
+            Picker("Transcription Model", selection: $selectedID) {
+                ForEach(downloaded) { Text(verbatim: $0.name).tag($0.id) }
+            }
+        }
+    }
 }
 
 /// Quick switch of the Summary Profile (e.g. from a test one to an EU one).

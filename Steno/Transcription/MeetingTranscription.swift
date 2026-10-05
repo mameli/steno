@@ -15,6 +15,9 @@ actor MeetingTranscription {
 
     /// Result of a Segment saved next to the audio: a new Processing does not redo it.
     private struct CachedSegment: Codable {
+        /// The model that transcribed it; `nil` in caches written before models could be chosen,
+        /// all made with the default one.
+        let model: String?
         /// `nil` if the Segment contains no speech.
         let language: String?
         /// False when the language was detected on too little speech to trust it.
@@ -28,6 +31,8 @@ actor MeetingTranscription {
     private static let minimumSpeechToLockLanguage = 10.0
 
     private let transcriber: LocalTranscriber
+    /// Fixed for the whole Meeting: Segments transcribed by another model are done again.
+    private let model: TranscriptionModel
     private let forcedLanguage: String?
     /// The Meeting language, once detected on enough speech.
     private var languageDetection: Task<String, Error>?
@@ -37,8 +42,9 @@ actor MeetingTranscription {
     private var pending: [String: Task<[Utterance], Error>] = [:]
 
     /// `language` is `nil` to detect it automatically.
-    init(transcriber: LocalTranscriber, language: String?) {
+    init(transcriber: LocalTranscriber, model: TranscriptionModel, language: String?) {
         self.transcriber = transcriber
+        self.model = model
         self.forcedLanguage = language
     }
 
@@ -96,7 +102,10 @@ actor MeetingTranscription {
         let cacheURL = directory.appending(path: segment.transcriptionCacheFileName)
         if forced == nil,
            let cached = try? JSONDecoder().decode(CachedSegment.self, from: Data(contentsOf: cacheURL)),
-           cached.language == nil || forcedLanguage == nil || cached.language == forcedLanguage {
+           // Without speech the model does not matter; otherwise it must be this Meeting's.
+           cached.language == nil
+               || ((cached.model ?? TranscriptionModel.default.id) == model.id
+                   && (forcedLanguage == nil || cached.language == forcedLanguage)) {
             if let language = cached.language, forcedLanguage == nil {
                 if cached.isLanguageReliable {
                     // Same language for the whole Meeting, even if some Segments come from the cache.
@@ -114,7 +123,7 @@ actor MeetingTranscription {
         // distant voices) it makes up sentences such as "Grazie.".
         let ranges = speechRanges(in: samples, sampleRate: sampleRate)
         guard !ranges.isEmpty else {
-            try JSONEncoder().encode(CachedSegment(language: nil, isLanguageReliable: true, utterances: []))
+            try JSONEncoder().encode(CachedSegment(model: model.id, language: nil, isLanguageReliable: true, utterances: []))
                 .write(to: cacheURL)
             return []
         }
@@ -133,14 +142,14 @@ actor MeetingTranscription {
         var utterances: [Utterance] = []
         for range in ranges {
             let offset = segment.start + Double(range.lowerBound) / sampleRate
-            let recognized = try await transcriber.transcribe(Array(samples[range]), language: language)
+            let recognized = try await transcriber.transcribe(Array(samples[range]), language: language, model: model)
             let speech = speechSeconds(in: samples, range: range, sampleRate: sampleRate)
             if isLikelyHallucination(recognized.map(\.text), speechDuration: speech) { continue }
             utterances += recognized.map {
                 Utterance(track: segment.track, start: offset + $0.start, end: offset + $0.end, text: $0.text)
             }
         }
-        try JSONEncoder().encode(CachedSegment(language: language, isLanguageReliable: isReliable, utterances: utterances))
+        try JSONEncoder().encode(CachedSegment(model: model.id, language: language, isLanguageReliable: isReliable, utterances: utterances))
             .write(to: cacheURL)
         return utterances
     }
@@ -164,7 +173,7 @@ actor MeetingTranscription {
         for range in ranges where speech.count < limit {
             speech += samples[range].prefix(limit - speech.count)
         }
-        let detection = Task { [transcriber] in try await transcriber.detectLanguage(speech) }
+        let detection = Task { [transcriber, model] in try await transcriber.detectLanguage(speech, model: model) }
         let isReliable = Double(speech.count) >= Self.minimumSpeechToLockLanguage * Recording.sampleRate
         if isReliable { languageDetection = detection }
         do {

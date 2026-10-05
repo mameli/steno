@@ -3,8 +3,10 @@ import ServiceManagement
 import StenoCore
 import SwiftUI
 
-/// Minimal Settings window: start at login, Vault, Templates, Recordings, Provider Profiles for the Summary.
+/// Minimal Settings window: start at login, Vault, Templates, Recordings, transcription models,
+/// Provider Profiles for the Summary.
 struct SettingsView: View {
+    let models: TranscriptionModels
     @State private var vaultPath = AppSettings.vaultPath ?? ""
     @State private var profiles = AppSettings.summaryProfiles
     @AppStorage(AppSettings.activeProviderProfileKey) private var activeProfileID = ""
@@ -38,6 +40,8 @@ struct SettingsView: View {
             TemplatesSection(defaultTemplate: $defaultTemplate, vaultPath: vaultPath)
 
             RecordingsSection()
+
+            TranscriptionSection(models: models)
 
             Section {
                 if profiles.isEmpty {
@@ -273,6 +277,84 @@ private struct TemplatesSection: View {
             status = error.localizedDescription
         }
         pendingDeletion = nil
+    }
+}
+
+/// The Whisper models: download, choose the one in use, delete the others.
+private struct TranscriptionSection: View {
+    let models: TranscriptionModels
+    @AppStorage(AppSettings.transcriptionModelKey) private var selectedID = TranscriptionModel.default.id
+    @State private var error: String?
+
+    var body: some View {
+        Section {
+            ForEach(TranscriptionModel.all) { model in
+                row(model)
+            }
+            if let error {
+                Text(error).foregroundStyle(.secondary).textSelection(.enabled)
+            }
+        } header: {
+            Text("Transcription")
+        } footer: {
+            Text("Models run on this Mac. Each is downloaded once from Hugging Face: only the model is downloaded, no audio or text is sent. The model in use applies to new Meetings and to Retry.")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func row(_ model: TranscriptionModel) -> some View {
+        // Read through `selectedID`, so the rows follow a change made in the menu.
+        let isSelected = model.id == (TranscriptionModel.all.first { $0.id == selectedID } ?? .default).id
+        return HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Text(verbatim: model.name)
+                    if isSelected {
+                        Text("In use").font(.caption).foregroundStyle(.green)
+                    }
+                }
+                HStack(spacing: 4) {
+                    Text(model.note)
+                    Text(verbatim: "·")
+                    Text((Int64(model.downloadMB) * 1_000_000).formatted(.byteCount(style: .file)))
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            Spacer()
+            if let percent = models.progress[model.id] {
+                ProgressView(value: Double(percent), total: 100).frame(width: 80)
+                Text(verbatim: "\(percent)%").monospacedDigit().frame(width: 40, alignment: .trailing)
+            } else if models.isDownloaded(model) {
+                if !isSelected {
+                    Button("Use") { selectedID = model.id }
+                    // The model in use is not deleted: the next Meeting would download it again.
+                    Button("Delete", role: .destructive) { delete(model) }
+                }
+            } else {
+                Button("Download") { download(model) }
+            }
+        }
+    }
+
+    private func download(_ model: TranscriptionModel) {
+        error = nil
+        Task {
+            do {
+                try await models.download(model)
+            } catch {
+                self.error = String(localized: "Download of \(model.name) failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func delete(_ model: TranscriptionModel) {
+        do {
+            try models.delete(model)
+            error = nil
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 }
 

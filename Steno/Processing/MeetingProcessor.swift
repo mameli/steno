@@ -185,7 +185,7 @@ final class MeetingProcessor {
         save(record)
         let directory = Self.directory(for: record.stenoID)
         let transcription = liveTranscriptions.removeValue(forKey: record.stenoID)
-            ?? MeetingTranscription(transcriber: transcriber, language: AppSettings.forcedLanguage)
+            ?? MeetingTranscription(transcriber: transcriber, model: .selected, language: AppSettings.forcedLanguage)
 
         let recording: Recording
         do {

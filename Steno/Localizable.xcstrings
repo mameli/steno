@@ -241,6 +241,26 @@
         }
       }
     },
+    "Download": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scarica"
+          }
+        }
+      }
+    },
+    "Download of %@ failed: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download di %@ non riuscito: %@"
+          }
+        }
+      }
+    },
     "Downloading transcription model… %lld%%": {
       "localizations": {
         "it": {
@@ -372,6 +392,16 @@
         }
       }
     },
+    "Light and fast; more mistakes, especially in Italian.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leggero e veloce; più errori, soprattutto in italiano."
+          }
+        }
+      }
+    },
     "Loading transcription model…": {
       "localizations": {
         "it": {
@@ -458,6 +488,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modello"
+          }
+        }
+      }
+    },
+    "Models run on this Mac. Each is downloaded once from Hugging Face: only the model is downloaded, no audio or text is sent. The model in use applies to new Meetings and to Retry.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I modelli girano su questo Mac. Ognuno si scarica una volta sola da Hugging Face: viene scaricato solo il modello, nessun audio o testo viene inviato. Il modello in uso vale per le nuove riunioni e per Riprova."
           }
         }
       }
@@ -673,6 +713,16 @@
         }
       }
     },
+    "Recommended: fast and accurate.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consigliato: veloce e preciso."
+          }
+        }
+      }
+    },
     "Recording interrupted and not recoverable: %@": {
       "localizations": {
         "it": {
@@ -799,6 +849,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mostra nel Finder"
+          }
+        }
+      }
+    },
+    "Slightly more accurate; more memory, slower to prepare.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un po' più preciso; più memoria, più lento da preparare."
           }
         }
       }
@@ -966,6 +1026,26 @@
         }
       }
     },
+    "Transcription": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascrizione"
+          }
+        }
+      }
+    },
+    "Transcription Model": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modello di trascrizione"
+          }
+        }
+      }
+    },
     "Transcription failed: %@": {
       "localizations": {
         "it": {
@@ -1003,6 +1083,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Senza nome"
+          }
+        }
+      }
+    },
+    "Use": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa"
           }
         }
       }

@@ -14,7 +14,8 @@ final class MeetingController {
     /// When the Meeting in progress started; `nil` when idle.
     private var startedAt: Date?
     private let recorder = MeetingRecorder()
-    private let transcriber = LocalTranscriber()
+    let models = TranscriptionModels()
+    private let transcriber: LocalTranscriber
     let processor: MeetingProcessor
     private var currentStenoID: UUID?
     private var now = Date()
@@ -31,7 +32,7 @@ final class MeetingController {
     /// The transcription model while it is downloading or loading, as the menu shows it.
     private(set) var modelMenuTitle: String?
     /// The latest phase, also while a menu is open (the observed title waits for it to close).
-    @ObservationIgnored private var modelPhase = LocalTranscriber.ModelPhase.notLoaded
+    @ObservationIgnored private var modelPhase = ModelMenuPhase.notLoaded
     @ObservationIgnored private var latestModelMenuTitle: String?
     private(set) var microphoneDenied = false
     private(set) var recordingError: String?
@@ -44,6 +45,7 @@ final class MeetingController {
     }
 
     init() {
+        transcriber = LocalTranscriber(models: models)
         AppSettings.registerDefaults()
         try? Vault.configured?.ensureDefaultTemplate()
         processor = MeetingProcessor(transcriber: transcriber)
@@ -57,6 +59,11 @@ final class MeetingController {
             await transcriber.setPhaseHandler { [weak self] phase in
                 Task { @MainActor in self?.modelPhaseChanged(phase) }
             }
+        }
+        // Downloads started from Settings show in the menu too, only for the model in use.
+        models.onProgress = { [weak self] model, percent in
+            guard model == .selected else { return }
+            self?.modelPhaseChanged(.downloading(percent: percent))
         }
     }
 
@@ -97,7 +104,8 @@ final class MeetingController {
         guard granted else { return }
 
         now = Date()
-        let transcription = MeetingTranscription(transcriber: transcriber, language: AppSettings.forcedLanguage)
+        let model = TranscriptionModel.selected
+        let transcription = MeetingTranscription(transcriber: transcriber, model: model, language: AppSettings.forcedLanguage)
         let started: MeetingRecorder.Started
         do {
             started = try recorder.start(at: now) { segment, directory in
@@ -124,7 +132,7 @@ final class MeetingController {
         // On first use this downloads the model: better while the Meeting is in progress.
         Task { [transcriber] in
             do {
-                try await transcriber.prepare()
+                try await transcriber.prepare(model)
             } catch {
                 logger.error("Preparing the model failed: \(error, privacy: .public)")
             }
@@ -293,6 +301,14 @@ final class MeetingController {
     /// menu at every percent would make it blink. An item appearing or disappearing waits for the
     /// menu to close.
     private func modelPhaseChanged(_ phase: LocalTranscriber.ModelPhase) {
+        switch phase {
+        case .notLoaded: modelPhaseChanged(ModelMenuPhase.notLoaded)
+        case .loading(_, let firstTime): modelPhaseChanged(.loading(firstTime: firstTime))
+        case .ready: modelPhaseChanged(ModelMenuPhase.ready)
+        }
+    }
+
+    private func modelPhaseChanged(_ phase: ModelMenuPhase) {
         // Progress reports can arrive after the download is over.
         if case .downloading = phase {
             switch modelPhase {
@@ -313,12 +329,12 @@ final class MeetingController {
         latestModelMenuTitle = title
     }
 
-    private static func modelMenuTitle(_ phase: LocalTranscriber.ModelPhase) -> String? {
+    private static func modelMenuTitle(_ phase: ModelMenuPhase) -> String? {
         switch phase {
         case .notLoaded, .ready:
             nil
-        case .downloading(let fraction):
-            String(localized: "Downloading transcription model… \(Int(fraction * 100))%")
+        case .downloading(let percent):
+            String(localized: "Downloading transcription model… \(percent)%")
         case .loading(firstTime: true):
             String(localized: "Preparing transcription model, first time only: a few minutes…")
         case .loading(firstTime: false):
@@ -332,4 +348,12 @@ final class MeetingController {
         let prefix = Self.recordingMenuTitle("")
         openMenu?.items.first { $0.title.hasPrefix(prefix) }?.title = title
     }
+}
+
+/// What the menu says about the transcription model.
+private enum ModelMenuPhase {
+    case notLoaded
+    case downloading(percent: Int)
+    case loading(firstTime: Bool)
+    case ready
 }
