@@ -45,6 +45,6 @@ Before starting: Steno running from the menu bar (waveform icon), Vault and a Su
 ## 5. When you set them up
 
 - [ ] **EU Provider** (e.g. Mistral): new Profile with key → *Test connection* → a test Meeting → *Regenerate with Profile* on an older Meeting to compare the Summaries.
-- [ ] **Local server** (llama.cpp): new Profile without key, `http://localhost:8080/v1`, max context equal to the server's (`llama-server -c 32768`).
+- [x] **Local server** (llama.cpp): new Profile without key, `http://localhost:8080/v1`, max context equal to the server's (`llama-server -c 32768`).
 
 If something goes wrong: the ⚠️ message in the menu and in the note says why; copy it as it is.
