@@ -6,3 +6,10 @@ DerivedData/
 xcuserdata/
 *.xcuserstate
 Config/Local.xcconfig
+
+# Demo video and music: kept locally, never committed
+docs/demo-video/
+*.mp4
+*.mov
+*.mp3
+*.wav
