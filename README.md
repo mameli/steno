@@ -1,3 +1,7 @@
+
+
+
+
 <p align="center">
   <img src="Steno/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png" alt="Steno icon" width="128">
 </p>
@@ -16,6 +20,8 @@ It was built as an alternative to Granola for people whose company does not allo
 - **Writes Markdown into Obsidian**: one note per meeting, opened when the meeting starts so you can take notes, plus a separate Transcript file. Your own notes are kept and used to steer the Summary.
 - **Templates are notes in your vault**: write the structure and instructions of the Summary in Obsidian.
 - **A Vocabulary for your jargon**: names and technical terms that recognition gets wrong are fixed in the Transcript and spelled right in the Summary.
+
+https://github.com/user-attachments/assets/e7ce8262-d917-4a1d-928f-9a91ea291088
 
 ## Requirements
 
