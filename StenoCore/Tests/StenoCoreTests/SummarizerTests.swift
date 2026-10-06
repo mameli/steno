@@ -32,6 +32,53 @@ struct SummarizerTests {
         #expect(stub.requests.count == 1)
     }
 
+    @Test("the times the model cites are removed from the Summary, the rest of the Markdown stays as it is")
+    func citedTimesRemoved() async throws {
+        let reply = """
+            ### Topics
+            - The budget is approved. [00:00]
+              - Approved by the board [00:05] [01:10].
+            - Rollout in two steps ([03:10], [1:02:45])
+            - Long discussion [04:00-06:30]
+            - Meeting at 10:30 on Friday, see [[Budget 2026]] and [the offer](https://x.example/offer)
+
+            ### Next steps
+            - [ ] Send the offer (Me) [00:05]
+            - [x] Book the room
+            """
+        let stub = StubTransport { _ in reply }
+        let prompt = SummaryPrompt(template: template, personalNotes: "", transcript: transcript(paragraphs: 6), meetingLanguage: "it")
+
+        let summary = try await Summarizer(client: client(stub), maxContextTokens: 32_000).summarize(prompt)
+
+        #expect(summary == """
+            ### Topics
+            - The budget is approved.
+              - Approved by the board.
+            - Rollout in two steps
+            - Long discussion
+            - Meeting at 10:30 on Friday, see [[Budget 2026]] and [the offer](https://x.example/offer)
+
+            ### Next steps
+            - [ ] Send the offer (Me)
+            - [x] Book the room
+            """)
+    }
+
+    @Test("in blocks the partial summaries keep their times for the merge, the final Summary loses them")
+    func citedTimesInBlocks() async throws {
+        let stub = StubTransport { index in "- point \(index + 1) [00:20]" }
+        let prompt = SummaryPrompt(template: template, personalNotes: "", transcript: transcript(paragraphs: 40), meetingLanguage: "it")
+
+        let summary = try await Summarizer(client: client(stub), maxContextTokens: 8_192).summarize(prompt)
+
+        let merge = try #require(stub.message(stub.requests.count - 1, "user"))
+        #expect(merge.contains("- point 1 [00:20]"))
+        #expect(summary == "- point \(stub.requests.count)")
+        // The last block may stop mid-sentence too.
+        #expect(stub.message(0, "system")?.contains("The Transcript may stop mid-sentence") == true)
+    }
+
     @Test("if it does not fit it is summarised in blocks, in order, and the partial summaries are merged with the Template")
     func chunked() async throws {
         let stub = StubTransport { index in "summary \(index + 1)" }

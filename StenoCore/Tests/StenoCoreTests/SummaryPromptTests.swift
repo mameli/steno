@@ -48,6 +48,26 @@ struct SummaryPromptTests {
         #expect(system.contains("personal notes"))
     }
 
+    @Test("every point must cite the time of the Transcript it comes from, and the model knows the times are removed")
+    func citedTimes() {
+        let system = SummaryPrompt(template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it")
+            .singleRequest()[0].content
+
+        #expect(system.contains("end it with the time of the Transcript passage it comes from"))
+        #expect(system.contains("`[12:34]`"))
+        #expect(system.contains("Leave out what you cannot point to"))
+        #expect(system.contains("Steno removes the times"))
+    }
+
+    @Test("a Transcript cut mid-sentence is summarised only up to where it stops")
+    func truncatedTranscript() {
+        let system = SummaryPrompt(template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it")
+            .singleRequest()[0].content
+
+        #expect(system.contains("The Transcript may stop mid-sentence"))
+        #expect(system.contains("do not complete talks, lists, steps or results that are announced but not reached"))
+    }
+
     let vocabulary = Vocabulary(fileContent: """
         - Steno = absteno, steno | our app for recording meetings
         - Scaleway = scale uai

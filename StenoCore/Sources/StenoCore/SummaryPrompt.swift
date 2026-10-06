@@ -125,11 +125,30 @@ public struct SummaryPrompt: Sendable {
         - Write the summary in \(languageName), whatever language the instructions are written in.
         - Follow the structure and instructions of the Template.
         - Do not invent: use only what is in the Transcript and in the personal notes.
+        - For every bullet, actions included, end it with the time of the Transcript passage it comes from, in square brackets as in the Transcript: `[12:34]`, or `[03:10] [07:45]` for several. Leave out what you cannot point to in the Transcript or in the personal notes. Steno removes the times before showing the summary: do not mention them otherwise.
+        - \(Self.truncationRule)
         - In the Transcript "Me" is the person who took the personal notes, "Others" are the other participants, not told apart.
         - The personal notes say what matters to the person who wrote them: give those topics priority.
         - Write actions as a `- [ ]` checklist, in the format the Template asks for; if it asks for none, `- [ ] who: what (when)`. Leave out who or when if they are not clear.
         - Reply with the summary in Markdown only, without preambles.
         """ + vocabularyBlock
+    }
+
+    /// A Recording stopped before the end of the Meeting leaves a Transcript cut mid-sentence: models
+    /// tend to complete what was announced (the rest of a talk, its results) from what they know.
+    private static let truncationRule = """
+        The Transcript may stop mid-sentence, when the recording ended before the meeting: summarise only what it contains, and do not complete talks, lists, steps or results that are announced but not reached.
+        """
+
+    /// The Summary without the times the model cites (`[12:34]`, `[03:10] [07:45]`, `([1:02:45])`,
+    /// `[04:00-06:30]`): they tie every point to the Transcript but are not meant to be read.
+    /// Checkboxes, wikilinks and Markdown links have no times in their brackets and stay.
+    public static func removingCitedTimes(_ summary: String) -> String {
+        let time = #"\d{1,2}(?::\d{2}){1,2}"#
+        let bracket = #"\[\#(time)(?:\s*[-–—,;]\s*\#(time))*\]"#
+        let run = #"\#(bracket)(?:[ \t]*[,;]?[ \t]*\#(bracket))*"#
+        let citedTimes = try! Regex(#"[ \t]*(?:\(\#(run)\)|\#(run))"#)
+        return summary.replacing(citedTimes, with: "")
     }
 
     /// The Vocabulary for the system prompt of any request, with a blank line before it; empty without one.
@@ -143,7 +162,8 @@ public struct SummaryPrompt: Sendable {
                 You are Steno. You receive part \(part) of \(count) of the Transcript of a meeting.
                 Summarise it faithfully and compactly, in \(languageName): topics, decisions, actions (who, what, when) and open questions, with timestamps.
                 In the Transcript "Me" is the person who took the personal notes, "Others" are the other participants.
-                Do not invent. Reply with the summary only.
+                Do not invent. \(Self.truncationRule)
+                Reply with the summary only.
                 """ + vocabularyBlock),
             ChatMessage(role: .user, content: """
                 # Personal notes

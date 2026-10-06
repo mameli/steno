@@ -14,7 +14,13 @@ public struct Summarizer: Sendable {
         self.maxContextTokens = max(maxContextTokens, Self.minimumContextTokens)
     }
 
+    /// The model cites the Transcript times of every point; they are removed here, after the
+    /// merge has used those of the partial summaries.
     public func summarize(_ prompt: SummaryPrompt) async throws -> String {
+        SummaryPrompt.removingCitedTimes(try await reply(prompt))
+    }
+
+    private func reply(_ prompt: SummaryPrompt) async throws -> String {
         if prompt.fits(maxContextTokens: maxContextTokens) {
             return try await client.complete(prompt.singleRequest())
         }
