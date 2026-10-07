@@ -40,4 +40,36 @@ struct EchoTests {
 
         #expect(removingEcho(others + me) == others + me)
     }
+
+    @Test("Me sentences 25 dB fainter than my loudest one are the others' voice left by echo cancellation")
+    func residueRemoved() {
+        let mine = Utterance(track: .me, start: 2, end: 5, text: "Tutto bene, partiamo.")
+        let quietReply = Utterance(track: .me, start: 20, end: 21, text: "Mm-hmm.")
+        let residue = Utterance(track: .me, start: 61, end: 62, text: "The five.")
+        let measured: [(utterance: Utterance, level: Double?)] = [
+            (mine, -12), (quietReply, -36.9), (residue, -41), (others[2], nil),
+        ]
+
+        #expect(removingEchoResidue(measured) == [mine, quietReply, others[2]])
+    }
+
+    @Test("without a level the sentence stays, and with no Me level nothing is removed")
+    func unknownLevelsKept() {
+        let me = Utterance(track: .me, start: 2, end: 5, text: "Tutto bene.")
+        let unmeasured = Utterance(track: .me, start: 6, end: 7, text: "Ok.")
+
+        #expect(removingEchoResidue([(me, -12), (unmeasured, nil)]) == [me, unmeasured])
+        #expect(removingEchoResidue([(unmeasured, nil), (others[0], nil)]) == [unmeasured, others[0]])
+    }
+
+    @Test("the level of a stretch of audio is the RMS of its loudest tenth of a second, in dBFS")
+    func peakLevelOfAudio() {
+        let sampleRate = 16_000.0
+        let silence = [Float](repeating: 0, count: 16_000)
+        let loud = [Float](repeating: 0.1, count: 1_600)
+
+        #expect(abs(peakLevel(of: (silence + loud + silence)[...], sampleRate: sampleRate) - (-20)) < 0.01)
+        #expect(peakLevel(of: silence[...], sampleRate: sampleRate) < -100)
+        #expect(abs(peakLevel(of: loud[..<400], sampleRate: sampleRate) - (-20)) < 0.01)
+    }
 }

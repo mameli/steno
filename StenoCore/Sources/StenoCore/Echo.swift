@@ -39,6 +39,41 @@ public func removingEcho(_ utterances: [Utterance]) -> [Utterance] {
     return utterances.indices.filter { !echo.contains($0) }.map { utterances[$0] }
 }
 
+/// My voice into my microphone peaks between -10 and -25 dBFS; what echo cancellation leaves of
+/// the others' voice peaks around -40, loud enough for the speech ranges and turned into random
+/// words ("The five.", "Oh yeah") in any language. Measured on 13 real Meetings: 25 dB below the
+/// loudest Me sentence removes that residue and keeps the faintest real replies by over 10 dB.
+private let maxBelowLoudest = 25.0
+
+/// Removes Me Utterances fainter than the loudest Me one by more than 25 dB: the others' voice
+/// left in the microphone by echo cancellation, too garbled for `removingEcho` to match their
+/// words. The reference is the loudest one, not a typical one, because in a Meeting where I
+/// barely speak most Me Utterances are residue. A `nil` level (not measured) keeps the Utterance.
+public func removingEchoResidue(_ measured: [(utterance: Utterance, level: Double?)]) -> [Utterance] {
+    let loudest = measured.filter { $0.utterance.track == .me }.compactMap(\.level).max()
+    return measured.filter { item in
+        guard item.utterance.track == .me, let loudest, let level = item.level else { return true }
+        return level >= loudest - maxBelowLoudest
+    }.map(\.utterance)
+}
+
+/// The loudness of a stretch of audio: the RMS of its loudest 100 ms (windows every 50 ms),
+/// in dBFS. A stretch shorter than 100 ms is one window.
+public func peakLevel(of samples: ArraySlice<Float>, sampleRate: Double) -> Double {
+    let window = Int(0.1 * sampleRate)
+    let hop = window / 2
+    var loudest: Float = 0
+    var start = samples.startIndex
+    repeat {
+        let slice = samples[start..<min(samples.endIndex, start + window)]
+        if !slice.isEmpty {
+            loudest = max(loudest, slice.reduce(0) { $0 + $1 * $1 } / Float(slice.count))
+        }
+        start += hop
+    } while start + window <= samples.endIndex
+    return 10 * log10(Double(loudest) + 1e-12)
+}
+
 private func words(_ text: String) -> [String] {
     text.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init)
 }

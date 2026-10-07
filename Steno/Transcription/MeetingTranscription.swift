@@ -88,7 +88,7 @@ actor MeetingTranscription {
 
         // The echo removal, the Speakers and the Vocabulary variants are applied here and not to
         // the cache: Retry on an old Recording benefits too.
-        var utterances = removingEcho(recording.segments.flatMap { bySegment[$0.fileName] ?? [] })
+        var utterances = removingEcho(removingEchoResidue(measuringMe(recording, bySegment, in: directory)))
         // Without the Speakers the Transcript keeps "Others": it is a warning, not a failure.
         var speakersProblem: String?
         if utterances.contains(where: { $0.track == .others }) {
@@ -105,6 +105,24 @@ actor MeetingTranscription {
         return Finished(
             url: url, transcript: transcript, language: language, failedSegments: failed, speakersProblem: speakersProblem
         )
+    }
+
+    /// The Utterances of every Segment with the peak level of the Me ones, measured on their audio
+    /// one Segment at a time. A Segment that cannot be read leaves its Utterances unmeasured.
+    private func measuringMe(
+        _ recording: Recording, _ bySegment: [String: [Utterance]], in directory: URL
+    ) -> [(utterance: Utterance, level: Double?)] {
+        recording.segments.flatMap { segment -> [(utterance: Utterance, level: Double?)] in
+            let utterances = bySegment[segment.fileName] ?? []
+            guard segment.track == .me, !utterances.isEmpty,
+                  let samples = try? Self.loadSamples(directory.appending(path: segment.fileName))
+            else { return utterances.map { ($0, nil) } }
+            return utterances.map { utterance in
+                let from = max(0, Int((utterance.start - segment.start) * Recording.sampleRate))
+                let to = min(samples.count, Int((utterance.end - segment.start) * Recording.sampleRate))
+                return (utterance, from < to ? peakLevel(of: samples[from..<to], sampleRate: Recording.sampleRate) : nil)
+            }
+        }
     }
 
     /// The voices of the whole Others Track, diarized in one pass so a voice keeps its number

@@ -51,6 +51,11 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 - [ ] **Recordings in Settings**: the space used matches the folder opened by *Show in Finder*; *Delete audio* asks for confirmation and brings it to zero.
 - [x] **Retry**: turn off the internet connection, record a short Meeting → "Processing failed" and ⚠️ in the note and in the menu; reconnect and *Retry* → Summary generated.
 
+## Echo residue
+
+- [ ] **Speakers without headphones**: a call on the Mac speakers where you mostly listen and reply now and then → the Transcript has your replies as Me, and no short English or nonsense Me sentences ("Oh yeah", "The five.") while the others talk.
+- [ ] **Quiet reply**: say "sì" or "mm-hmm" softly while the others talk → it stays in the Transcript.
+
 ## Speakers
 
 - [ ] **First use**: move `~/Library/Application Support/Steno/Models/fluidaudio/speaker-diarization` to the Trash, record a call with two or three other people → the Transcript has *Speaker 1*, *Speaker 2*… instead of *Others*, with the turns matching who spoke; the models are back in that folder.
