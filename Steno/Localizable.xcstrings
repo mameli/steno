@@ -903,6 +903,16 @@
         }
       }
     },
+    "Speakers not told apart: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partecipanti non distinti: %@"
+          }
+        }
+      }
+    },
     "Start meeting    ⌃⌥⌘R": {
       "localizations": {
         "it": {

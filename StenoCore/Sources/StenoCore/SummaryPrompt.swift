@@ -127,12 +127,23 @@ public struct SummaryPrompt: Sendable {
         - Do not invent: use only what is in the Transcript and in the personal notes.
         - For every bullet, actions included, end it with the time of the Transcript passage it comes from, in square brackets as in the Transcript: `[12:34]`, or `[03:10] [07:45]` for several. Leave out what you cannot point to in the Transcript or in the personal notes. Steno removes the times before showing the summary: do not mention them otherwise.
         - \(Self.truncationRule)
-        - In the Transcript "Me" is the person who took the personal notes, "Others" are the other participants, not told apart.
+        - \(Self.speakersRule)
         - The personal notes say what matters to the person who wrote them: give those topics priority.
-        - Write actions as a `- [ ]` checklist, in the format the Template asks for; if it asks for none, `- [ ] who: what (when)`. Leave out who or when if they are not clear.
+        - Write actions as a `- [ ]` checklist, in the format the Template asks for; if it asks for none, `- [ ] who: what (when)`. Leave out who or when if they are not clear, with nothing in their place.
         - Reply with the summary in Markdown only, without preambles.
         """ + vocabularyBlock
     }
+
+    /// Speakers are told apart by voice only: their names come from what is said, when it is clear.
+    private static let speakersRule = """
+        In the Transcript "Me" is the person who took the personal notes. The other participants are "Speaker 1", "Speaker 2"…, told apart by their voice: the same number is the same person throughout the Transcript, but a short reply can be given to the wrong one; "Others" is someone not told apart. A Speaker's name is the one they introduce themselves with, or the one they answer to when called: use it for what that Speaker says and takes on. Never write "Speaker N" in the summary: for a Speaker without a name, say who they are if it is clear (e.g. "the supplier's team"), otherwise leave out who.
+        """
+
+    /// In the summaries of the parts of a long Meeting a Speaker's name may only come up in
+    /// another part: the label is kept so the final summary can still name them.
+    private static let partialSpeakersRule = """
+        In the Transcript "Me" is the person who took the personal notes. The other participants are "Speaker 1", "Speaker 2"…, told apart by their voice: the same number is the same person in every part; "Others" is someone not told apart. A Speaker's name is the one they introduce themselves with, or the one they answer to when called: write "Speaker N (Name)" when it is clear, otherwise keep "Speaker N".
+        """
 
     /// A Recording stopped before the end of the Meeting leaves a Transcript cut mid-sentence: models
     /// tend to complete what was announced (the rest of a talk, its results) from what they know.
@@ -161,7 +172,7 @@ public struct SummaryPrompt: Sendable {
             ChatMessage(role: .system, content: """
                 You are Steno. You receive part \(part) of \(count) of the Transcript of a meeting.
                 Summarise it faithfully and compactly, in \(languageName): topics, decisions, actions (who, what, when) and open questions, with timestamps.
-                In the Transcript "Me" is the person who took the personal notes, "Others" are the other participants.
+                \(Self.partialSpeakersRule)
                 Do not invent. \(Self.truncationRule)
                 Reply with the summary only.
                 """ + vocabularyBlock),
@@ -180,6 +191,7 @@ public struct SummaryPrompt: Sendable {
             ChatMessage(role: .system, content: """
                 You are Steno. You receive the summaries of consecutive parts of the same meeting.
                 Merge them into a single faithful and compact summary, in \(languageName): topics, decisions, actions (who, what, when) and open questions, with timestamps.
+                "Speaker N" is the same person in every summary: keep it, with the name if one of them gives it.
                 Do not invent. Reply with the summary only.
                 """ + vocabularyBlock),
             ChatMessage(role: .user, content: """

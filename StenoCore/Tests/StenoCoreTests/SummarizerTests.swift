@@ -107,6 +107,20 @@ struct SummarizerTests {
         #expect(positions == positions.sorted())
     }
 
+    @Test("in blocks the partial summaries keep \"Speaker N\", so the final Summary can name a Speaker named in another block")
+    func speakersKeptAcrossBlocks() async throws {
+        let stub = StubTransport { index in "summary \(index + 1)" }
+        let prompt = SummaryPrompt(template: template, personalNotes: "", transcript: transcript(paragraphs: 40), meetingLanguage: "it")
+
+        _ = try await Summarizer(client: client(stub), maxContextTokens: 8_192).summarize(prompt)
+
+        let partialRules = try #require(stub.message(0, "system"))
+        #expect(partialRules.contains("otherwise keep \"Speaker N\""))
+        #expect(!partialRules.contains("Never write \"Speaker N\""))
+        let mergeRules = try #require(stub.message(stub.requests.count - 1, "system"))
+        #expect(mergeRules.contains("Never write \"Speaker N\" in the summary"))
+    }
+
     @Test("if even the partial summaries do not fit, they are merged in groups until they do")
     func hierarchicalMerge() async throws {
         // Every partial summary is long: with 120 paragraphs and the minimum context a direct merge does not fit.

@@ -16,6 +16,7 @@ final class MeetingController {
     private let recorder = MeetingRecorder()
     let models = TranscriptionModels()
     private let transcriber: LocalTranscriber
+    private let diarizer = SpeakerDiarizer()
     let processor: MeetingProcessor
     private var currentStenoID: UUID?
     private var now = Date()
@@ -48,7 +49,7 @@ final class MeetingController {
         transcriber = LocalTranscriber(models: models)
         AppSettings.registerDefaults()
         try? Vault.configured?.ensureDefaultTemplate()
-        processor = MeetingProcessor(transcriber: transcriber)
+        processor = MeetingProcessor(transcriber: transcriber, diarizer: diarizer)
         templateName = AppSettings.defaultTemplate
         Notifications.shared.configure()
         hotKey = GlobalHotKey { [weak self] in self?.toggle() }
@@ -110,7 +111,9 @@ final class MeetingController {
 
         now = Date()
         let model = TranscriptionModel.selected
-        let transcription = MeetingTranscription(transcriber: transcriber, model: model, language: AppSettings.forcedLanguage)
+        let transcription = MeetingTranscription(
+            transcriber: transcriber, diarizer: diarizer, model: model, language: AppSettings.forcedLanguage
+        )
         let started: MeetingRecorder.Started
         do {
             started = try recorder.start(at: now) { segment, directory in

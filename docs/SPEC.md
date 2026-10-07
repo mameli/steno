@@ -66,7 +66,8 @@ Personal use, one machine (M3 Pro, 18 GB, macOS 26). Meetings in Italian or Engl
 - Each Track is transcribed separately. The Utterances of the two Tracks are sorted by start time and merged into paragraphs (rules below).
 - A Segment that cannot be transcribed does not block the others: the Transcript is written with a gap and the error is reported.
 - Whisper only gets the **speech ranges** of each Segment: half-second windows with RMS above 0.004, pauses under 2 seconds absorbed, a quarter of a second of margin on each side. On silence, echo residue and distant voices Whisper makes up sentences ("Grazie.", dozens of times in the phase 1 test). Annotations such as `[BLANK_AUDIO]` or sentences in parentheses are dropped anyway. A speech range with at most 3 seconds of sound (pauses and margins excluded) whose whole text is a stock subtitle sentence ("Grazie.", "Thank you.", "Sottotitoli creati dalla comunità Amara.org"…) is dropped too: it is Whisper's reaction to a short noise such as a notification sound. A real isolated "Grazie." from the others is lost with it. Echo leaked into the microphone (speakers without headphones, while echo cancellation is still adapting) is removed when the Transcript is built: a run of Me Utterances (pauses under 2 seconds) of at least 3 words, 80% of which appear in the same order in what Others say within 5 seconds, is dropped. It is applied when the Transcript is built, not to the cache, so Retry cleans older Recordings too.
-- A Transcript paragraph joins consecutive Utterances of the same Track, but breaks after a pause longer than 30 seconds or when an Utterance starts more than 60 seconds after the paragraph's start: a new timestamp about every minute (a Whisper Utterance is at most 30 seconds long).
+- **Speakers**: the Others Track is diarized locally after its Segments are transcribed, with FluidAudio's offline pipeline (pyannote community-1, models of about 22 MB downloaded on first use to `Steno/Models/fluidaudio/speaker-diarization`). The Segments are joined in one temporary file, each at its start, so a voice keeps its number across Segments. Each Others Utterance takes the voice whose turns cover most of it; one that overlaps none (a short "ok" the diarizer did not count as speech) takes the voice of a turn within 2 seconds, otherwise it stays *Others*. Voices are numbered *Speaker 1*, *Speaker 2*… in the order they first speak in the Transcript. Diarization runs at every Processing, not cached (a 40-minute Meeting takes under 10 seconds); if it fails the Transcript keeps *Others* and the error is a warning. The Me Track is not diarized: it is one person.
+- A Transcript paragraph joins consecutive Utterances of the same Track and Speaker, but breaks after a pause longer than 30 seconds or when an Utterance starts more than 60 seconds after the paragraph's start: a new timestamp about every minute (a Whisper Utterance is at most 30 seconds long).
 - The **Vocabulary** variants are replaced with the term in the paragraph text, once the Utterances are merged (so a variant that crosses two Utterances of the same paragraph is found), when the Transcript is built, not in the cache: like the echo removal, a Retry with the audio uses the Vocabulary of that moment. A variant matches as a whole word (letters and digits on either side stop a match, an apostrophe or punctuation does not: `l'absteno` → `l'Steno`), ignoring case; the longest variant wins; the replacement is the term as written in the Vocabulary. It also applies with *Transcript* chosen as Summary Profile. A Regeneration does not touch the text already in the Vault.
 - The result of each Segment (language and Utterances) is saved next to the audio (`me-000.m4a.json`), so a new Processing does not transcribe again what is done.
 - **Models**: Large v3 Turbo (`openai_whisper-large-v3-v20240930_turbo_632MB`, 646 MB, default), Large v3 Turbo full (`…_turbo`, 1.6 GB) Small (`openai_whisper-small_216MB`, 217 MB) and NVIDIA Parakeet TDT 0.6B v3 (through FluidAudio, about 490 MB), all multilingual. Parakeet cannot be held to a language: it picks one per stretch of speech and on short, unclear replies can switch (e.g. to English or Portuguese); the Meeting language is read from its text with macOS's language recogniser. Its tokens are joined into sentences at final punctuation or after a 1.5 s pause. Settings → *Transcription* downloads them (with a percentage, then "Preparing…" while Parakeet is compiled), chooses the one in use and deletes the others; the model is changed rarely, so the menu bar does not offer it. A Meeting keeps the model it started with; Retry uses the one in use. The per-Segment cache records the model: Segments transcribed by another model are transcribed again.
@@ -82,10 +83,14 @@ steno_id: 6F1C…
 meeting: "[[2026-10-04 1430 - Title]]"
 language: it
 ---
-**[00:00] Others:** Buongiorno a tutti, partiamo dal…
+**[00:00] Speaker 1:** Buongiorno a tutti, partiamo dal…
 
 **[00:42] Me:** Sì, sul primo punto…
+
+**[00:47] Speaker 2:** Ok.
 ```
+
+Transcripts written before Speakers existed have *Others* instead and still read back.
 
 ## Meeting note
 

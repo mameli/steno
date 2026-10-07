@@ -48,6 +48,17 @@ struct SummaryPromptTests {
         #expect(system.contains("personal notes"))
     }
 
+    @Test("the model names a Speaker from what is said, never writes the number, and leaves no placeholder for who")
+    func speakers() {
+        let system = SummaryPrompt(template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it")
+            .singleRequest()[0].content
+
+        #expect(system.contains("\"Speaker 1\", \"Speaker 2\"…, told apart by their voice"))
+        #expect(system.contains("the one they introduce themselves with, or the one they answer to when called"))
+        #expect(system.contains("Never write \"Speaker N\" in the summary"))
+        #expect(system.contains("Leave out who or when if they are not clear, with nothing in their place"))
+    }
+
     @Test("every point must cite the time of the Transcript it comes from, and the model knows the times are removed")
     func citedTimes() {
         let system = SummaryPrompt(template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it")

@@ -4,13 +4,14 @@ import StenoCore
 /// Transcribes the Segments of a Meeting as they close and, at the stop, writes
 /// `transcript.md` in the Recording folder.
 actor MeetingTranscription {
-    /// The Transcript written, the language used (`nil` if there was no speech)
-    /// and the Segments that could not be transcribed.
+    /// The Transcript written, the language used (`nil` if there was no speech), the Segments
+    /// that could not be transcribed and why the others could not be told apart, if they could not.
     struct Finished {
         let url: URL
         let transcript: Transcript
         let language: String?
         let failedSegments: [String]
+        let speakersProblem: String?
     }
 
     /// Result of a Segment saved next to the audio: a new Processing does not redo it.
@@ -31,6 +32,7 @@ actor MeetingTranscription {
     private static let minimumSpeechToLockLanguage = 10.0
 
     private let transcriber: LocalTranscriber
+    private let diarizer: SpeakerDiarizer
     /// Fixed for the whole Meeting: Segments transcribed by another model are done again.
     private let model: TranscriptionModel
     private let forcedLanguage: String?
@@ -42,8 +44,9 @@ actor MeetingTranscription {
     private var pending: [String: Task<[Utterance], Error>] = [:]
 
     /// `language` is `nil` to detect it automatically.
-    init(transcriber: LocalTranscriber, model: TranscriptionModel, language: String?) {
+    init(transcriber: LocalTranscriber, diarizer: SpeakerDiarizer, model: TranscriptionModel, language: String?) {
         self.transcriber = transcriber
+        self.diarizer = diarizer
         self.model = model
         self.forcedLanguage = language
     }
@@ -83,14 +86,56 @@ actor MeetingTranscription {
             }
         }
 
-        // The echo removal and the Vocabulary variants are applied here and not to the cache:
-        // Retry on an old Recording benefits too.
-        let utterances = removingEcho(recording.segments.flatMap { bySegment[$0.fileName] ?? [] })
+        // The echo removal, the Speakers and the Vocabulary variants are applied here and not to
+        // the cache: Retry on an old Recording benefits too.
+        var utterances = removingEcho(recording.segments.flatMap { bySegment[$0.fileName] ?? [] })
+        // Without the Speakers the Transcript keeps "Others": it is a warning, not a failure.
+        var speakersProblem: String?
+        if utterances.contains(where: { $0.track == .others }) {
+            do {
+                utterances = assigningSpeakers(to: utterances, turns: try await othersTurns(recording, in: directory))
+            } catch {
+                speakersProblem = error.localizedDescription
+            }
+        }
         let url = directory.appending(path: Transcript.recordingCopyFileName)
         let transcript = Transcript(utterances: utterances, vocabulary: vocabulary)
         try transcript.markdown.write(to: url, atomically: true, encoding: .utf8)
         let language = locked ?? provisionalSegments.values.first?.language
-        return Finished(url: url, transcript: transcript, language: language, failedSegments: failed)
+        return Finished(
+            url: url, transcript: transcript, language: language, failedSegments: failed, speakersProblem: speakersProblem
+        )
+    }
+
+    /// The voices of the whole Others Track, diarized in one pass so a voice keeps its number
+    /// across Segments. The Segments are joined in a temporary file, each at its start with
+    /// silence before it, so turn times are Meeting times and a long Meeting is not held in memory.
+    private func othersTurns(_ recording: Recording, in directory: URL) async throws -> [SpeakerTurn] {
+        let timeline = FileManager.default.temporaryDirectory.appending(path: "steno-others-\(UUID().uuidString).caf")
+        defer { try? FileManager.default.removeItem(at: timeline) }
+        do { // The file is closed at the end of this block, before diarization reads it.
+            let format = AVAudioFormat(standardFormatWithSampleRate: Recording.sampleRate, channels: 1)!
+            let file = try AVAudioFile(forWriting: timeline, settings: format.settings)
+            let othersSegments = recording.segments.filter { $0.track == .others }.sorted { $0.start < $1.start }
+            for segment in othersSegments {
+                // An unreadable Segment (the one open during a crash) has no Utterances to label either.
+                guard let samples = try? Self.loadSamples(directory.appending(path: segment.fileName)) else { continue }
+                let silence = max(0, Int(segment.start * Recording.sampleRate) - Int(file.length))
+                try Self.write([Float](repeating: 0, count: silence), to: file, format: format)
+                try Self.write(samples, to: file, format: format)
+            }
+        }
+        return try await diarizer.turns(inFile: timeline)
+    }
+
+    private static func write(_ samples: [Float], to file: AVAudioFile, format: AVAudioFormat) throws {
+        guard !samples.isEmpty else { return }
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count)) else {
+            throw TranscriptionError.unreadableAudio(file.url.lastPathComponent)
+        }
+        buffer.frameLength = AVAudioFrameCount(samples.count)
+        samples.withUnsafeBufferPointer { buffer.floatChannelData![0].update(from: $0.baseAddress!, count: samples.count) }
+        try file.write(from: buffer)
     }
 
     private func startIfNeeded(_ segment: Segment, in directory: URL) {

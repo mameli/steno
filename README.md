@@ -15,6 +15,7 @@ A macOS menu bar app that records your meetings, transcribes them **on your Mac*
 It was built as an alternative to Granola for people whose company does not allow meeting audio and text to leave the EU.
 
 - **Records both sides of a call**: your microphone and the system audio (Meet, Zoom, Teams, any app), with echo cancellation.
+- **Tells the others apart**: the Transcript shows Speaker 1, Speaker 2… by voice, and the Summary names them when the call makes clear who they are.
 - **Transcribes locally** with OpenAI Whisper or NVIDIA Parakeet: the audio never leaves the Mac. Choose between Whisper Large v3 Turbo (default), its full version, Small and Parakeet v3 in *Settings → Transcription*.
 - **Summarises with a provider you pick**: llama.cpp, Ollama or LM Studio on your Mac, or a remote OpenAI-compatible API. You can also skip the Summary and keep only the Transcript.
 - **Writes Markdown into Obsidian**: one note per meeting, opened when the meeting starts so you can take notes, plus a separate Transcript file. Your own notes are kept and used to steer the Summary.

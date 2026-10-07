@@ -6,25 +6,35 @@ public struct Utterance: Codable, Equatable, Sendable {
     public let start: TimeInterval
     public let end: TimeInterval
     public let text: String
+    /// The Speaker of an Others Utterance, once told apart (see `assigningSpeakers`).
+    public let speaker: Int?
 
-    public init(track: Track, start: TimeInterval, end: TimeInterval, text: String) {
+    public init(track: Track, start: TimeInterval, end: TimeInterval, text: String, speaker: Int? = nil) {
         self.track = track
         self.start = start
         self.end = end
         self.text = text
+        self.speaker = speaker
     }
 }
 
-/// Consecutive Utterances of the same Track, shown with a single timestamp.
+/// Consecutive Utterances of the same Track and Speaker, shown with a single timestamp.
 public struct Paragraph: Equatable, Sendable {
     public let track: Track
     public let start: TimeInterval
     public let text: String
+    public let speaker: Int?
 
-    public init(track: Track, start: TimeInterval, text: String) {
+    public init(track: Track, start: TimeInterval, text: String, speaker: Int? = nil) {
         self.track = track
         self.start = start
         self.text = text
+        self.speaker = speaker
+    }
+
+    /// Who speaks, as the Transcript shows it: `Me`, `Speaker 2`, or `Others` when not told apart.
+    public var label: String {
+        if track == .others, let speaker { "Speaker \(speaker)" } else { track.label }
     }
 }
 
@@ -48,23 +58,27 @@ public struct Transcript: Sendable {
         let spoken = utterances.compactMap { utterance -> Utterance? in
             let text = utterance.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty, !Self.isAnnotation(text) else { return nil }
-            return Utterance(track: utterance.track, start: utterance.start, end: utterance.end, text: text)
+            return Utterance(
+                track: utterance.track, start: utterance.start, end: utterance.end, text: text, speaker: utterance.speaker
+            )
         }
         for utterance in spoken.sorted(by: { $0.start < $1.start }) {
             defer { lastEnd = utterance.end }
-            if let last = paragraphs.last, last.track == utterance.track,
+            if let last = paragraphs.last, last.track == utterance.track, last.speaker == utterance.speaker,
                utterance.start - lastEnd <= Self.paragraphBreak,
                utterance.start - last.start < Self.maxParagraphDuration {
                 paragraphs[paragraphs.count - 1] = Paragraph(
-                    track: last.track, start: last.start, text: last.text + " " + utterance.text
+                    track: last.track, start: last.start, text: last.text + " " + utterance.text, speaker: last.speaker
                 )
             } else {
-                paragraphs.append(Paragraph(track: utterance.track, start: utterance.start, text: utterance.text))
+                paragraphs.append(Paragraph(
+                    track: utterance.track, start: utterance.start, text: utterance.text, speaker: utterance.speaker
+                ))
             }
         }
         let replaceVariants = vocabulary.variantReplacer()
         self.paragraphs = paragraphs.map {
-            Paragraph(track: $0.track, start: $0.start, text: replaceVariants($0.text))
+            Paragraph(track: $0.track, start: $0.start, text: replaceVariants($0.text), speaker: $0.speaker)
         }
     }
 
@@ -79,26 +93,28 @@ public struct Transcript: Sendable {
 
     static func markdown(of paragraphs: [Paragraph]) -> String {
         paragraphs
-            .map { "**[\(elapsedLabel($0.start))] \($0.track.label):** \($0.text)\n" }
+            .map { "**[\(elapsedLabel($0.start))] \($0.label):** \($0.text)\n" }
             .joined(separator: "\n")
     }
 
     /// Reads back the Transcript file written in the Vault (even if edited by hand): lines
-    /// that do not start with `**[time] Me/Others:**` stay in the paragraph they are in.
+    /// that do not start with `**[time] Me/Speaker N/Others:**` stay in the paragraph they are in.
     public static func parse(vaultFile: String) -> (transcript: Transcript, language: String?) {
         let markdown = MarkdownLines(vaultFile)
         let language = markdown.value("language")
 
-        let header = /^\*\*\[(\d+(?::\d{2}){1,2})\] (Me|Others):\*\* ?(.*)$/
+        let header = /^\*\*\[(\d+(?::\d{2}){1,2})\] (Me|Others|Speaker (\d+)):\*\* ?(.*)$/
         var paragraphs: [Paragraph] = []
         for line in markdown.lines[markdown.bodyStart...] {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if let match = trimmed.wholeMatch(of: header) {
                 let seconds = match.1.split(separator: ":").reduce(0) { $0 * 60 + (Double($1) ?? 0) }
                 let track: Track = match.2 == "Me" ? .me : .others
-                paragraphs.append(Paragraph(track: track, start: seconds, text: String(match.3)))
+                paragraphs.append(Paragraph(track: track, start: seconds, text: String(match.4), speaker: match.3.flatMap { Int($0) }))
             } else if !trimmed.isEmpty, let last = paragraphs.popLast() {
-                paragraphs.append(Paragraph(track: last.track, start: last.start, text: last.text + " " + trimmed))
+                paragraphs.append(Paragraph(
+                    track: last.track, start: last.start, text: last.text + " " + trimmed, speaker: last.speaker
+                ))
             }
         }
         return (Transcript(paragraphs: paragraphs), language)

@@ -51,6 +51,13 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 - [ ] **Recordings in Settings**: the space used matches the folder opened by *Show in Finder*; *Delete audio* asks for confirmation and brings it to zero.
 - [x] **Retry**: turn off the internet connection, record a short Meeting → "Processing failed" and ⚠️ in the note and in the menu; reconnect and *Retry* → Summary generated.
 
+## Speakers
+
+- [ ] **First use**: move `~/Library/Application Support/Steno/Models/fluidaudio/speaker-diarization` to the Trash, record a call with two or three other people → the Transcript has *Speaker 1*, *Speaker 2*… instead of *Others*, with the turns matching who spoke; the models are back in that folder.
+- [ ] **Names in the Summary**: in a call where someone is called by name and answers → the Summary uses that name for their points and actions; for someone never named it leaves out who and never writes "Speaker N".
+- [ ] **Offline**: with the diarization models deleted and no internet, *Retry* on a Meeting with its audio → the Transcript has *Others*, the menu and the notification say "Speakers not told apart: …", the Summary is written anyway.
+- [ ] **Old Transcript**: *Retry* without audio on a Meeting processed before Speakers existed → the Summary is made from the Transcript with *Others*.
+
 ## Vocabulary
 
 - [ ] **Open Vocabulary**: Settings → *Vocabulary* → *Open Vocabulary* → `Meetings/_Vocabulary.md` is created with the explanation text and opens in Obsidian; *Entries* says 0. Add `- Scaleway = scale uai | our EU cloud provider`, go back to the Settings window → *Entries* says 1.

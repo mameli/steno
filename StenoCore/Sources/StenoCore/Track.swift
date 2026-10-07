@@ -5,7 +5,7 @@ public enum Track: String, Codable, Sendable, CaseIterable {
     /// System audio.
     case others
 
-    /// How the Track appears in the Transcript.
+    /// How the Track appears in the Transcript; Others only where the Speakers are not told apart.
     public var label: String {
         switch self {
         case .me: "Me"

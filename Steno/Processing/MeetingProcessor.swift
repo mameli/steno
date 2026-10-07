@@ -18,6 +18,7 @@ final class MeetingProcessor {
     }
 
     private let transcriber: LocalTranscriber
+    private let diarizer: SpeakerDiarizer
     /// Transcriptions started while recording, to be completed at the stop.
     private var liveTranscriptions: [UUID: MeetingTranscription] = [:]
     /// In-memory copy of the state of Meetings being recorded: if saving to disk fails,
@@ -32,8 +33,9 @@ final class MeetingProcessor {
     /// The Transcript in the Vault or, without a Vault, the copy in the Recording folder.
     private(set) var lastTranscriptURL: URL?
 
-    init(transcriber: LocalTranscriber) {
+    init(transcriber: LocalTranscriber, diarizer: SpeakerDiarizer) {
         self.transcriber = transcriber
+        self.diarizer = diarizer
     }
 
     static func directory(for stenoID: UUID) -> URL {
@@ -185,7 +187,9 @@ final class MeetingProcessor {
         save(record)
         let directory = Self.directory(for: record.stenoID)
         let transcription = liveTranscriptions.removeValue(forKey: record.stenoID)
-            ?? MeetingTranscription(transcriber: transcriber, model: .selected, language: AppSettings.forcedLanguage)
+            ?? MeetingTranscription(
+                transcriber: transcriber, diarizer: diarizer, model: .selected, language: AppSettings.forcedLanguage
+            )
 
         let recording: Recording
         do {
@@ -206,6 +210,9 @@ final class MeetingProcessor {
             finished = try await transcription.finish(recording, in: directory, vocabulary: vocabulary)
             if let failedSegments = finished?.failedSegments, !failedSegments.isEmpty {
                 warnings.append(String(localized: "Incomplete transcript: \(failedSegments.joined(separator: "; "))"))
+            }
+            if let speakersProblem = finished?.speakersProblem {
+                warnings.append(String(localized: "Speakers not told apart: \(speakersProblem)"))
             }
             lastTranscriptURL = finished?.url
         } catch {
