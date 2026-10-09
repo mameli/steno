@@ -59,7 +59,7 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 ## Speakers
 
 - [ ] **First use**: move `~/Library/Application Support/Steno/Models/fluidaudio/speaker-diarization` to the Trash, record a call with two or three other people → the Transcript has *Speaker 1*, *Speaker 2*… instead of *Others*, with the turns matching who spoke; the models are back in that folder.
-- [ ] **Names in the Summary**: in a call where someone is called by name and answers → the Summary uses that name for their points and actions; for someone never named it leaves out who and never writes "Speaker N".
+- [ ] **Names in the Summary**: in a call where someone is called by name and answers → the Summary uses that name for their points and actions; for someone never named it writes "Speaker N" only as who takes on an action, never in a heading or in the other bullets.
 - [ ] **Offline**: with the diarization models deleted and no internet, *Retry* on a Meeting with its audio → the Transcript has *Others*, the menu and the notification say "Speakers not told apart: …", the Summary is written anyway.
 - [ ] **Old Transcript**: *Retry* without audio on a Meeting processed before Speakers existed → the Summary is made from the Transcript with *Others*.
 

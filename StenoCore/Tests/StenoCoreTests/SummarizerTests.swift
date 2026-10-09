@@ -116,9 +116,9 @@ struct SummarizerTests {
 
         let partialRules = try #require(stub.message(0, "system"))
         #expect(partialRules.contains("otherwise keep \"Speaker N\""))
-        #expect(!partialRules.contains("Never write \"Speaker N\""))
+        #expect(!partialRules.contains("only as who takes on an action"))
         let mergeRules = try #require(stub.message(stub.requests.count - 1, "system"))
-        #expect(mergeRules.contains("Never write \"Speaker N\" in the summary"))
+        #expect(mergeRules.contains("write \"Speaker N\" only as who takes on an action"))
     }
 
     @Test("if even the partial summaries do not fit, they are merged in groups until they do")

@@ -1,5 +1,5 @@
 import Testing
-import StenoCore
+@testable import StenoCore
 
 @Suite("Summary prompt")
 struct SummaryPromptTests {
@@ -48,14 +48,34 @@ struct SummaryPromptTests {
         #expect(system.contains("personal notes"))
     }
 
-    @Test("the model names a Speaker from what is said, never writes the number, and leaves no placeholder for who")
+    @Test("Me is written with the user's name, also in the partial requests of a long Meeting")
+    func meByName() {
+        let prompt = SummaryPrompt(
+            template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it", userName: " Mario Rossi "
+        )
+
+        #expect(prompt.singleRequest()[0].content.contains("\"Me\" is Mario Rossi, the person who took the personal notes"))
+        #expect(prompt.singleRequest()[0].content.contains("never as \"Me\""))
+        #expect(prompt.partialRequests(maxContextTokens: 8_192)[0][0].content.contains("\"Me\" is Mario Rossi"))
+    }
+
+    @Test("without the user's name the model still never writes Me")
+    func meWithoutName() {
+        let system = SummaryPrompt(template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it", userName: "")
+            .singleRequest()[0].content
+
+        #expect(system.contains("Never write \"Me\" in the summary"))
+    }
+
+    @Test("the model names a Speaker from what is said, writes the number only on an action, and leaves no placeholder for who")
     func speakers() {
         let system = SummaryPrompt(template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it")
             .singleRequest()[0].content
 
         #expect(system.contains("\"Speaker 1\", \"Speaker 2\"…, told apart by their voice"))
         #expect(system.contains("the one they introduce themselves with, or the one they answer to when called"))
-        #expect(system.contains("Never write \"Speaker N\" in the summary"))
+        #expect(system.contains("write \"Speaker N\" only as who takes on an action"))
+        #expect(system.contains("never \"Speaker N\" in a heading or in the other bullets"))
         #expect(system.contains("Leave out who or when if they are not clear, with nothing in their place"))
     }
 

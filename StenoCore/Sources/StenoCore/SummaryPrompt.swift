@@ -10,16 +10,19 @@ public struct SummaryPrompt: Sendable {
     private let transcript: Transcript
     private let meetingLanguage: String?
     private let vocabulary: Vocabulary
+    private let userName: String?
 
+    /// `userName` is who "Me" is in the Transcript, so the Summary names them as the others call them.
     public init(
         template: Template, personalNotes: String, transcript: Transcript, meetingLanguage: String?,
-        vocabulary: Vocabulary = .empty
+        vocabulary: Vocabulary = .empty, userName: String? = nil
     ) {
         self.template = template
         self.personalNotes = personalNotes
         self.transcript = transcript
         self.meetingLanguage = meetingLanguage
         self.vocabulary = vocabulary
+        self.userName = userName.map { $0.trimmingCharacters(in: .whitespaces) }.flatMap { $0.isEmpty ? nil : $0 }
     }
 
     /// Language code: the Template's, else the Meeting's, else Italian.
@@ -127,6 +130,7 @@ public struct SummaryPrompt: Sendable {
         - Do not invent: use only what is in the Transcript and in the personal notes.
         - For every bullet, actions included, end it with the time of the Transcript passage it comes from, in square brackets as in the Transcript: `[12:34]`, or `[03:10] [07:45]` for several. Leave out what you cannot point to in the Transcript or in the personal notes. Steno removes the times before showing the summary: do not mention them otherwise.
         - \(Self.truncationRule)
+        - \(meRule)
         - \(Self.speakersRule)
         - The personal notes say what matters to the person who wrote them: give those topics priority.
         - Write actions as a `- [ ]` checklist, in the format the Template asks for; if it asks for none, `- [ ] who: what (when)`. Leave out who or when if they are not clear, with nothing in their place.
@@ -134,15 +138,30 @@ public struct SummaryPrompt: Sendable {
         """ + vocabularyBlock
     }
 
+    /// "Me" is a Track label, not a name: written as is it reads "Me ha esplorato…", and without the
+    /// user's name the model takes "Mario", as the others call them, for someone else.
+    private var meRule: String {
+        if let userName {
+            """
+            In the Transcript "Me" is \(userName), the person who took the personal notes; the others may call them by their first name. In the summary write about them by name like any other participant, never as "Me".
+            """
+        } else {
+            """
+            In the Transcript "Me" is the person who took the personal notes. Never write "Me" in the summary: if a name they answer to is clear, use it, otherwise leave out who.
+            """
+        }
+    }
+
     /// Speakers are told apart by voice only: their names come from what is said, when it is clear.
+    /// An unnamed Speaker keeps the label only on an action, where "who" is worth a guess for the reader.
     private static let speakersRule = """
-        In the Transcript "Me" is the person who took the personal notes. The other participants are "Speaker 1", "Speaker 2"…, told apart by their voice: the same number is the same person throughout the Transcript, but a short reply can be given to the wrong one; "Others" is someone not told apart. A Speaker's name is the one they introduce themselves with, or the one they answer to when called: use it for what that Speaker says and takes on. Never write "Speaker N" in the summary: for a Speaker without a name, say who they are if it is clear (e.g. "the supplier's team"), otherwise leave out who.
+        The other participants are "Speaker 1", "Speaker 2"…, told apart by their voice: the same number is the same person throughout the Transcript, but a short reply can be given to the wrong one; "Others" is someone not told apart. A Speaker's name is the one they introduce themselves with, or the one they answer to when called: use it for what that Speaker says and takes on. For a Speaker without a name, say who they are if it is clear (e.g. "the supplier's team"). Otherwise write "Speaker N" only as who takes on an action, and leave out who everywhere else: never "Speaker N" in a heading or in the other bullets.
         """
 
     /// In the summaries of the parts of a long Meeting a Speaker's name may only come up in
     /// another part: the label is kept so the final summary can still name them.
     private static let partialSpeakersRule = """
-        In the Transcript "Me" is the person who took the personal notes. The other participants are "Speaker 1", "Speaker 2"…, told apart by their voice: the same number is the same person in every part; "Others" is someone not told apart. A Speaker's name is the one they introduce themselves with, or the one they answer to when called: write "Speaker N (Name)" when it is clear, otherwise keep "Speaker N".
+        The other participants are "Speaker 1", "Speaker 2"…, told apart by their voice: the same number is the same person in every part; "Others" is someone not told apart. A Speaker's name is the one they introduce themselves with, or the one they answer to when called: write "Speaker N (Name)" when it is clear, otherwise keep "Speaker N".
         """
 
     /// A Recording stopped before the end of the Meeting leaves a Transcript cut mid-sentence: models
@@ -172,6 +191,7 @@ public struct SummaryPrompt: Sendable {
             ChatMessage(role: .system, content: """
                 You are Steno. You receive part \(part) of \(count) of the Transcript of a meeting.
                 Summarise it faithfully and compactly, in \(languageName): topics, decisions, actions (who, what, when) and open questions, with timestamps.
+                \(meRule)
                 \(Self.partialSpeakersRule)
                 Do not invent. \(Self.truncationRule)
                 Reply with the summary only.

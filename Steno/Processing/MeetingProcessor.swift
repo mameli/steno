@@ -413,7 +413,7 @@ final class MeetingProcessor {
             let client = try ChatClient(profile: profile)
             let prompt = SummaryPrompt(
                 template: template, personalNotes: personalNotes, transcript: transcript, meetingLanguage: language,
-                vocabulary: vocabulary
+                vocabulary: vocabulary, userName: NSFullUserName()
             )
             let text = try await Summarizer(client: client, maxContextTokens: profile.maxContextTokens).summarize(prompt)
             let reply = try? await client.complete(MeetingTitle.request(summary: text, language: prompt.summaryLanguage, vocabulary: vocabulary))
