@@ -31,7 +31,8 @@ struct LaunchAtLoginToggle: View {
     var body: some View {
         Toggle("Open at login", isOn: Binding(
             get: { status == .enabled || status == .requiresApproval },
-            set: setEnabled
+            // A closure, not `setEnabled` itself: Swift 6.3 (Xcode 26) crashes converting the method.
+            set: { setEnabled($0) }
         ))
         // The status can change in System Settings while this window is closed.
         .onAppear { status = SMAppService.mainApp.status }
@@ -98,7 +99,7 @@ struct CalendarToggle: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Toggle("Use the calendar", isOn: Binding(get: { useCalendar }, set: setEnabled))
+            Toggle("Use the calendar", isOn: Binding(get: { useCalendar }, set: { setEnabled($0) }))
             Text("The Meeting note takes the name and the participants of the event in progress.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
