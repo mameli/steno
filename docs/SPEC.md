@@ -22,17 +22,17 @@ Personal use, one machine (M3 Pro, 18 GB, macOS 26). Meetings in Italian or Engl
 - Recording kept for 7 days, **Processing** queue
 - English user interface with Italian translation (string catalogs); English Vault format
 
-**Out of v1** (most likely first)
-1. Calendar (title and participants from EventKit)
-2. Remote transcription (local is enough: 12 minutes in 50 seconds on an M3 Pro); Profiles will then also get the transcription Role
-3. Room capture mode (microphone only, for in-person meetings)
-4. "Looks like a call" notification when an app grabs the microphone
-5. Real diarization (Person 1, 2…)
-6. Ready-made Provider presets
-7. Notarized distribution (paid Developer ID). v1 is distributed as a zip on GitHub Releases, signed with a self-signed certificate (`scripts/release.sh`): other Macs open it with "Open Anyway"
-8. Automatic stop on silence at the end of the call (was phase 6)
-9. Vocabulary for the recognition engines (a prompt for Whisper; CTC boosting for Parakeet, tried and not usable in Italian). See ADR 0005.
-10. An LLM pass that corrects the Transcript before the Summary (only if the variants and the Summary prompt prove not enough)
+**In v2**: see [v2](#v2) at the end. Speakers (*Speaker 1*, *Speaker 2*…) were added to v1 after its release ([ADR 0006](adr/0006-speakers-by-local-diarization.md)).
+
+**Out of v2** (most likely first)
+1. Remote transcription (local is enough: 12 minutes in 50 seconds on an M3 Pro); Profiles will then also get the transcription Role
+2. Ready-made Provider presets
+3. Notarized distribution (paid Developer ID). Steno is distributed as a zip on GitHub Releases, signed with a self-signed certificate (`scripts/release.sh`): other Macs open it with "Open Anyway"
+4. Automatic stop on silence at the end of the call (was phase 6): v2 suggests the stop when the call app releases the microphone instead
+5. Vocabulary for the recognition engines (a prompt for Whisper; CTC boosting for Parakeet, tried and not usable in Italian). See ADR 0005.
+6. An LLM pass that corrects the Transcript before the Summary (only if the variants and the Summary prompt prove not enough)
+
+Dropped: Room capture mode (microphone only, for in-person meetings). Steno is for calls.
 
 ## Main flow
 
@@ -72,7 +72,7 @@ Personal use, one machine (M3 Pro, 18 GB, macOS 26). Meetings in Italian or Engl
 - The result of each Segment (language and Utterances) is saved next to the audio (`me-000.m4a.json`), so a new Processing does not transcribe again what is done.
 - **Models**: Large v3 Turbo (`openai_whisper-large-v3-v20240930_turbo_632MB`, 646 MB, default), Large v3 Turbo full (`…_turbo`, 1.6 GB) Small (`openai_whisper-small_216MB`, 217 MB) and NVIDIA Parakeet TDT 0.6B v3 (through FluidAudio, about 490 MB), all multilingual. Parakeet cannot be held to a language: it picks one per stretch of speech and on short, unclear replies can switch (e.g. to English or Portuguese); the Meeting language is read from its text with macOS's language recogniser. Its tokens are joined into sentences at final punctuation or after a 1.5 s pause. Settings → *Transcription* downloads them (with a percentage, then "Preparing…" while Parakeet is compiled), chooses the one in use and deletes the others; the model is changed rarely, so the menu bar does not offer it. A Meeting keeps the model it started with; Retry uses the one in use. The per-Segment cache records the model: Segments transcribed by another model are transcribed again.
 - **Local**: WhisperKit; the model in use is downloaded on first use to `~/Library/Application Support/Steno/Models` and prepared while the first Meeting is in progress. The menu shows "Downloading transcription model… N%", then "Preparing transcription model, first time only" (macOS compiles it for the Neural Engine: a few minutes, once) or, on later launches, "Loading transcription model…". A marker file written after the download makes an interrupted download resume instead of loading a partial model.
-- **Language**: `auto` or forced `it`/`en` (`defaults write dev.mameli.steno language it`). Detection runs on up to 30 seconds of speech only (the voice ranges, no silence) of the first Segment that has any, from either Track, picking only between Italian and English, and holds for the whole Meeting. It is locked only when there are at least 10 seconds of speech: on a short "ok" Whisper can pick the wrong language and then *translate* instead of transcribing. With less speech the detected language is provisional: it applies to that Segment only, detection is tried again on the next one, and at the end of Processing the Segments transcribed with a provisional language different from the locked one are transcribed again. If the language is never locked (very little speech in the whole Meeting) the provisional results stay. Detecting on the first 30 seconds of audio is not enough: in the real phase 1 test the Me Track started with 80 seconds of near silence and Whisper classified it as Swedish. The language used is saved in every Segment's cache; if a different language is forced later, the Segment is transcribed again.
+- **Language**: detected among the Meeting languages ticked in Settings, or forced when only one is ticked (v1: `auto` or forced `it`/`en`, see [Meeting languages](#meeting-languages)). Detection runs on up to 30 seconds of speech only (the voice ranges, no silence) of the first Segment that has any, from either Track, picking only among those languages, and holds for the whole Meeting. It is locked only when there are at least 10 seconds of speech: on a short "ok" Whisper can pick the wrong language and then *translate* instead of transcribing. With less speech the detected language is provisional: it applies to that Segment only, detection is tried again on the next one, and at the end of Processing the Segments transcribed with a provisional language different from the locked one are transcribed again. If the language is never locked (very little speech in the whole Meeting) the provisional results stay. Detecting on the first 30 seconds of audio is not enough: in the real phase 1 test the Me Track started with 80 seconds of near silence and Whisper classified it as Swedish. The language used is saved in every Segment's cache; if a different language is forced later, the Segment is transcribed again.
 - **Remote** (after v1): `POST {baseURL}/audio/transcriptions` (multipart, one Segment per request) through the OpenAI-compatible adapter. Only at the stop: during the call the audio never leaves the Mac.
 
 File `<Vault>/Meetings/Transcripts/2026-10-04 1430 - <Title> (transcript).md` (a copy without frontmatter stays in `transcript.md` in the Recording folder while the audio is there). A new Processing of the same Meeting overwrites the existing file, found through `steno_id`:
@@ -178,7 +178,9 @@ One entry per line, as a Markdown list item:
 - Transcription: models (Download, Use, Delete; the one in use cannot be deleted)
 - Recordings: days the audio is kept (default 7), space used, "Show in Finder", "Delete audio" (all concluded Meetings, with confirmation). A shorter retention applies at the next cleanup, not on the spot.
 
-From the terminal only (`defaults write dev.mameli.steno language it`), to move into the Settings window if it is needed: the Meeting language (`auto` | `it` | `en`). Echo cancellation is always on.
+- Meeting languages (see [Meeting languages](#meeting-languages)), in the *Transcription* section
+
+Echo cancellation is always on.
 
 The global shortcut is fixed: ⌃⌥⌘R. If another app already uses it, the menu says so.
 
@@ -186,8 +188,8 @@ The folders are fixed: `Meetings/`, `Meetings/Transcripts/`, `Meetings/_Template
 
 ## Menu bar
 
-- **Idle**: Start meeting (shortcut) · Template ▸ (hidden when the Summary Profile is *Transcript*) · Summary Profile ▸ (*Transcript* or a Profile) · Recent meetings ▸ (Open note · Retry) · Settings… · Quit
-- **Recording**: only a red dot in the bar; in the menu "Recording · duration" · Stop · Template ▸ · Settings…
+- **Idle**: Start meeting (shortcut) · Template ▸ (hidden when the Summary Profile is *Transcript*) · Summary Profile ▸ (*Transcript* or a Profile) · Recent meetings ▸ (Open note · Retry, then Show all in Obsidian…) · "Steno x.y.z is available…" when there is one · Settings… · Quit
+- **Recording**: only a red dot in the bar (a star for a second after a Mark); in the menu "Recording · duration" · the silent Track warnings · Stop · Mark this moment (⌃⌥⌘M) · "Marked moments: N" · Template ▸ · Settings…
 - **Processing**: hourglass in the bar; in the menu "Processing… (N more queued)"
 
 The interface is in English in the code and translated to Italian in `Steno/Localizable.xcstrings` and `Steno/InfoPlist.xcstrings`: macOS picks the language of the system. Error messages from `StenoCore` are looked up in the app's catalog too. The structure Steno writes into the Vault (headings, markers, keys, labels, status lines such as "Summary not generated:") is always in English; the error detail after it follows the app language, like the menu.
@@ -235,3 +237,77 @@ Every phase closes with a concrete check.
 - **Renaming with the note open in Obsidian**: Obsidian does not follow the rename: it closes the note and shows the previous one. Steno reads in `.obsidian/workspace.json` which note Obsidian shows. If, before the rename, it was the Meeting note, Steno waits 3 seconds for Obsidian to notice the rename and then, if Obsidian does not show the renamed note, opens it and checks again (up to 3 times). If Obsidian is not the frontmost app it waits (up to an hour) for the user to come back to it instead of bringing it forward. A note Steno opens meanwhile (a new Meeting, a notification) cancels the wait. If the user was looking at another note, nothing happens. Correctness over speed: the note may appear a few seconds after the notification.
 - **Short Vocabulary terms and variants**: a variant is replaced everywhere it appears as a whole word, so a variant that is also a real word ("acne" for "Acme") would corrupt correct text; whoever writes the Vocabulary chooses the variants. Short terms that sound like common words ("Steno" next to "meno", "sono") are one more reason there is no engine biasing: the Summary prompt resolves them from context instead.
 - **Whisper model download**: WhisperKit downloads the weights from Hugging Face. It is not Meeting data and does not affect ADR 0001, but it needs the network on first launch.
+
+## v2
+
+What comes after v1, in implementation order. Every item keeps ADR 0001: nothing about a Meeting leaves the Mac except towards the Summary Provider.
+
+### Silent Track warning
+
+A Track that records nothing is noticed during the Meeting, not after it.
+
+- While recording, each Track remembers when it last received sound: a buffer whose peak is above -80 dBFS. The silence Steno writes itself to fill holes does not count. A real microphone never goes that low (its noise floor is higher); a Track that stays below it is digital silence: permission revoked, a device that delivers nothing, a broken tap.
+- **Menu**: while a Track has had no sound for 2 minutes, a line under the timer says so: "⚠️ No sound from the microphone for N min" or "⚠️ No sound from the system audio for N min". It disappears as soon as sound comes back. During a quiet stretch of a call (the others say nothing) the line for the system audio can appear: it is information, not an error.
+- **Notification**: once per Track per Meeting, only when the Track has had no sound **since the start** for 2 minutes, the case where the Meeting would be lost: "No sound from the system audio" · "Steno has recorded nothing from the call for 2 minutes. Check System Settings → Privacy & Security → Screen & System Audio Recording." (for the microphone: "… → Microphone").
+- Nothing is written in the note; the Recording goes on.
+
+### Meeting languages
+
+- Settings → *Transcription* → *Meeting languages*: a list of languages to tick. Detection picks only among those ticked; with a single one ticked, it is forced and there is no detection. At least one stays ticked. Default: Italian and English (what v1 did).
+- The languages offered are those both engines handle: the 25 of Parakeet v3 (Bulgarian, Croatian, Czech, Danish, Dutch, English, Estonian, Finnish, French, German, Greek, Hungarian, Italian, Latvian, Lithuanian, Maltese, Polish, Portuguese, Romanian, Russian, Slovak, Slovenian, Spanish, Swedish, Ukrainian). Whisper detects among them through its language probabilities, Parakeet's text through macOS's language recogniser constrained to them.
+- The Settings list has Italian and English first, then the others by name. When nothing can be detected the fallback is the first ticked language in that order, as Italian was in v1.
+- The `language` key of v1 (`defaults write … language it`) is migrated once: `it` or `en` becomes that single language ticked, `auto` Italian and English.
+- The hallucination filter and everything else that depends on the language stay as they are; the stock sentences list may need new entries for new languages.
+
+### Calendar
+
+- Settings → *General* → *Use the calendar* (off by default). Turning it on asks macOS for full access to the calendars (`NSCalendarsFullAccessUsageDescription`); if it is denied the switch goes back off and a line explains how to allow it in System Settings.
+- At the start Steno looks, among the events of all calendars, for the one in progress: not all-day, not cancelled, not declined by the user, starting at most 10 minutes from now and not yet ended. Among several, the one that has attendees, then the one whose start is closest to now. Reading the calendar never delays the start of the recording.
+- With an event:
+  - the Meeting note is named after it: `2026-10-04 1430 - Weekly sync.md`. Not having the provisional name, it is not renamed with the generated title (the title call is skipped);
+  - its frontmatter gets `participants`, the attendees except the user and except rooms and resources, by name or, without one, by email, written only at creation like `date` and `tags` (the user can correct it):
+    ```yaml
+    participants:
+      - "Mario Rossi"
+      - "Anna Bianchi"
+    ```
+- **Summary**: `participants` is read from the note's frontmatter at every Processing and Regeneration (so a correction counts on Retry) and, if there are any, goes into the user message as `# Invited participants`. Rule: the invitation says who was asked to join, not who spoke; a Speaker's name can be one of them only when the Transcript makes it clear, or when there is exactly one invited participant and one Speaker. The names also help spell names right, like the Vocabulary.
+- No calendar, no permission, no event: everything as in v1.
+
+### Speaker names by hand
+
+When the Summary cannot tell who a Speaker is, the user can say it:
+
+- In the Meeting note's frontmatter, a `speakers` list written by the user (Steno never writes it), one entry per Speaker, with the Vocabulary's `=`:
+  ```yaml
+  speakers:
+    - Speaker 1 = Mario Rossi
+    - Speaker 3 = Anna Bianchi
+  ```
+- Read at every Processing and Regeneration. In the Transcript the paragraphs of a named Speaker show `**[00:42] Mario Rossi (Speaker 1):**`: the number stays, so the name can be changed and Retry applies the new one, and the Transcript is read back by its number. Speakers not listed stay *Speaker N*. Entries that do not match `Speaker <number> = <name>` are ignored.
+- A Regeneration (audio deleted) rewrites the labels of the Transcript in the Vault with the names of that moment; the text stays as it is.
+- **Summary**: the rule says that "Name (Speaker N)" is a name given by the user, certain: use it always.
+- Typical use: after the first Summary, read the Transcript, add `speakers`, *Retry*.
+
+### Marked moments
+
+- While recording, **⌃⌥⌘M** (from any app) or *Mark this moment* in the menu marks the current time as important. For a second the red dot in the menu bar becomes a star; the menu shows "Marked moments: N". No sound: it would be recorded in the Others Track.
+- The marks are saved in `marks.json` in the Recording folder (seconds from the start of the Meeting), at once, so they survive a crash.
+- In the Transcript the paragraph a mark falls in (the last one starting at or before it, of either Track) starts with ⭐: `**[12:30] Speaker 2:** ⭐ So the deadline…`. The mark usually comes right after what mattered. Several marks in the same paragraph give one star. Being in the Transcript, the stars survive the audio and a Regeneration.
+- **Summary**: rule "Paragraphs starting with ⭐ were marked as important by the user during the meeting: give them priority, like the topics of the personal notes."
+- If ⌃⌥⌘M is taken by another app, the menu says so, like for ⌃⌥⌘R.
+
+### Call start and end
+
+- Settings → *General* → *Suggest recording when a call starts* (on by default).
+- Every 3 seconds Steno reads which processes are using an audio input (Core Audio process objects, `kAudioProcessPropertyIsRunningInput`; nothing is recorded or listened to). Steno itself is ignored. The app is named after the running app that owns the process (a browser helper becomes the browser).
+- **Start**: when idle and another app has been using the microphone for 15 seconds without a break, one notification per stretch of use: "Looks like a call in Zoom" · "Start recording?", with a *Start meeting* button; clicking the notification starts too. Dictation apps used for a few seconds do not trigger it.
+- **End**: while recording, if at some point another app was using the microphone and now none has been for 30 seconds, one notification: "The call seems over" · "Stop recording?", with a *Stop meeting* button. It comes again only if an app takes the microphone back and releases it again. Steno never stops by itself.
+- These notifications are not sent while the corresponding action makes no sense (start while recording, stop while idle); a stale button does nothing.
+
+### Smaller changes
+
+- **Update check**: Settings → *General* → *Check for updates* (on by default). At launch and once a day Steno asks GitHub for the latest release (`api.github.com/repos/mameli/steno/releases/latest`, no data about the user or the Meetings, only the request). If its version (`v0.1.6` → `0.1.6`) is newer than the running one, the menu shows "Steno 0.1.6 is available…", which opens the release page. The README lists this request in "Where your data is".
+- **Recent meetings → Show all in Obsidian…**: opens Obsidian's search on the Vault with the Meeting notes (`[steno_id] -path:"Meetings/Transcripts"`).
+- **CI**: GitHub Actions runs `swift test` on `StenoCore` and builds the app (signed ad hoc) at every push and pull request.
+- **Code**: `SettingsView.swift` split by section; `MeetingProcessor.swift` without the retention and the notifications of the outcome, moved to their own types.
