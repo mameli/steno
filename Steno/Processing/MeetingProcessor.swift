@@ -6,8 +6,8 @@ import os
 private let logger = Logger(subsystem: "dev.mameli.steno", category: "processing")
 
 /// Meeting Processing: one at a time, in arrival order, with the state saved in the Recording
-/// folder (`processing.json`) so it resumes after a restart or a crash. Also handles Retry,
-/// notifications and audio retention.
+/// folder (`processing.json`) so it resumes after a restart or a crash. Also handles Retry and
+/// starts the cleanup of expired audio (`RecordingStorage`).
 @MainActor
 @Observable
 final class MeetingProcessor {
@@ -124,7 +124,7 @@ final class MeetingProcessor {
         guard var record = record(stenoID) else { return }
         record.templateName = templateName
         record.summaryProfile = profile
-        if Self.hasAudio(Self.directory(for: stenoID)) {
+        if RecordingStorage.hasAudio(Self.directory(for: stenoID)) {
             guard (try? record.queueForRetry()) != nil else { return }
             save(record)
             enqueueProcessing(record)
@@ -280,25 +280,16 @@ final class MeetingProcessor {
         if problems.isEmpty {
             record.status = .completed
             lastError = warnings.isEmpty ? nil : warnings.joined(separator: " ")
-            if Vault.configured == nil {
-                Notifications.shared.notify(
-                    title: String(localized: "Transcript ready"),
-                    body: String(localized: "Set up the Vault to get the Summary."), note: nil
-                )
-            } else {
-                let body = warnings.isEmpty ? noteName : "\(noteName) (\(warnings.joined(separator: " ")))"
-                let title = record.summaryProfile == nil ? String(localized: "Transcript ready") : String(localized: "Summary ready")
-                Notifications.shared.notify(title: title, body: body, note: record.noteURL)
-            }
         } else {
             let reason = problems.joined(separator: " ")
             record.status = .failed(reason: reason)
             lastError = reason
             logger.error("\(reason, privacy: .public)")
-            Notifications.shared.notify(
-                title: String(localized: "Processing failed"), body: "\(noteName): \(reason)", note: record.noteURL
-            )
         }
+        Notifications.shared.processingFinished(
+            noteName: noteName, note: record.noteURL, hasVault: Vault.configured != nil,
+            hasSummary: record.summaryProfile != nil, problems: problems, warnings: warnings
+        )
         save(record)
     }
 
@@ -486,11 +477,6 @@ final class MeetingProcessor {
         if meetings != recent { recent = meetings }
     }
 
-    private static func hasAudio(_ directory: URL) -> Bool {
-        let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
-        return files.contains { $0.pathExtension == "m4a" }
-    }
-
     /// Rebuilds `recording.json` of a Recording interrupted by a crash from the Segment
     /// lists; the end is the last write of a Segment.
     private func recoverRecording(_ record: ProcessingRecord, in directory: URL) throws {
@@ -509,46 +495,9 @@ final class MeetingProcessor {
             .save(inFolder: directory)
     }
 
-    /// Deletes the audio of expired Recordings (see `deleteAudio(olderThanDays:)`).
+    /// Deletes the audio of expired Recordings (see `RecordingStorage.deleteAudio(olderThanDays:)`).
     func cleanUpExpiredRecordings() {
-        Self.deleteAudio(olderThanDays: AppSettings.retentionDays)
+        RecordingStorage.deleteAudio(olderThanDays: AppSettings.retentionDays)
         refreshRecent()
-    }
-
-    /// Deletes the audio files of concluded Recordings older than `days` days (0: all of them),
-    /// with the transcription caches and the `transcript.md` copy. Meetings still pending are
-    /// kept. The manifests stay: the Meeting stays among the recent ones and Retry makes the
-    /// Summary again from the Transcript in the Vault.
-    static func deleteAudio(olderThanDays days: Int) {
-        let folders = (try? FileManager.default.contentsOfDirectory(
-            at: MeetingRecorder.recordingsDirectory, includingPropertiesForKeys: nil
-        )) ?? []
-        let items = folders.compactMap { folder -> Retention.Item? in
-            guard let stenoID = UUID(uuidString: folder.lastPathComponent) else { return nil }
-            guard let record = try? ProcessingRecord.load(fromFolder: folder) else { return nil }
-            return Retention.Item(stenoID: stenoID, startedAt: record.startedAt, status: record.status)
-        }
-        let kept = Set([Recording.fileName, ProcessingRecord.fileName] + Track.allCases.map(Segment.listFileName(for:)))
-        for stenoID in Retention.expired(items, now: Date(), days: days) {
-            let folder = directory(for: stenoID)
-            let files = (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
-            for file in files where !kept.contains(file.lastPathComponent) {
-                try? FileManager.default.removeItem(at: file)
-            }
-        }
-    }
-
-    /// Bytes of audio kept, shown in Settings.
-    static func audioSize() -> Int64 {
-        let enumerator = FileManager.default.enumerator(
-            at: MeetingRecorder.recordingsDirectory, includingPropertiesForKeys: [.fileSizeKey]
-        )
-        var total: Int64 = 0
-        while let file = enumerator?.nextObject() as? URL {
-            if file.pathExtension == "m4a" {
-                total += Int64((try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
-            }
-        }
-        return total
     }
 }
