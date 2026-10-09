@@ -157,7 +157,7 @@ struct SummaryPromptTests {
     }
 }
 
-@Suite("Summary prompt: names and Marks")
+@Suite("Summary prompt: names, participants and Marks")
 struct SummaryPromptPeopleTests {
     let template = Template(fileName: "Notes", content: "Be brief.")
     let transcript = Transcript(utterances: [
@@ -176,6 +176,31 @@ struct SummaryPromptPeopleTests {
         #expect(named.partialRequests(maxContextTokens: 8_192)[0][0].content.contains("\"Name (Speaker N)\""))
         #expect(named.singleRequest()[1].content.contains("**[00:00] Anna Bianchi (Speaker 1):**"))
         #expect(!unnamed.singleRequest()[0].content.contains("Name (Speaker N)"))
+    }
+
+    @Test("invited participants go in the user message after the notes, with the rule not to guess from them")
+    func participants() {
+        let prompt = SummaryPrompt(
+            template: template, personalNotes: "- budget", transcript: transcript, meetingLanguage: "it",
+            participants: ["Anna Bianchi", "Luca Verdi"]
+        )
+
+        #expect(prompt.singleRequest()[1].content.contains("""
+            # Personal notes
+            - budget
+
+            # Invited participants
+            - Anna Bianchi
+            - Luca Verdi
+
+            # Transcript
+            """))
+        #expect(prompt.singleRequest()[0].content.contains("not who spoke"))
+        #expect(prompt.singleRequest()[0].content.contains("exactly one invited participant and one Speaker"))
+        #expect(prompt.partialRequests(maxContextTokens: 8_192)[0][1].content.contains("# Invited participants\n- Anna Bianchi"))
+        let without = SummaryPrompt(template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it")
+        #expect(!without.singleRequest()[1].content.contains("Invited participants"))
+        #expect(!without.singleRequest()[0].content.contains("invited"))
     }
 
     @Test("starred paragraphs get priority, in the single and in the partial requests")

@@ -11,11 +11,13 @@ public struct SummaryPrompt: Sendable {
     private let meetingLanguage: String?
     private let vocabulary: Vocabulary
     private let userName: String?
+    private let participants: [String]
 
     /// `userName` is who "Me" is in the Transcript, so the Summary names them as the others call them.
+    /// `participants`: who the calendar event invited, as the Meeting note lists them now.
     public init(
         template: Template, personalNotes: String, transcript: Transcript, meetingLanguage: String?,
-        vocabulary: Vocabulary = .empty, userName: String? = nil
+        vocabulary: Vocabulary = .empty, userName: String? = nil, participants: [String] = []
     ) {
         self.template = template
         self.personalNotes = personalNotes
@@ -23,6 +25,7 @@ public struct SummaryPrompt: Sendable {
         self.meetingLanguage = meetingLanguage
         self.vocabulary = vocabulary
         self.userName = userName.map { $0.trimmingCharacters(in: .whitespaces) }.flatMap { $0.isEmpty ? nil : $0 }
+        self.participants = participants
     }
 
     /// Language code: the Template's, else the Meeting's, else Italian.
@@ -131,7 +134,7 @@ public struct SummaryPrompt: Sendable {
         - For every bullet, actions included, end it with the time of the Transcript passage it comes from, in square brackets as in the Transcript: `[12:34]`, or `[03:10] [07:45]` for several. Leave out what you cannot point to in the Transcript or in the personal notes. Steno removes the times before showing the summary: do not mention them otherwise.
         - \(Self.truncationRule)
         - \(meRule)
-        - \(Self.speakersRule)\(namedSpeakersRule.map { "\n- " + $0 } ?? "")
+        - \(Self.speakersRule)\(namedSpeakersRule.map { "\n- " + $0 } ?? "")\(participantsRule.map { "\n- " + $0 } ?? "")
         - The personal notes say what matters to the person who wrote them: give those topics priority.\(marksRule.map { "\n- " + $0 } ?? "")
         - Write actions as a `- [ ]` checklist, in the format the Template asks for; if it asks for none, `- [ ] who: what (when)`. Leave out who or when if they are not clear, with nothing in their place.
         - Reply with the summary in Markdown only, without preambles.
@@ -169,6 +172,14 @@ public struct SummaryPrompt: Sendable {
         guard transcript.hasNamedSpeakers else { return nil }
         return """
             "Name (Speaker N)" in the Transcript is a name the user gave that Speaker: it is certain, always write that name for what they say and take on.
+            """
+    }
+
+    /// Who was invited is not who spoke: a guess by elimination would put words in the wrong mouth.
+    private var participantsRule: String? {
+        guard !participants.isEmpty else { return nil }
+        return """
+            The invited participants are who the calendar invitation asked to join, not who spoke, and some may not have joined: a Speaker's name can be one of them only when the Transcript makes it clear, or when there is exactly one invited participant and one Speaker. Use them to spell names right.
             """
     }
 
@@ -215,7 +226,7 @@ public struct SummaryPrompt: Sendable {
             ChatMessage(role: .user, content: """
                 # Personal notes
                 \(notesOrNone)
-
+                \(participantsBlock)
                 # Transcript, part \(part) of \(count)
                 \(transcript)
                 """),
@@ -246,8 +257,14 @@ public struct SummaryPrompt: Sendable {
         \(template.body)
 
         # Personal notes
-        \(notesOrNone)
+        \(notesOrNone)\(participantsBlock.isEmpty ? "" : "\n\n" + participantsBlock.trimmingCharacters(in: .newlines))
         """
+    }
+
+    /// The invited participants as a section of the user message, with a blank line after it; empty without any.
+    private var participantsBlock: String {
+        guard !participants.isEmpty else { return "" }
+        return "\n# Invited participants\n" + participants.map { "- \($0)" }.joined(separator: "\n") + "\n"
     }
 
     private var notesOrNone: String {

@@ -17,6 +17,7 @@ struct SettingsView: View {
         Form {
             Section {
                 LaunchAtLoginToggle()
+                CalendarToggle()
             } header: {
                 // The header of the first Section, so the icon scrolls away with the rest.
                 VStack(alignment: .leading, spacing: 16) {
@@ -175,6 +176,45 @@ private struct LaunchAtLoginToggle: View {
             self.error = error.localizedDescription
         }
         status = SMAppService.mainApp.status
+    }
+}
+
+/// Names the Meeting note after the calendar event in progress and lists its participants.
+/// Turning it on asks macOS for access to the calendars; without it the switch goes back off.
+private struct CalendarToggle: View {
+    @AppStorage(AppSettings.useCalendarKey) private var useCalendar = false
+    @State private var isDenied = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Toggle("Use the calendar", isOn: Binding(get: { useCalendar }, set: setEnabled))
+            Text("The Meeting note takes the name and the participants of the event in progress.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        // Access can be revoked in System Settings while Steno is running.
+        .onAppear { if useCalendar && !MeetingCalendar.isAuthorized { useCalendar = false } }
+        if isDenied {
+            HStack {
+                Text("Allow Steno in System Settings → Privacy & Security → Calendars.").foregroundStyle(.secondary)
+                Spacer()
+                Button("Open Calendars") {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!)
+                }
+            }
+        }
+    }
+
+    private func setEnabled(_ isEnabled: Bool) {
+        guard isEnabled else {
+            useCalendar = false
+            return
+        }
+        Task {
+            let granted = await MeetingCalendar.requestAccess()
+            useCalendar = granted
+            isDenied = !granted
+        }
     }
 }
 

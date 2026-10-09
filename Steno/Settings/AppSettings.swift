@@ -7,6 +7,8 @@ enum AppSettings {
     /// v1's single language (`it`, `en`, `auto`), read only to migrate it to `meetingLanguagesKey`.
     private static let languageKey = "language"
     private static let meetingLanguagesKey = "meetingLanguages"
+    /// Also used by `@AppStorage` in Settings.
+    static let useCalendarKey = "useCalendar"
     private static let openInObsidianKey = "openInObsidian"
     /// Also used by `@AppStorage` in the menu: it must follow Profiles added or deleted in Settings.
     static let summaryProfilesKey = "summaryProfiles"
@@ -62,6 +64,11 @@ enum AppSettings {
                 ?? MeetingLanguages.migrated(fromLanguageSetting: UserDefaults.standard.string(forKey: languageKey))
         }
         set { UserDefaults.standard.set(MeetingLanguages.normalized(newValue), forKey: meetingLanguagesKey) }
+    }
+
+    /// Name the Meeting note after the calendar event in progress and list its participants.
+    static var useCalendar: Bool {
+        UserDefaults.standard.bool(forKey: useCalendarKey)
     }
 
     /// Off only in automated tests, which write to a test Vault Obsidian does not know.

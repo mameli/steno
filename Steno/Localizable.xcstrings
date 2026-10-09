@@ -1436,6 +1436,46 @@
           }
         }
       }
+    },
+    "Use the calendar": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa il calendario"
+          }
+        }
+      }
+    },
+    "The Meeting note takes the name and the participants of the event in progress.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La nota della riunione prende il nome e i partecipanti dell'evento in corso."
+          }
+        }
+      }
+    },
+    "Allow Steno in System Settings → Privacy & Security → Calendars.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti Steno in Impostazioni di Sistema → Privacy e sicurezza → Calendari."
+          }
+        }
+      }
+    },
+    "Open Calendars": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri Calendari"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -5,5 +5,8 @@
 	<!-- With the Hardened Runtime, the microphone is denied without this. -->
 	<key>com.apple.security.device.audio-input</key>
 	<true/>
+	<!-- With the Hardened Runtime, the calendars are denied without this. -->
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
 </dict>
 </plist>

@@ -31,6 +31,26 @@ struct SpeakerNamesTests {
         #expect(note("speakers: [Speaker 2 = Luca Verdi]").speakerNames == [2: "Luca Verdi"])
     }
 
+    @Test("the invited participants are written at the start and read back, also after the user edits them")
+    func participants() {
+        let created = MeetingNote.initial(
+            stenoID: stenoID, startedAt: Date(timeIntervalSince1970: 0), participants: ["Mario Rossi", "Anna \"Annie\" Bianchi"],
+            timeZone: TimeZone(identifier: "Europe/Rome")!
+        )
+
+        #expect(created.content.contains("""
+            tags: [meeting]
+            participants:
+              - "Mario Rossi"
+              - "Anna \\"Annie\\" Bianchi"
+            ---
+            """))
+        #expect(created.participants == ["Mario Rossi", "Anna \"Annie\" Bianchi"])
+        #expect(note("participants: [Mario Rossi, 'Luca Verdi']").participants == ["Mario Rossi", "Luca Verdi"])
+        #expect(MeetingNote.initial(stenoID: stenoID, startedAt: Date()).participants.isEmpty)
+        #expect(!MeetingNote.initial(stenoID: stenoID, startedAt: Date()).content.contains("participants"))
+    }
+
     let transcript = Transcript(utterances: [
         Utterance(track: .others, start: 0, end: 4, text: "Good morning.", speaker: 1),
         Utterance(track: .me, start: 5, end: 8, text: "Hi."),

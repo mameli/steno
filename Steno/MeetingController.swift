@@ -257,7 +257,9 @@ final class MeetingController {
     private func createMeetingNote(stenoID: UUID, startedAt: Date) -> URL? {
         guard let vault = Vault.configured else { return nil }
         do {
-            let url = try vault.createMeetingNote(stenoID: stenoID, startedAt: startedAt)
+            // Read after the recording has started: the calendar never delays it.
+            let event = MeetingCalendar.eventInProgress(at: startedAt)
+            let url = try vault.createMeetingNote(stenoID: stenoID, startedAt: startedAt, event: event)
             if AppSettings.openInObsidian {
                 Vault.openNewFileInObsidian(url)
             }

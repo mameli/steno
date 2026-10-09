@@ -11,6 +11,16 @@
         }
       }
     },
+    "NSCalendarsFullAccessUsageDescription": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steno dà alla nota della riunione il nome dell'evento in corso ed elenca chi è stato invitato."
+          }
+        }
+      }
+    },
     "NSMicrophoneUsageDescription": {
       "localizations": {
         "it": {

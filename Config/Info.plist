@@ -24,9 +24,11 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>LSUIElement</key>
 	<true/>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Steno records your voice during meetings to transcribe it.</string>
 	<key>NSAudioCaptureUsageDescription</key>
 	<string>Steno records the audio of the other meeting participants to transcribe it.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Steno names the meeting note after the event in progress and lists who was invited.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Steno records your voice during meetings to transcribe it.</string>
 </dict>
 </plist>

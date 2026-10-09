@@ -47,12 +47,19 @@ public struct MeetingNote: Equatable, Sendable {
         self.content = MarkdownLines(content).text
     }
 
-    public static func initial(stenoID: UUID, startedAt: Date, timeZone: TimeZone = .current) -> MeetingNote {
-        MeetingNote(content: """
+    /// `participants`: the invited participants of the calendar event, if there is one. Like `date`
+    /// and `tags` they are written only here and belong to the user afterwards.
+    public static func initial(
+        stenoID: UUID, startedAt: Date, participants: [String] = [], timeZone: TimeZone = .current
+    ) -> MeetingNote {
+        let participantsEntry = participants.isEmpty ? "" : "\nparticipants:" + participants.map {
+            "\n  - \"\($0.replacingOccurrences(of: "\\", with: "").replacingOccurrences(of: "\"", with: "\\\""))\""
+        }.joined()
+        return MeetingNote(content: """
             ---
             steno_id: \(stenoID.uuidString)
             date: \(DateFormatter.posix("yyyy-MM-dd'T'HH:mm", timeZone: timeZone).string(from: startedAt))
-            tags: [meeting]
+            tags: [meeting]\(participantsEntry)
             ---
             \(managedStart)
             ⏺ Recording in progress: the summary will appear here after you stop.
@@ -81,6 +88,11 @@ public struct MeetingNote: Equatable, Sendable {
             names[number] = String(match.2)
         }
         return names
+    }
+
+    /// The invited participants written at the start from the calendar, as the user left them.
+    public var participants: [String] {
+        MarkdownLines(content).list("participants") ?? []
     }
 
     /// Replaces the text between the Managed section markers with `body`.

@@ -88,19 +88,21 @@ struct Vault {
 
     // MARK: - Meeting notes and Transcripts
 
-    /// Creates the Meeting note with the provisional title. Never creates the Vault folder:
-    /// if it is missing (volume not mounted) it fails, and the note is created at the end of Processing.
-    func createMeetingNote(stenoID: UUID, startedAt: Date) throws -> URL {
+    /// Creates the Meeting note named after the calendar event, if there is one, otherwise with the
+    /// provisional title (replaced by the generated one at the end of Processing). Never creates the
+    /// Vault folder: if it is missing (volume not mounted) it fails, and the note is created at the
+    /// end of Processing.
+    func createMeetingNote(stenoID: UUID, startedAt: Date, event: CalendarEvent? = nil) throws -> URL {
         guard FileManager.default.fileExists(atPath: root.path(percentEncoded: false)) else {
             throw VaultError.unreachable(root.path(percentEncoded: false))
         }
         try FileManager.default.createDirectory(at: meetingsFolder, withIntermediateDirectories: true)
         let name = VaultNaming.available(
-            VaultNaming.noteName(startedAt: startedAt, title: VaultNaming.defaultTitle),
+            VaultNaming.noteName(startedAt: startedAt, title: event?.title ?? VaultNaming.defaultTitle),
             taken: Self.noteNames(in: meetingsFolder)
         )
         let url = meetingsFolder.appending(path: name + ".md")
-        let note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt)
+        let note = MeetingNote.initial(stenoID: stenoID, startedAt: startedAt, participants: event?.participants ?? [])
         try note.content.write(to: url, atomically: true, encoding: .utf8)
         return url
     }

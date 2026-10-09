@@ -355,11 +355,16 @@ final class MeetingProcessor {
         vocabulary: Vocabulary,
         writeNote: (URL, MeetingNote.SummaryOutcome, [Int: String]) throws -> Void
     ) async throws -> (URL, String?) {
-        // Read now, not at the start: the user may have named Speakers.
+        // Read now, not at the start: the user may have named Speakers or fixed the participants.
         let note = try vault.meetingNote(at: noteURL)
         let speakerNames = note.speakerNames
+        // A note named after its calendar event, or renamed by the user, keeps its name: no title to ask for.
+        let wantsTitle = vault.isInMeetingsFolder(noteURL) && VaultNaming.renamedNoteName(
+            current: noteURL.deletingPathExtension().lastPathComponent, startedAt: record.startedAt, title: VaultNaming.defaultTitle
+        ) != nil
         let (summary, title) = await summarize(
             transcript.naming(speakerNames), language: language, personalNotes: note.personalNotes,
+            participants: note.participants, wantsTitle: wantsTitle,
             template: vault.template(named: record.templateName), profile: record.summaryProfile, vocabulary: vocabulary
         )
         let rename = renameIfProvisional(noteURL, title: title, startedAt: record.startedAt, in: vault)
@@ -396,8 +401,8 @@ final class MeetingProcessor {
     /// Summary and title for the rename. A missing title is not an error: the note keeps its
     /// provisional name.
     private func summarize(
-        _ transcript: Transcript, language: String?, personalNotes: String, template: Template,
-        profile: ProviderProfile?, vocabulary: Vocabulary
+        _ transcript: Transcript, language: String?, personalNotes: String, participants: [String], wantsTitle: Bool,
+        template: Template, profile: ProviderProfile?, vocabulary: Vocabulary
     ) async -> (MeetingNote.SummaryOutcome, String?) {
         var profile = profile
         var isTestProfile = false
@@ -420,10 +425,12 @@ final class MeetingProcessor {
             let client = try ChatClient(profile: profile)
             let prompt = SummaryPrompt(
                 template: template, personalNotes: personalNotes, transcript: transcript, meetingLanguage: language,
-                vocabulary: vocabulary, userName: NSFullUserName()
+                vocabulary: vocabulary, userName: NSFullUserName(), participants: participants
             )
             let text = try await Summarizer(client: client, maxContextTokens: profile.maxContextTokens).summarize(prompt)
-            let reply = try? await client.complete(MeetingTitle.request(summary: text, language: prompt.summaryLanguage, vocabulary: vocabulary))
+            let reply = wantsTitle
+                ? try? await client.complete(MeetingTitle.request(summary: text, language: prompt.summaryLanguage, vocabulary: vocabulary))
+                : nil
             return (.written(text: text, template: template.name, provider: profile.displayName), reply.flatMap(MeetingTitle.clean))
         } catch {
             logger.error("Summary not generated: \(error, privacy: .public)")
