@@ -15,9 +15,9 @@ public struct Summarizer: Sendable {
     }
 
     /// The model cites the Transcript times of every point; they are removed here, after the
-    /// merge has used those of the partial summaries.
+    /// merge has used those of the partial summaries, together with any star of a marked paragraph.
     public func summarize(_ prompt: SummaryPrompt) async throws -> String {
-        SummaryPrompt.removingCitedTimes(try await reply(prompt))
+        SummaryPrompt.removingMarks(SummaryPrompt.removingCitedTimes(try await reply(prompt)))
     }
 
     private func reply(_ prompt: SummaryPrompt) async throws -> String {

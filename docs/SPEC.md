@@ -294,7 +294,7 @@ When the Summary cannot tell who a Speaker is, the user can say it:
 - While recording, **⌃⌥⌘M** (from any app) or *Mark this moment* in the menu marks the current time as important. For a second the red dot in the menu bar becomes a star; the menu shows "Marked moments: N". No sound: it would be recorded in the Others Track.
 - The marks are saved in `marks.json` in the Recording folder (seconds from the start of the Meeting), at once, so they survive a crash.
 - In the Transcript the paragraph a mark falls in (the last one starting at or before it, of either Track) starts with ⭐: `**[12:30] Speaker 2:** ⭐ So the deadline…`. The mark usually comes right after what mattered. Several marks in the same paragraph give one star. Being in the Transcript, the stars survive the audio and a Regeneration.
-- **Summary**: rule "Paragraphs starting with ⭐ were marked as important by the user during the meeting: give them priority, like the topics of the personal notes."
+- **Summary**: rule "Paragraphs starting with ⭐ were marked as important by the user during the meeting: give them priority, like the topics of the personal notes." Stars the model copies into the Summary are removed with the cited times.
 - If ⌃⌥⌘M is taken by another app, the menu says so, like for ⌃⌥⌘R.
 
 ### Call start and end

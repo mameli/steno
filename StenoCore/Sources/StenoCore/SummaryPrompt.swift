@@ -208,6 +208,17 @@ public struct SummaryPrompt: Sendable {
         return summary.replacing(citedTimes, with: "")
     }
 
+    /// The Summary without the stars of the marked paragraphs, which the model sometimes copies:
+    /// they tell it what matters, they are not meant to be read.
+    public static func removingMarks(_ summary: String) -> String {
+        // The emoji variant (⭐️) is another grapheme: made plain first, so one pattern covers both.
+        summary
+            .replacingOccurrences(of: Transcript.markSymbol + "\u{FE0F}", with: Transcript.markSymbol)
+            // At the end of a line the spaces before it go too; elsewhere those after it.
+            .replacing(try! Regex("[ \t]*\(Transcript.markSymbol)[ \t]*(?=\n|$)"), with: "")
+            .replacing(try! Regex("\(Transcript.markSymbol)[ \t]*"), with: "")
+    }
+
     /// The Vocabulary for the system prompt of any request, with a blank line before it; empty without one.
     private var vocabularyBlock: String {
         vocabulary.promptBlock.map { "\n\n" + $0 } ?? ""

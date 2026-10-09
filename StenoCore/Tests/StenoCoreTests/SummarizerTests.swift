@@ -65,6 +65,27 @@ struct SummarizerTests {
             """)
     }
 
+    @Test("the stars of the marked paragraphs, copied by the model, are removed from the Summary")
+    func marksRemoved() async throws {
+        let reply = """
+            ### Dishware
+            - ⭐ The dishware catalogue is ready. [01:24]
+            - The deadline is Friday ⭐
+            - ⭐️Orange spot removed
+            """
+        let stub = StubTransport { _ in reply }
+        let prompt = SummaryPrompt(template: template, personalNotes: "", transcript: transcript(paragraphs: 6), meetingLanguage: "it")
+
+        let summary = try await Summarizer(client: client(stub), maxContextTokens: 32_000).summarize(prompt)
+
+        #expect(summary == """
+            ### Dishware
+            - The dishware catalogue is ready.
+            - The deadline is Friday
+            - Orange spot removed
+            """)
+    }
+
     @Test("in blocks the partial summaries keep their times for the merge, the final Summary loses them")
     func citedTimesInBlocks() async throws {
         let stub = StubTransport { index in "- point \(index + 1) [00:20]" }
