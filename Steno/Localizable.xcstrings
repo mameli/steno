@@ -1476,6 +1476,96 @@
           }
         }
       }
+    },
+    "another app": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "un'altra app"
+          }
+        }
+      }
+    },
+    "Start meeting": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia riunione"
+          }
+        }
+      }
+    },
+    "Stop meeting": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ferma riunione"
+          }
+        }
+      }
+    },
+    "Looks like a call in %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sembra una chiamata su %@"
+          }
+        }
+      }
+    },
+    "Start recording?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avviare la registrazione?"
+          }
+        }
+      }
+    },
+    "The call seems over": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La chiamata sembra finita"
+          }
+        }
+      }
+    },
+    "Stop recording?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermare la registrazione?"
+          }
+        }
+      }
+    },
+    "Suggest recording when a call starts": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggerisci di registrare quando inizia una chiamata"
+          }
+        }
+      }
+    },
+    "A notification when an app uses the microphone for a while, and another when it stops. Steno never starts or stops by itself.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una notifica quando un'app usa il microfono per un po', e un'altra quando smette. Steno non avvia né ferma mai da solo."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

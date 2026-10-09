@@ -18,6 +18,7 @@ struct SettingsView: View {
             Section {
                 LaunchAtLoginToggle()
                 CalendarToggle()
+                SuggestCallsToggle()
             } header: {
                 // The header of the first Section, so the icon scrolls away with the rest.
                 VStack(alignment: .leading, spacing: 16) {
@@ -176,6 +177,20 @@ private struct LaunchAtLoginToggle: View {
             self.error = error.localizedDescription
         }
         status = SMAppService.mainApp.status
+    }
+}
+
+/// Notifications that suggest starting and stopping a Meeting when a call app takes and releases the microphone.
+private struct SuggestCallsToggle: View {
+    @AppStorage(AppSettings.suggestCallsKey) private var suggestCalls = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Toggle("Suggest recording when a call starts", isOn: $suggestCalls)
+            Text("A notification when an app uses the microphone for a while, and another when it stops. Steno never starts or stops by itself.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 

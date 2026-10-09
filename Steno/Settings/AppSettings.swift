@@ -9,6 +9,8 @@ enum AppSettings {
     private static let meetingLanguagesKey = "meetingLanguages"
     /// Also used by `@AppStorage` in Settings.
     static let useCalendarKey = "useCalendar"
+    /// Also used by `@AppStorage` in Settings.
+    static let suggestCallsKey = "suggestCalls"
     private static let openInObsidianKey = "openInObsidian"
     /// Also used by `@AppStorage` in the menu: it must follow Profiles added or deleted in Settings.
     static let summaryProfilesKey = "summaryProfiles"
@@ -22,6 +24,7 @@ enum AppSettings {
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
             openInObsidianKey: true,
+            suggestCallsKey: true,
             defaultTemplateKey: Template.defaultName,
             retentionDaysKey: Retention.days,
         ])
@@ -69,6 +72,11 @@ enum AppSettings {
     /// Name the Meeting note after the calendar event in progress and list its participants.
     static var useCalendar: Bool {
         UserDefaults.standard.bool(forKey: useCalendarKey)
+    }
+
+    /// Suggest starting a Meeting when a call starts, and stopping it when it ends.
+    static var suggestCalls: Bool {
+        UserDefaults.standard.bool(forKey: suggestCallsKey)
     }
 
     /// Off only in automated tests, which write to a test Vault Obsidian does not know.

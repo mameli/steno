@@ -29,6 +29,7 @@ final class MeetingController {
     @ObservationIgnored private var openMenus = 0
     @ObservationIgnored private weak var openMenu: NSMenu?
     private var hotKey: GlobalHotKey?
+    private let callDetector = CallDetector()
     private var markHotKey: GlobalHotKey?
     /// False if another app already uses ⌃⌥⌘R.
     var isHotKeyAvailable: Bool { hotKey?.isRegistered ?? false }
@@ -66,6 +67,30 @@ final class MeetingController {
         Notifications.shared.configure()
         hotKey = GlobalHotKey(id: 1, keyCode: kVK_ANSI_R) { [weak self] in self?.toggle() }
         markHotKey = GlobalHotKey(id: 2, keyCode: kVK_ANSI_M) { [weak self] in self?.mark() }
+        Notifications.shared.onAction = { [weak self] action in
+            guard let self else { return }
+            // A button on an old notification does nothing when its action no longer makes sense.
+            switch action {
+            case .startMeeting: if !self.isInProgress { Task { await self.start() } }
+            case .stopMeeting: if self.isInProgress { self.stop() }
+            }
+        }
+        callDetector.start { [weak self] in
+            self?.isInProgress ?? false
+        } suggest: { suggestion in
+            switch suggestion {
+            case .start(let app):
+                Notifications.shared.notify(
+                    title: String(localized: "Looks like a call in \(app)"), body: String(localized: "Start recording?"),
+                    note: nil, action: .startMeeting
+                )
+            case .stop:
+                Notifications.shared.notify(
+                    title: String(localized: "The call seems over"), body: String(localized: "Stop recording?"),
+                    note: nil, action: .stopMeeting
+                )
+            }
+        }
         processor.resumeAfterLaunch()
         startDailyCleanUp()
         keepTimerLiveWithoutRebuildingMenus()
