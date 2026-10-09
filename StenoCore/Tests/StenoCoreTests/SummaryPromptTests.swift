@@ -157,7 +157,7 @@ struct SummaryPromptTests {
     }
 }
 
-@Suite("Summary prompt: Speaker names")
+@Suite("Summary prompt: names and Marks")
 struct SummaryPromptPeopleTests {
     let template = Template(fileName: "Notes", content: "Be brief.")
     let transcript = Transcript(utterances: [
@@ -176,5 +176,17 @@ struct SummaryPromptPeopleTests {
         #expect(named.partialRequests(maxContextTokens: 8_192)[0][0].content.contains("\"Name (Speaker N)\""))
         #expect(named.singleRequest()[1].content.contains("**[00:00] Anna Bianchi (Speaker 1):**"))
         #expect(!unnamed.singleRequest()[0].content.contains("Name (Speaker N)"))
+    }
+
+    @Test("starred paragraphs get priority, in the single and in the partial requests")
+    func marks() {
+        let marked = SummaryPrompt(
+            template: template, personalNotes: "", transcript: transcript.marking([1]), meetingLanguage: "it"
+        )
+        let unmarked = SummaryPrompt(template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it")
+
+        #expect(marked.singleRequest()[0].content.contains("Paragraphs starting with ⭐ were marked as important"))
+        #expect(marked.partialRequests(maxContextTokens: 8_192)[0][0].content.contains("⭐"))
+        #expect(!unmarked.singleRequest()[0].content.contains("⭐"))
     }
 }

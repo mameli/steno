@@ -132,7 +132,7 @@ public struct SummaryPrompt: Sendable {
         - \(Self.truncationRule)
         - \(meRule)
         - \(Self.speakersRule)\(namedSpeakersRule.map { "\n- " + $0 } ?? "")
-        - The personal notes say what matters to the person who wrote them: give those topics priority.
+        - The personal notes say what matters to the person who wrote them: give those topics priority.\(marksRule.map { "\n- " + $0 } ?? "")
         - Write actions as a `- [ ]` checklist, in the format the Template asks for; if it asks for none, `- [ ] who: what (when)`. Leave out who or when if they are not clear, with nothing in their place.
         - Reply with the summary in Markdown only, without preambles.
         """ + vocabularyBlock
@@ -172,6 +172,14 @@ public struct SummaryPrompt: Sendable {
             """
     }
 
+    /// The user marked these paragraphs while recording (⌃⌥⌘M).
+    private var marksRule: String? {
+        guard transcript.paragraphs.contains(where: \.isMarked) else { return nil }
+        return """
+            Paragraphs starting with \(Transcript.markSymbol) were marked as important by the user during the meeting: give them priority, like the topics of the personal notes.
+            """
+    }
+
     /// A Recording stopped before the end of the Meeting leaves a Transcript cut mid-sentence: models
     /// tend to complete what was announced (the rest of a talk, its results) from what they know.
     private static let truncationRule = """
@@ -200,7 +208,7 @@ public struct SummaryPrompt: Sendable {
                 You are Steno. You receive part \(part) of \(count) of the Transcript of a meeting.
                 Summarise it faithfully and compactly, in \(languageName): topics, decisions, actions (who, what, when) and open questions, with timestamps.
                 \(meRule)
-                \(Self.partialSpeakersRule)\(namedSpeakersRule.map { "\n" + $0 } ?? "")
+                \(Self.partialSpeakersRule)\(namedSpeakersRule.map { "\n" + $0 } ?? "")\(marksRule.map { "\n" + $0 } ?? "")
                 Do not invent. \(Self.truncationRule)
                 Reply with the summary only.
                 """ + vocabularyBlock),

@@ -1,5 +1,6 @@
 import AVFoundation
 import AppKit
+import Carbon.HIToolbox
 import Observation
 import StenoCore
 import os
@@ -28,8 +29,17 @@ final class MeetingController {
     @ObservationIgnored private var openMenus = 0
     @ObservationIgnored private weak var openMenu: NSMenu?
     private var hotKey: GlobalHotKey?
+    private var markHotKey: GlobalHotKey?
     /// False if another app already uses ⌃⌥⌘R.
     var isHotKeyAvailable: Bool { hotKey?.isRegistered ?? false }
+    /// False if another app already uses ⌃⌥⌘M.
+    var isMarkHotKeyAvailable: Bool { markHotKey?.isRegistered ?? false }
+    /// The Recording folder of the Meeting in progress, where its Marks are saved.
+    private var currentDirectory: URL?
+    /// The Marks of the Meeting in progress, in seconds from its start.
+    private(set) var marks: [TimeInterval] = []
+    /// For a second after a Mark the menu bar shows a star instead of the red dot.
+    private(set) var isShowingMark = false
     /// The transcription model while it is downloading or loading, as the menu shows it.
     private(set) var modelMenuTitle: String?
     /// The latest phase, also while a menu is open (the observed title waits for it to close).
@@ -54,7 +64,8 @@ final class MeetingController {
         processor = MeetingProcessor(transcriber: transcriber, diarizer: diarizer)
         templateName = AppSettings.defaultTemplate
         Notifications.shared.configure()
-        hotKey = GlobalHotKey { [weak self] in self?.toggle() }
+        hotKey = GlobalHotKey(id: 1, keyCode: kVK_ANSI_R) { [weak self] in self?.toggle() }
+        markHotKey = GlobalHotKey(id: 2, keyCode: kVK_ANSI_M) { [weak self] in self?.mark() }
         processor.resumeAfterLaunch()
         startDailyCleanUp()
         keepTimerLiveWithoutRebuildingMenus()
@@ -133,6 +144,25 @@ final class MeetingController {
         }
     }
 
+    /// ⌃⌥⌘M or the menu: marks the current moment of the Meeting in progress as important. Saved at
+    /// once, so a crash does not lose it; it stars the Transcript paragraph it falls in.
+    func mark() {
+        guard let startedAt, let currentDirectory else { return }
+        marks.append(Date().timeIntervalSince(startedAt))
+        do {
+            try Marks.save(marks, inFolder: currentDirectory)
+        } catch {
+            logger.error("Mark not saved: \(error, privacy: .public)")
+            recordingError = error.localizedDescription
+        }
+        // No sound: the system audio capture would record it in the Others Track.
+        isShowingMark = true
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            self?.isShowingMark = false
+        }
+    }
+
     /// ⌃⌥⌘R: starts or stops the Meeting from any app.
     func toggle() {
         if isInProgress {
@@ -171,6 +201,8 @@ final class MeetingController {
         recordingError = nil
         silentTracksNotified = []
         currentStenoID = started.meetingID
+        currentDirectory = started.directory
+        marks = []
         processor.meetingStarted(
             stenoID: started.meetingID,
             startedAt: now,
@@ -215,6 +247,8 @@ final class MeetingController {
             processor.meetingStopped(stenoID: currentStenoID)
         }
         currentStenoID = nil
+        currentDirectory = nil
+        marks = []
         templateName = AppSettings.defaultTemplate
     }
 

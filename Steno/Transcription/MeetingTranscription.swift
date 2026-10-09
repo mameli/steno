@@ -90,7 +90,7 @@ actor MeetingTranscription {
             }
         }
 
-        // The echo removal, the Speakers and the Vocabulary variants are applied here and not to
+        // The echo removal, the Speakers, the Vocabulary variants and the Marks are applied here and not to
         // the cache: Retry on an old Recording benefits too.
         var utterances = removingEcho(removingEchoResidue(measuringMe(recording, bySegment, in: directory)))
         // Without the Speakers the Transcript keeps "Others": it is a warning, not a failure.
@@ -104,6 +104,7 @@ actor MeetingTranscription {
         }
         let url = directory.appending(path: Transcript.recordingCopyFileName)
         let transcript = Transcript(utterances: utterances, vocabulary: vocabulary)
+            .marking(Marks.load(fromFolder: directory))
         try transcript.markdown.write(to: url, atomically: true, encoding: .utf8)
         let language = locked ?? provisionalSegments.values.first?.language
         return Finished(

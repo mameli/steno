@@ -27,7 +27,9 @@ private struct MenuBarLabel: View {
     // While recording only the red dot: narrow, so it does not end up behind the notch.
     // The duration is in the menu.
     var body: some View {
-        if controller.isInProgress {
+        if controller.isShowingMark {
+            Image(nsImage: .markIndicator)
+        } else if controller.isInProgress {
             Image(nsImage: .recordingIndicator)
         } else if controller.processor.pendingCount > 0 {
             Image(systemName: "hourglass")
@@ -50,6 +52,13 @@ private struct MeetingMenu: View {
             ForEach(controller.silenceWarnings, id: \.self) { Text(verbatim: $0) }
             // The shortcut is global (GlobalHotKey): shown here as a reminder only, not as a menu key.
             Button("Stop meeting    ⌃⌥⌘R") { controller.stop() }
+            Button("Mark this moment    ⌃⌥⌘M") { controller.mark() }
+            if !controller.marks.isEmpty {
+                Text("Marked moments: \(controller.marks.count)")
+            }
+            if !controller.isMarkHotKeyAvailable {
+                Text("⌃⌥⌘M is already used by another app")
+            }
         } else {
             Button("Start meeting    ⌃⌥⌘R") { Task { await controller.start() } }
         }
@@ -162,6 +171,14 @@ private extension NSImage {
     /// Red dot: menu bar images are monochrome unless `isTemplate` is turned off.
     static let recordingIndicator: NSImage = {
         let image = NSImage(systemSymbolName: "record.circle.fill", accessibilityDescription: String(localized: "Meeting in progress"))!
+            .withSymbolConfiguration(.init(paletteColors: [.white, .systemRed]))!
+        image.isTemplate = false
+        return image
+    }()
+
+    /// Shown for a second after a Mark, in the same red as the recording dot.
+    static let markIndicator: NSImage = {
+        let image = NSImage(systemSymbolName: "star.circle.fill", accessibilityDescription: String(localized: "Moment marked"))!
             .withSymbolConfiguration(.init(paletteColors: [.white, .systemRed]))!
         image.isTemplate = false
         return image

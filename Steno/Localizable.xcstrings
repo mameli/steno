@@ -1396,6 +1396,46 @@
           }
         }
       }
+    },
+    "Mark this moment    ⌃⌥⌘M": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segna questo momento    ⌃⌥⌘M"
+          }
+        }
+      }
+    },
+    "Marked moments: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Momenti segnati: %lld"
+          }
+        }
+      }
+    },
+    "⌃⌥⌘M is already used by another app": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌃⌥⌘M è già usata da un'altra app"
+          }
+        }
+      }
+    },
+    "Moment marked": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Momento segnato"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

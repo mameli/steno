@@ -43,6 +43,11 @@ public struct Paragraph: Equatable, Sendable {
         return name.map { "\($0) (Speaker \(speaker))" } ?? "Speaker \(speaker)"
     }
 
+    /// The user marked this paragraph as important while recording.
+    public var isMarked: Bool {
+        text.hasPrefix(Transcript.markSymbol)
+    }
+
     func with(text: String? = nil, name: String?) -> Paragraph {
         Paragraph(track: track, start: start, text: text ?? self.text, speaker: speaker, name: name)
     }
@@ -58,6 +63,9 @@ public struct Transcript: Sendable {
     /// An Utterance starting later than this from the paragraph start opens a new one,
     /// so even a long monologue gets a timestamp about every minute.
     public static let maxParagraphDuration: TimeInterval = 60
+
+    /// Starts the text of a paragraph a Mark falls in.
+    public static let markSymbol = "⭐"
 
     public let paragraphs: [Paragraph]
 
@@ -99,6 +107,17 @@ public struct Transcript: Sendable {
     /// The Speakers with the names the user gave them (by number); the others keep only the number.
     public func naming(_ names: [Int: String]) -> Transcript {
         Transcript(paragraphs: paragraphs.map { $0.with(name: $0.speaker.flatMap { names[$0] }) })
+    }
+
+    /// The paragraphs the Marks fall in, starred: for each Mark the last paragraph starting at or
+    /// before it, of either Track (a Mark usually comes right after what mattered). A Mark before
+    /// any speech stars nothing; several in one paragraph give one star.
+    public func marking(_ marks: [TimeInterval]) -> Transcript {
+        let marked = Set(marks.compactMap { mark in paragraphs.lastIndex { $0.start <= mark } })
+        return Transcript(paragraphs: paragraphs.enumerated().map { index, paragraph in
+            guard marked.contains(index), !paragraph.isMarked else { return paragraph }
+            return paragraph.with(text: "\(Self.markSymbol) \(paragraph.text)", name: paragraph.name)
+        })
     }
 
     /// Whether some Speaker has a name given by the user.
