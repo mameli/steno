@@ -159,6 +159,10 @@ private struct RecentMeetingsMenu: View {
                     }
                 }
             }
+            if let vault = Vault.configured {
+                Divider()
+                Button("Show all in Obsidian…") { vault.showMeetingsInObsidian() }
+            }
         }
     }
 

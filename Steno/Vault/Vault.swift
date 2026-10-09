@@ -195,6 +195,17 @@ struct Vault {
         NSWorkspace.shared.open(components.url!)
     }
 
+    /// Obsidian's search on this Vault, listing the Meeting notes (Transcripts excluded).
+    func showMeetingsInObsidian() {
+        var components = URLComponents(string: "obsidian://search")!
+        components.queryItems = [
+            // Obsidian knows a Vault by its folder name.
+            URLQueryItem(name: "vault", value: root.lastPathComponent),
+            URLQueryItem(name: "query", value: "[steno_id] -path:\"Meetings/Transcripts\""),
+        ]
+        NSWorkspace.shared.open(components.url!)
+    }
+
     /// Obsidian finds a file only once it has noticed it on disk: opened right after being
     /// created, it sometimes answers "file not found".
     @MainActor

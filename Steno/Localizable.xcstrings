@@ -1596,6 +1596,16 @@
           }
         }
       }
+    },
+    "Show all in Obsidian…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra tutte in Obsidian…"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
