@@ -1,11 +1,12 @@
 import Foundation
 import StenoCore
 
-/// Steno's settings, editable in the Settings window. Some only from the terminal, for example:
-/// `defaults write dev.mameli.steno language it` (or `en`, `auto`)
+/// Steno's settings, editable in the Settings window.
 enum AppSettings {
     private static let vaultPathKey = "vaultPath"
+    /// v1's single language (`it`, `en`, `auto`), read only to migrate it to `meetingLanguagesKey`.
     private static let languageKey = "language"
+    private static let meetingLanguagesKey = "meetingLanguages"
     private static let openInObsidianKey = "openInObsidian"
     /// Also used by `@AppStorage` in the menu: it must follow Profiles added or deleted in Settings.
     static let summaryProfilesKey = "summaryProfiles"
@@ -18,7 +19,6 @@ enum AppSettings {
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
-            languageKey: "auto",
             openInObsidianKey: true,
             defaultTemplateKey: Template.defaultName,
             retentionDaysKey: Retention.days,
@@ -54,11 +54,14 @@ enum AppSettings {
     }
     #endif
 
-    /// `nil` to detect the language automatically.
-    static var forcedLanguage: String? {
-        UserDefaults.standard.string(forKey: languageKey).flatMap {
-            LocalTranscriber.supportedLanguages.contains($0) ? $0 : nil
+    /// The languages a Meeting can be in (see `MeetingLanguages`); until the user changes them,
+    /// those of v1's `language` setting.
+    static var meetingLanguages: [String] {
+        get {
+            UserDefaults.standard.stringArray(forKey: meetingLanguagesKey).map(MeetingLanguages.normalized)
+                ?? MeetingLanguages.migrated(fromLanguageSetting: UserDefaults.standard.string(forKey: languageKey))
         }
+        set { UserDefaults.standard.set(MeetingLanguages.normalized(newValue), forKey: meetingLanguagesKey) }
     }
 
     /// Off only in automated tests, which write to a test Vault Obsidian does not know.

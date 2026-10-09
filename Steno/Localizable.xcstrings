@@ -1366,6 +1366,36 @@
           }
         }
       }
+    },
+    "Meeting languages": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lingue delle riunioni"
+          }
+        }
+      }
+    },
+    "Every Meeting is transcribed in this language.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni riunione viene trascritta in questa lingua."
+          }
+        }
+      }
+    },
+    "Steno detects which of these languages each Meeting is in.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steno riconosce in quale di queste lingue è ogni riunione."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

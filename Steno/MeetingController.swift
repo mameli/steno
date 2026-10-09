@@ -155,7 +155,7 @@ final class MeetingController {
         now = Date()
         let model = TranscriptionModel.selected
         let transcription = MeetingTranscription(
-            transcriber: transcriber, diarizer: diarizer, model: model, language: AppSettings.forcedLanguage
+            transcriber: transcriber, diarizer: diarizer, model: model, languages: AppSettings.meetingLanguages
         )
         let started: MeetingRecorder.Started
         do {

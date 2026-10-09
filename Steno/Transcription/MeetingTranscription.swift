@@ -35,6 +35,9 @@ actor MeetingTranscription {
     private let diarizer: SpeakerDiarizer
     /// Fixed for the whole Meeting: Segments transcribed by another model are done again.
     private let model: TranscriptionModel
+    /// The Meeting languages ticked in Settings at the start: detection picks among them.
+    private let languages: [String]
+    /// The only language ticked, if there is just one.
     private let forcedLanguage: String?
     /// The Meeting language, once detected on enough speech.
     private var languageDetection: Task<String, Error>?
@@ -43,12 +46,13 @@ actor MeetingTranscription {
     private var provisionalSegments: [String: (segment: Segment, language: String)] = [:]
     private var pending: [String: Task<[Utterance], Error>] = [:]
 
-    /// `language` is `nil` to detect it automatically.
-    init(transcriber: LocalTranscriber, diarizer: SpeakerDiarizer, model: TranscriptionModel, language: String?) {
+    /// `languages`: the Meeting languages; with only one it is forced, otherwise detected among them.
+    init(transcriber: LocalTranscriber, diarizer: SpeakerDiarizer, model: TranscriptionModel, languages: [String]) {
         self.transcriber = transcriber
         self.diarizer = diarizer
         self.model = model
-        self.forcedLanguage = language
+        self.languages = MeetingLanguages.normalized(languages)
+        self.forcedLanguage = MeetingLanguages.forced(languages)
     }
 
     func segmentClosed(_ segment: Segment, in directory: URL) {
@@ -166,10 +170,10 @@ actor MeetingTranscription {
         let cacheURL = directory.appending(path: segment.transcriptionCacheFileName)
         if forced == nil,
            let cached = try? JSONDecoder().decode(CachedSegment.self, from: Data(contentsOf: cacheURL)),
-           // Without speech the model does not matter; otherwise it must be this Meeting's.
-           cached.language == nil
-               || ((cached.model ?? TranscriptionModel.default.id) == model.id
-                   && (forcedLanguage == nil || cached.language == forcedLanguage)) {
+           // Without speech the model does not matter; otherwise model and language must be this Meeting's.
+           (cached.language.map {
+               (cached.model ?? TranscriptionModel.default.id) == model.id && languages.contains($0)
+           } ?? true) {
             if let language = cached.language, forcedLanguage == nil {
                 if cached.isLanguageReliable {
                     // Same language for the whole Meeting, even if some Segments come from the cache.
@@ -237,7 +241,9 @@ actor MeetingTranscription {
         for range in ranges where speech.count < limit {
             speech += samples[range].prefix(limit - speech.count)
         }
-        let detection = Task { [transcriber, model] in try await transcriber.detectLanguage(speech, model: model) }
+        let detection = Task { [transcriber, model, languages] in
+            try await transcriber.detectLanguage(speech, among: languages, model: model)
+        }
         let isReliable = Double(speech.count) >= Self.minimumSpeechToLockLanguage * Recording.sampleRate
         if isReliable { languageDetection = detection }
         do {

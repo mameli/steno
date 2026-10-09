@@ -24,10 +24,6 @@ actor LocalTranscriber {
         case ready
     }
 
-    /// Meetings are in Italian or English: language detection picks only between these
-    /// (a Template can still ask for a Summary in any language).
-    static let supportedLanguages = ["it", "en"]
-
     private let models: TranscriptionModels
     private var onPhase: @Sendable (ModelPhase) -> Void = { _ in }
     private enum Engine {
@@ -56,29 +52,31 @@ actor LocalTranscriber {
         _ = try await loaded(model)
     }
 
-    func detectLanguage(_ samples: [Float], model: TranscriptionModel) async throws -> String {
+    /// The most likely of `languages` (the Meeting languages ticked in Settings).
+    func detectLanguage(_ samples: [Float], among languages: [String], model: TranscriptionModel) async throws -> String {
         await acquire()
         defer { release() }
         switch try await loaded(model) {
         case .whisper(let whisperKit):
             let (_, probabilities) = try await whisperKit.detectLangauge(audioArray: samples)
-            return Self.supportedLanguages.max {
+            return languages.max {
                 probabilities[$0, default: -.infinity] < probabilities[$1, default: -.infinity]
             }!
         case .parakeet(let asr):
             // Parakeet does not say which language it heard: it is read from the text.
             var state = TdtDecoderState.make()
             let text = try await asr.transcribe(samples, decoderState: &state).text
-            return Self.language(of: text)
+            return Self.language(of: text, among: languages)
         }
     }
 
-    /// The supported language the text is most likely in; Italian when the text says nothing.
-    private static func language(of text: String) -> String {
+    /// Which of `languages` the text is most likely in; the first one when the text says nothing.
+    private static func language(of text: String, among languages: [String]) -> String {
         let recognizer = NLLanguageRecognizer()
-        recognizer.languageConstraints = supportedLanguages.map { NLLanguage($0) }
+        recognizer.languageConstraints = languages.map { NLLanguage($0) }
         recognizer.processString(text)
-        return recognizer.dominantLanguage?.rawValue ?? "it"
+        return recognizer.dominantLanguage.map(\.rawValue).flatMap { languages.contains($0) ? $0 : nil }
+            ?? MeetingLanguages.fallback(languages)
     }
 
     /// `language` is followed by Whisper; Parakeet picks the language by itself.

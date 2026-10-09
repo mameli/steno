@@ -336,14 +336,30 @@ private struct VocabularySection: View {
     }
 }
 
-/// The Whisper models: download, choose the one in use, delete the others.
+/// The Meeting languages and the transcription models: download, choose the one in use, delete the others.
 private struct TranscriptionSection: View {
     let models: TranscriptionModels
     @AppStorage(AppSettings.transcriptionModelKey) private var selectedID = TranscriptionModel.default.id
     @State private var error: String?
+    @State private var languages = AppSettings.meetingLanguages
 
     var body: some View {
         Section {
+            VStack(alignment: .leading, spacing: 2) {
+                LabeledContent("Meeting languages") {
+                    Menu(languages.map(Self.name).formatted(.list(type: .and))) {
+                        ForEach(MeetingLanguages.offered, id: \.self) { code in
+                            Toggle(Self.name(code), isOn: isTicked(code))
+                        }
+                    }
+                    .fixedSize()
+                }
+                Text(languages.count == 1
+                    ? String(localized: "Every Meeting is transcribed in this language.")
+                    : String(localized: "Steno detects which of these languages each Meeting is in."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             ForEach(TranscriptionModel.all) { model in
                 row(model)
             }
@@ -355,6 +371,25 @@ private struct TranscriptionSection: View {
         } footer: {
             Text("Models run on this Mac. Each is downloaded once from Hugging Face: only the model is downloaded, no audio or text is sent. The model in use applies to new Meetings and to Retry.")
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    /// The language's name in the interface language: "Italiano", "French"…
+    private static func name(_ code: String) -> String {
+        let name = Locale.current.localizedString(forLanguageCode: code) ?? code
+        return name.prefix(1).uppercased(with: .current) + name.dropFirst()
+    }
+
+    /// At least one language stays ticked.
+    private func isTicked(_ code: String) -> Binding<Bool> {
+        Binding {
+            languages.contains(code)
+        } set: { isOn in
+            var ticked = languages.filter { $0 != code }
+            if isOn { ticked.append(code) }
+            guard !ticked.isEmpty else { return }
+            AppSettings.meetingLanguages = ticked
+            languages = AppSettings.meetingLanguages
         }
     }
 
