@@ -19,6 +19,7 @@ struct SettingsView: View {
                 LaunchAtLoginToggle()
                 CalendarToggle()
                 SuggestCallsToggle()
+                UpdatesToggle()
             } header: {
                 // The header of the first Section, so the icon scrolls away with the rest.
                 VStack(alignment: .leading, spacing: 16) {
@@ -177,6 +178,20 @@ private struct LaunchAtLoginToggle: View {
             self.error = error.localizedDescription
         }
         status = SMAppService.mainApp.status
+    }
+}
+
+/// The daily question to GitHub about a newer release.
+private struct UpdatesToggle: View {
+    @AppStorage(AppSettings.checkForUpdatesKey) private var checkForUpdates = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Toggle("Check for updates", isOn: $checkForUpdates)
+            Text("Once a day Steno asks GitHub for the latest version; nothing about you or your Meetings is sent.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 }
 

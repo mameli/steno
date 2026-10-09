@@ -1566,6 +1566,36 @@
           }
         }
       }
+    },
+    "Steno %@ is available…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "È disponibile Steno %@…"
+          }
+        }
+      }
+    },
+    "Check for updates": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Controlla gli aggiornamenti"
+          }
+        }
+      }
+    },
+    "Once a day Steno asks GitHub for the latest version; nothing about you or your Meetings is sent.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una volta al giorno Steno chiede a GitHub l'ultima versione; non invia niente su di te o sulle tue riunioni."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

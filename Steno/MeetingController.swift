@@ -30,6 +30,7 @@ final class MeetingController {
     @ObservationIgnored private weak var openMenu: NSMenu?
     private var hotKey: GlobalHotKey?
     private let callDetector = CallDetector()
+    let updates = UpdateChecker()
     private var markHotKey: GlobalHotKey?
     /// False if another app already uses ⌃⌥⌘R.
     var isHotKeyAvailable: Bool { hotKey?.isRegistered ?? false }
@@ -93,6 +94,7 @@ final class MeetingController {
         }
         processor.resumeAfterLaunch()
         startDailyCleanUp()
+        updates.start()
         keepTimerLiveWithoutRebuildingMenus()
         Task { [transcriber] in
             await transcriber.setPhaseHandler { [weak self] phase in

@@ -118,6 +118,11 @@ private struct MeetingMenu: View {
             }
         }
 
+        if let release = controller.updates.available {
+            Divider()
+            Button("Steno \(release.version) is available…") { controller.updates.openReleasePage() }
+        }
+
         Divider()
         Button("Settings…") {
             // Steno has no Dock icon: without activating it the window would stay behind the others.

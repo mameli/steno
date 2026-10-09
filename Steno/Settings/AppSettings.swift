@@ -11,6 +11,8 @@ enum AppSettings {
     static let useCalendarKey = "useCalendar"
     /// Also used by `@AppStorage` in Settings.
     static let suggestCallsKey = "suggestCalls"
+    /// Also used by `@AppStorage` in Settings.
+    static let checkForUpdatesKey = "checkForUpdates"
     private static let openInObsidianKey = "openInObsidian"
     /// Also used by `@AppStorage` in the menu: it must follow Profiles added or deleted in Settings.
     static let summaryProfilesKey = "summaryProfiles"
@@ -25,6 +27,7 @@ enum AppSettings {
         UserDefaults.standard.register(defaults: [
             openInObsidianKey: true,
             suggestCallsKey: true,
+            checkForUpdatesKey: true,
             defaultTemplateKey: Template.defaultName,
             retentionDaysKey: Retention.days,
         ])
@@ -77,6 +80,11 @@ enum AppSettings {
     /// Suggest starting a Meeting when a call starts, and stopping it when it ends.
     static var suggestCalls: Bool {
         UserDefaults.standard.bool(forKey: suggestCallsKey)
+    }
+
+    /// Ask GitHub once a day whether a newer Steno is out.
+    static var checkForUpdates: Bool {
+        UserDefaults.standard.bool(forKey: checkForUpdatesKey)
     }
 
     /// Off only in automated tests, which write to a test Vault Obsidian does not know.
