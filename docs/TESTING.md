@@ -82,6 +82,18 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 - [x] **Italian interface**: `defaults write dev.mameli.steno AppleLanguages -array it`, restart Steno → menu, Settings and notifications in Italian (`defaults delete dev.mameli.steno AppleLanguages` to go back).
 - [x] **Wrong key**: in Settings replace the key with a random one → *Test connection* shows the provider's error; then put the right one back.
 
+## v2
+
+- [ ] **Silent Track**: System Settings → Privacy & Security → Screen & System Audio Recording, turn Steno off; start a Meeting with a video playing → after 2 minutes the menu shows "⚠️ No sound from the system audio for 2 min" and a notification says to check that setting. Turn it back on. In a normal call where the others are quiet for 2 minutes the menu line may appear, with no notification.
+- [ ] **Meeting languages**: Settings → *Transcription* → *Meeting languages*, tick only French, record a French video → Transcript in French. Tick Italian, English and French, record each → each in its language. The last ticked language cannot be unticked.
+- [ ] **Language migration**: before updating, `defaults write dev.mameli.steno language en` → after updating only English is ticked.
+- [ ] **Calendar**: *Use the calendar* on → macOS asks for access; an event with invited people in progress, start a Meeting → the note is named after the event, `participants` lists them (not you, not rooms); after Processing the note keeps that name. Deny access in System Settings → the switch is off when Settings opens again.
+- [ ] **Speaker names**: after a Meeting with two Speakers, add `speakers: [Speaker 2 = Mario Rossi]` to the note, *Retry* → the Transcript shows *Mario Rossi (Speaker 2)* and the Summary uses the name. Change it to another name and *Retry* again, also once the audio is deleted → the Transcript follows.
+- [ ] **Marks**: ⌃⌥⌘M during a Meeting from another app → the dot becomes a star for a second, the menu shows "Marked moments: 1"; after Processing the paragraph just before has a ⭐ and the Summary covers it.
+- [ ] **Call suggestions**: idle, join a Meet, Zoom or Teams call → within 20 seconds "Looks like a call in <app>" with *Start meeting*, which starts. Leave the call → within 35 seconds "The call seems over" with *Stop meeting*. A 5-second dictation with another app suggests nothing. Turn it off in Settings → no notifications.
+- [ ] **Update check**: with `MARKETING_VERSION` lowered in a Debug build, the menu shows "Steno <latest> is available…", which opens the release page.
+- [ ] **Show all in Obsidian**: *Recent meetings* → *Show all in Obsidian…* → Obsidian's search lists the Meeting notes, not the Transcripts.
+
 ## 5. When you set them up
 
 - [ ] **EU Provider** (e.g. Mistral): new Profile with key → *Test connection* → a test Meeting → choose it in the menu and *Retry* on an older Meeting to compare the Summaries.

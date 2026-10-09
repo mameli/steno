@@ -15,7 +15,9 @@ A macOS menu bar app that records your meetings, transcribes them **on your Mac*
 It was built as an alternative to Granola for people whose company does not allow meeting audio and text to leave the EU.
 
 - **Records both sides of a call**: your microphone and the system audio (Meet, Zoom, Teams, any app), with echo cancellation.
-- **Tells the others apart**: the Transcript shows Speaker 1, Speaker 2… by voice, and the Summary names them when the call makes clear who they are.
+- **Tells the others apart**: the Transcript shows Speaker 1, Speaker 2… by voice, and the Summary names them when the call makes clear who they are, or when you name them in the note.
+- **Knows your calendar** (optional): the note takes the name and the participants of the event in progress.
+- **Suggests when to record**: a notification when a call app takes the microphone, and another when the call seems over.
 - **Transcribes locally** with OpenAI Whisper or NVIDIA Parakeet: the audio never leaves the Mac. Choose between Whisper Large v3 Turbo (default), its full version, Small and Parakeet v3 in *Settings → Transcription*.
 - **Summarises with a provider you pick**: llama.cpp, Ollama or LM Studio on your Mac, or a remote OpenAI-compatible API. You can also skip the Summary and keep only the Transcript.
 - **Writes Markdown into Obsidian**: one note per meeting, opened when the meeting starts so you can take notes, plus a separate Transcript file. Your own notes are kept and used to steer the Summary.
@@ -30,7 +32,7 @@ https://github.com/user-attachments/assets/f26da8d8-59b4-490a-af40-25801e35b958
 - An Obsidian vault (any folder works, Obsidian is only needed to open the notes)
 - Disk space for the transcription model, downloaded on first use: about 650 MB for the default one (from 220 MB to 1.6 GB depending on the model)
 
-Meetings can be in Italian or English, one language per meeting; the Summary can be written in any language.
+Meetings can be in Italian, English or 23 other European languages (*Settings → Transcription → Meeting languages*), one language per meeting; the Summary can be written in any language.
 
 ## Install
 
@@ -68,11 +70,29 @@ On Macs managed by your company, IT may not allow apps that are not notarized. T
 
 ## Use
 
-- **Start and stop** a meeting from the menu bar or with **⌃⌥⌘R** from any app. While recording the icon is a red dot and the menu shows the duration.
+- **Start and stop** a meeting from the menu bar or with **⌃⌥⌘R** from any app. While recording the icon is a red dot and the menu shows the duration. If a call app keeps the microphone for 15 seconds, a notification offers to start; when it lets the microphone go, another offers to stop (*Settings → General* to turn them off).
+- **Mark a moment** with **⌃⌥⌘M** while recording: the dot turns into a star for a second, the passage gets a ⭐ in the Transcript and the Summary gives it priority.
+- If Steno hears nothing from the microphone or from the call for 2 minutes, the menu says so; if it has heard nothing since the start, a notification tells you what to check.
 - The meeting note opens in Obsidian: write your own notes under **Personal notes**. Steno never touches them.
-- After the stop Steno finishes the transcription, writes the Summary at the top of the note, links the Transcript and renames the note with a short title. A notification tells you when it is ready.
+- After the stop Steno finishes the transcription, writes the Summary at the top of the note, links the Transcript and renames the note with a short title (unless it is named after a calendar event). A notification tells you when it is ready.
 - **Template** and **Summary Profile** are chosen in the menu. Choose *Transcript* as Profile to get only the Transcript, with no Summary.
-- **Recent meetings → Retry** redoes a meeting with the Template and Profile currently selected: use it after an error, or to get a Summary with another Template.
+- **Recent meetings → Retry** redoes a meeting with the Template and Profile currently selected: use it after an error, or to get a Summary with another Template. *Show all in Obsidian…* lists every meeting note.
+
+### Calendar
+
+Turn on *Settings → General → Use the calendar* and allow access: when a meeting starts during an event, the note is named after it and lists who was invited in `participants`. The list helps the Summary name the Speakers; correct it in the note if it is wrong, it counts on the next Retry.
+
+### Speaker names
+
+If the Summary cannot tell who a Speaker is, read the Transcript and say it in the note's frontmatter, then *Retry*:
+
+```yaml
+speakers:
+  - Speaker 1 = Mario Rossi
+  - Speaker 3 = Anna Bianchi
+```
+
+The Transcript then shows *Mario Rossi (Speaker 1)* and the Summary uses the name.
 
 ### Templates
 
@@ -96,6 +116,8 @@ The variants are replaced with the term in the Transcript, as whole words: do no
 - **Audio**: in `~/Library/Application Support/Steno/Recordings/`, about 20 MB per hour of meeting. It is deleted after 7 days (*Settings → Recordings*); after that, Retry rebuilds the Summary from the Transcript in the vault.
 - **API keys**: in the macOS Keychain.
 - **Transcription model**: in `~/Library/Application Support/Steno/Models/`, downloaded once from Hugging Face. Only the model is downloaded; no audio or text is sent.
+- **Calendar**: read on the Mac through macOS, only if you turn it on; titles and participants go into the note, and the participants into the Summary request.
+- **Update check**: once a day Steno asks GitHub for the latest version (*Settings → General → Check for updates*). The request carries nothing about you or your meetings.
 
 Recording a meeting may require the consent of the other participants: tell them, and follow the rules that apply to you.
 
