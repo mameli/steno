@@ -38,6 +38,8 @@ final class MeetingController {
     private(set) var microphoneDenied = false
     private(set) var recordingError: String?
     private(set) var lastRecordingDirectory: URL?
+    /// Tracks of the Meeting in progress already notified as silent since the start.
+    @ObservationIgnored private var silentTracksNotified: Set<Track> = []
     /// Template for the Meeting in progress or the next one; it can change until the stop.
     var templateName = AppSettings.defaultTemplate {
         didSet {
@@ -90,6 +92,47 @@ final class MeetingController {
         String(localized: "Recording · \(elapsed)")
     }
 
+    /// Menu lines for the Tracks of the Meeting in progress that have had no sound for 2 minutes or more.
+    var silenceWarnings: [String] {
+        guard let startedAt else { return [] }
+        let elapsed = now.timeIntervalSince(startedAt)
+        let lastSound = recorder.lastSoundTimes()
+        return Track.allCases.compactMap { track in
+            guard let trackLastSound = lastSound[track],
+                  let minutes = TrackSilence.silentMinutes(lastSound: trackLastSound, now: elapsed)
+            else { return nil }
+            return switch track {
+            case .me: String(localized: "⚠️ No sound from the microphone for \(minutes) min")
+            case .others: String(localized: "⚠️ No sound from the system audio for \(minutes) min")
+            }
+        }
+    }
+
+    /// Once per Track per Meeting: a Track with no sound since the start means the Meeting would be lost.
+    private func notifySilentTracks() {
+        guard let startedAt else { return }
+        let elapsed = Date().timeIntervalSince(startedAt)
+        for (track, lastSound) in recorder.lastSoundTimes()
+        where !silentTracksNotified.contains(track) && TrackSilence.neverHeard(lastSound: lastSound, now: elapsed) {
+            silentTracksNotified.insert(track)
+            logger.error("No sound from the \(track.rawValue, privacy: .public) Track since the start")
+            switch track {
+            case .me:
+                Notifications.shared.notify(
+                    title: String(localized: "No sound from the microphone"),
+                    body: String(localized: "Steno has recorded nothing from your microphone for 2 minutes. Check System Settings → Privacy & Security → Microphone."),
+                    note: nil
+                )
+            case .others:
+                Notifications.shared.notify(
+                    title: String(localized: "No sound from the system audio"),
+                    body: String(localized: "Steno has recorded nothing from the call for 2 minutes. Check System Settings → Privacy & Security → Screen & System Audio Recording."),
+                    note: nil
+                )
+            }
+        }
+    }
+
     /// ⌃⌥⌘R: starts or stops the Meeting from any app.
     func toggle() {
         if isInProgress {
@@ -126,6 +169,7 @@ final class MeetingController {
         }
         startedAt = now
         recordingError = nil
+        silentTracksNotified = []
         currentStenoID = started.meetingID
         processor.meetingStarted(
             stenoID: started.meetingID,
@@ -305,6 +349,7 @@ final class MeetingController {
                 } else {
                     self.updateOpenMenuTimer()
                 }
+                self.notifySilentTracks()
             }
         }
     }

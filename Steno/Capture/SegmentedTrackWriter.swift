@@ -1,3 +1,4 @@
+import Accelerate
 import AVFoundation
 import StenoCore
 
@@ -37,6 +38,7 @@ final class SegmentedTrackWriter: @unchecked Sendable {
     private var fileIndex: Int?
     private var firstError: Error?
     private var isFinished = false
+    private var lastSound: TimeInterval?
 
     /// `onSegmentClosed` fires at every Segment change; the last Segment closes with `finish`.
     init(
@@ -71,6 +73,12 @@ final class SegmentedTrackWriter: @unchecked Sendable {
         }
     }
 
+    /// When the Track last received sound, in seconds from the start of the Meeting; `nil` if never.
+    /// The silence written to fill holes does not count.
+    var lastSoundTime: TimeInterval? {
+        lock.withLock { lastSound }
+    }
+
     func finish() -> Outcome {
         lock.withLock {
             isFinished = true
@@ -85,6 +93,9 @@ final class SegmentedTrackWriter: @unchecked Sendable {
         guard converted.frameLength > 0 else { return }
 
         let start = secondsSinceMeetingStart(hostTime)
+        if Self.peak(of: converted) > TrackSilence.soundThreshold {
+            lastSound = start + Double(converted.frameLength) / Recording.sampleRate
+        }
         if let segmenter {
             try appendSilence(frames: segmenter.silenceFrames(beforeBufferAt: start))
         } else {
@@ -162,6 +173,12 @@ final class SegmentedTrackWriter: @unchecked Sendable {
         }
         if status == .error, let conversionError { throw conversionError }
         return output
+    }
+
+    private static func peak(of buffer: AVAudioPCMBuffer) -> Float {
+        var peak: Float = 0
+        vDSP_maxmgv(buffer.floatChannelData![0], 1, &peak, vDSP_Length(buffer.frameLength))
+        return peak
     }
 
     private func secondsSinceMeetingStart(_ hostTime: UInt64) -> TimeInterval {

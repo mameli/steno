@@ -1306,6 +1306,66 @@
           }
         }
       }
+    },
+    "⚠️ No sound from the microphone for %lld min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⚠️ Nessun suono dal microfono da %lld min"
+          }
+        }
+      }
+    },
+    "⚠️ No sound from the system audio for %lld min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⚠️ Nessun suono dall'audio di sistema da %lld min"
+          }
+        }
+      }
+    },
+    "No sound from the microphone": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun suono dal microfono"
+          }
+        }
+      }
+    },
+    "No sound from the system audio": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun suono dall'audio di sistema"
+          }
+        }
+      }
+    },
+    "Steno has recorded nothing from your microphone for 2 minutes. Check System Settings → Privacy & Security → Microphone.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da 2 minuti Steno non registra niente dal tuo microfono. Controlla Impostazioni di Sistema → Privacy e sicurezza → Microfono."
+          }
+        }
+      }
+    },
+    "Steno has recorded nothing from the call for 2 minutes. Check System Settings → Privacy & Security → Screen & System Audio Recording.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da 2 minuti Steno non registra niente dalla chiamata. Controlla Impostazioni di Sistema → Privacy e sicurezza → Registrazione schermo e audio di sistema."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

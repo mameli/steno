@@ -85,6 +85,12 @@ final class MeetingRecorder {
         return Started(meetingID: meetingID, directory: directory)
     }
 
+    /// When each Track of the Recording in progress last received sound (see `SegmentedTrackWriter.lastSoundTime`).
+    func lastSoundTimes() -> [Track: TimeInterval?] {
+        guard let active else { return [:] }
+        return [.me: active.me.lastSoundTime, .others: active.others.lastSoundTime]
+    }
+
     #if DEBUG
     func simulateMicrophoneChange() {
         microphone.simulateDeviceChange()
