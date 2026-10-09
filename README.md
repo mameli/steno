@@ -8,7 +8,7 @@
 
 <h1 align="center">Takku</h1>
 
-<p align="center"><a href="https://github.com/mameli/takku/releases/latest"><b>Download the latest version</b></a> · macOS 15+ · Apple Silicon</p>
+<p align="center"><a href="https://takku.app">takku.app</a> · <a href="https://github.com/mameli/takku/releases/latest"><b>Download the latest version</b></a> · macOS 15+ · Apple Silicon</p>
 
 A macOS menu bar app that records your meetings, transcribes them **on your Mac** and writes the Transcript and a Summary into your **Obsidian** vault. You choose who writes the Summary: a model running locally, or any OpenAI-compatible provider you trust (for example one hosted in the EU).
 
