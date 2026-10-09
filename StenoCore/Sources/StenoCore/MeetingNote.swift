@@ -69,6 +69,20 @@ public struct MeetingNote: Equatable, Sendable {
         MarkdownLines(content).value(StenoKey.stenoID.rawValue).flatMap(UUID.init(uuidString:))
     }
 
+    /// The names the user gave the Speakers, from the frontmatter list `speakers`
+    /// (`- Speaker 1 = Mario Rossi`). Entries in another form are ignored; for a number given
+    /// twice, the first one counts.
+    public var speakerNames: [Int: String] {
+        var names: [Int: String] = [:]
+        for entry in MarkdownLines(content).list("speakers") ?? [] {
+            guard let match = entry.wholeMatch(of: /[Ss]peaker\s+(\d+)\s*=\s*(.*\S)\s*/),
+                  let number = Int(match.1), names[number] == nil
+            else { continue }
+            names[number] = String(match.2)
+        }
+        return names
+    }
+
     /// Replaces the text between the Managed section markers with `body`.
     ///
     /// If the user deleted one or both markers, the leftover ones are removed and the managed

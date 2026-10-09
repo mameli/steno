@@ -131,7 +131,7 @@ public struct SummaryPrompt: Sendable {
         - For every bullet, actions included, end it with the time of the Transcript passage it comes from, in square brackets as in the Transcript: `[12:34]`, or `[03:10] [07:45]` for several. Leave out what you cannot point to in the Transcript or in the personal notes. Steno removes the times before showing the summary: do not mention them otherwise.
         - \(Self.truncationRule)
         - \(meRule)
-        - \(Self.speakersRule)
+        - \(Self.speakersRule)\(namedSpeakersRule.map { "\n- " + $0 } ?? "")
         - The personal notes say what matters to the person who wrote them: give those topics priority.
         - Write actions as a `- [ ]` checklist, in the format the Template asks for; if it asks for none, `- [ ] who: what (when)`. Leave out who or when if they are not clear, with nothing in their place.
         - Reply with the summary in Markdown only, without preambles.
@@ -164,6 +164,14 @@ public struct SummaryPrompt: Sendable {
         The other participants are "Speaker 1", "Speaker 2"…, told apart by their voice: the same number is the same person in every part; "Others" is someone not told apart. A Speaker's name is the one they introduce themselves with, or the one they answer to when called: write "Speaker N (Name)" when it is clear, otherwise keep "Speaker N".
         """
 
+    /// "Name (Speaker N)" in the Transcript: the user named that Speaker in the Meeting note.
+    private var namedSpeakersRule: String? {
+        guard transcript.hasNamedSpeakers else { return nil }
+        return """
+            "Name (Speaker N)" in the Transcript is a name the user gave that Speaker: it is certain, always write that name for what they say and take on.
+            """
+    }
+
     /// A Recording stopped before the end of the Meeting leaves a Transcript cut mid-sentence: models
     /// tend to complete what was announced (the rest of a talk, its results) from what they know.
     private static let truncationRule = """
@@ -192,7 +200,7 @@ public struct SummaryPrompt: Sendable {
                 You are Steno. You receive part \(part) of \(count) of the Transcript of a meeting.
                 Summarise it faithfully and compactly, in \(languageName): topics, decisions, actions (who, what, when) and open questions, with timestamps.
                 \(meRule)
-                \(Self.partialSpeakersRule)
+                \(Self.partialSpeakersRule)\(namedSpeakersRule.map { "\n" + $0 } ?? "")
                 Do not invent. \(Self.truncationRule)
                 Reply with the summary only.
                 """ + vocabularyBlock),

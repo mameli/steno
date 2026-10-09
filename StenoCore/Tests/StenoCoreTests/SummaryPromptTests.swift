@@ -156,3 +156,25 @@ struct SummaryPromptTests {
         #expect(user.contains("# Personal notes\n(none)\n"))
     }
 }
+
+@Suite("Summary prompt: Speaker names")
+struct SummaryPromptPeopleTests {
+    let template = Template(fileName: "Notes", content: "Be brief.")
+    let transcript = Transcript(utterances: [
+        Utterance(track: .others, start: 0, end: 4, text: "The budget is approved.", speaker: 1),
+        Utterance(track: .me, start: 5, end: 8, text: "I'll send the offer on Friday."),
+    ])
+
+    @Test("Speakers the user named are certain for the model; without names the rule is not there")
+    func namedSpeakers() {
+        let named = SummaryPrompt(
+            template: template, personalNotes: "", transcript: transcript.naming([1: "Anna Bianchi"]), meetingLanguage: "it"
+        )
+        let unnamed = SummaryPrompt(template: template, personalNotes: "", transcript: transcript, meetingLanguage: "it")
+
+        #expect(named.singleRequest()[0].content.contains("\"Name (Speaker N)\" in the Transcript is a name the user gave"))
+        #expect(named.partialRequests(maxContextTokens: 8_192)[0][0].content.contains("\"Name (Speaker N)\""))
+        #expect(named.singleRequest()[1].content.contains("**[00:00] Anna Bianchi (Speaker 1):**"))
+        #expect(!unnamed.singleRequest()[0].content.contains("Name (Speaker N)"))
+    }
+}

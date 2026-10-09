@@ -24,17 +24,27 @@ public struct Paragraph: Equatable, Sendable {
     public let start: TimeInterval
     public let text: String
     public let speaker: Int?
+    /// The name the user gave the Speaker in the Meeting note, if any.
+    public let name: String?
 
-    public init(track: Track, start: TimeInterval, text: String, speaker: Int? = nil) {
+    public init(track: Track, start: TimeInterval, text: String, speaker: Int? = nil, name: String? = nil) {
         self.track = track
         self.start = start
         self.text = text
         self.speaker = speaker
+        self.name = speaker == nil ? nil : name
     }
 
-    /// Who speaks, as the Transcript shows it: `Me`, `Speaker 2`, or `Others` when not told apart.
+    /// Who speaks, as the Transcript shows it: `Me`, `Speaker 2`, `Mario Rossi (Speaker 2)` once the
+    /// user named them, or `Others` when not told apart. The number stays with the name, so the
+    /// name can be changed later.
     public var label: String {
-        if track == .others, let speaker { "Speaker \(speaker)" } else { track.label }
+        guard track == .others, let speaker else { return track.label }
+        return name.map { "\($0) (Speaker \(speaker))" } ?? "Speaker \(speaker)"
+    }
+
+    func with(text: String? = nil, name: String?) -> Paragraph {
+        Paragraph(track: track, start: start, text: text ?? self.text, speaker: speaker, name: name)
     }
 }
 
@@ -86,6 +96,16 @@ public struct Transcript: Sendable {
         self.paragraphs = paragraphs
     }
 
+    /// The Speakers with the names the user gave them (by number); the others keep only the number.
+    public func naming(_ names: [Int: String]) -> Transcript {
+        Transcript(paragraphs: paragraphs.map { $0.with(name: $0.speaker.flatMap { names[$0] }) })
+    }
+
+    /// Whether some Speaker has a name given by the user.
+    public var hasNamedSpeakers: Bool {
+        paragraphs.contains { $0.name != nil }
+    }
+
     /// Body of the Transcript file: `**[mm:ss] Me:** text`, one paragraph per block.
     public var markdown: String {
         Self.markdown(of: paragraphs)
@@ -103,21 +123,49 @@ public struct Transcript: Sendable {
         let markdown = MarkdownLines(vaultFile)
         let language = markdown.value("language")
 
-        let header = /^\*\*\[(\d+(?::\d{2}){1,2})\] (Me|Others|Speaker (\d+)):\*\* ?(.*)$/
         var paragraphs: [Paragraph] = []
         for line in markdown.lines[markdown.bodyStart...] {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
-            if let match = trimmed.wholeMatch(of: header) {
-                let seconds = match.1.split(separator: ":").reduce(0) { $0 * 60 + (Double($1) ?? 0) }
-                let track: Track = match.2 == "Me" ? .me : .others
-                paragraphs.append(Paragraph(track: track, start: seconds, text: String(match.4), speaker: match.3.flatMap { Int($0) }))
+            if let header = Header(trimmed) {
+                paragraphs.append(header.paragraph)
             } else if !trimmed.isEmpty, let last = paragraphs.popLast() {
-                paragraphs.append(Paragraph(
-                    track: last.track, start: last.start, text: last.text + " " + trimmed, speaker: last.speaker
-                ))
+                paragraphs.append(last.with(text: last.text + " " + trimmed, name: last.name))
             }
         }
         return (Transcript(paragraphs: paragraphs), language)
+    }
+
+    /// The Transcript file in the Vault with the Speakers' labels changed to the names the user
+    /// gives them now; everything else, text included, stays as it is. `nil` if no label changes.
+    public static func relabeling(vaultFile: String, names: [Int: String]) -> String? {
+        var markdown = MarkdownLines(vaultFile)
+        var changed = false
+        for index in markdown.lines.indices.dropFirst(markdown.bodyStart) {
+            guard let header = Header(markdown.lines[index].trimmingCharacters(in: .whitespaces)) else { continue }
+            let before = header.paragraph
+            let after = before.with(name: before.speaker.flatMap { names[$0] })
+            guard after.label != before.label else { continue }
+            markdown.lines[index] = "**[\(header.time)] \(after.label):** \(after.text)"
+            changed = true
+        }
+        return changed ? markdown.text : nil
+    }
+
+    /// The first line of a paragraph in the Transcript file: `**[12:34] Speaker 2:** text`.
+    private struct Header {
+        let time: Substring
+        let paragraph: Paragraph
+
+        init?(_ line: String) {
+            let pattern = /^\*\*\[(\d+(?::\d{2}){1,2})\] (Me|Others|Speaker (\d+)|(.+?) \(Speaker (\d+)\)):\*\* ?(.*)$/
+            guard let match = line.wholeMatch(of: pattern) else { return nil }
+            time = match.1
+            let seconds = match.1.split(separator: ":").reduce(0) { $0 * 60 + (Double($1) ?? 0) }
+            paragraph = Paragraph(
+                track: match.2 == "Me" ? .me : .others, start: seconds, text: String(match.6),
+                speaker: (match.3 ?? match.5).flatMap { Int($0) }, name: match.4.map(String.init)
+            )
+        }
     }
 
     /// The Transcript file in the Vault: frontmatter linking back to the Meeting note.

@@ -255,7 +255,11 @@ final class MeetingProcessor {
             let summaryProblem: String?
             (noteURL, summaryProblem) = try await writeSummary(
                 transcript, language: language, into: noteURL, record: record, vault: vault, vocabulary: vault.vocabulary()
-            ) { noteURL, summary in
+            ) { noteURL, summary, speakerNames in
+                // Only the labels: the text of a Transcript already in the Vault is the user's.
+                if let relabeled = Transcript.relabeling(vaultFile: transcriptFile, names: speakerNames) {
+                    try relabeled.write(to: transcriptURL, atomically: true, encoding: .utf8)
+                }
                 try vault.update(noteURL) {
                     $0.recordRegeneration(
                         stenoID: stenoID, transcriptName: transcriptURL.deletingPathExtension().lastPathComponent, summary: summary
@@ -321,10 +325,10 @@ final class MeetingProcessor {
         return try await writeSummary(
             finished.transcript, language: finished.language, into: noteURL, record: record, vault: vault,
             vocabulary: vocabulary
-        ) { noteURL, summary in
+        ) { noteURL, summary, speakerNames in
             // Written after the rename: a new Transcript is named after the note's final name.
             let transcriptURL = try vault.writeTranscript(
-                finished.transcript,
+                finished.transcript.naming(speakerNames),
                 stenoID: record.stenoID,
                 meetingNoteName: noteURL.deletingPathExtension().lastPathComponent,
                 language: finished.language
@@ -343,20 +347,23 @@ final class MeetingProcessor {
     }
 
     /// Generates the Summary with the Meeting's Template and Profile, renames a note still
-    /// provisional with the title, lets `writeNote` write the note where it now is, and shows the
-    /// renamed note in Obsidian. Returns where the note is and the Summary problem, if any.
+    /// provisional with the title, lets `writeNote` write the note where it now is (with the Speaker
+    /// names the note gives now), and shows the renamed note in Obsidian. Returns where the note is
+    /// and the Summary problem, if any.
     private func writeSummary(
         _ transcript: Transcript, language: String?, into noteURL: URL, record: ProcessingRecord, vault: Vault,
         vocabulary: Vocabulary,
-        writeNote: (URL, MeetingNote.SummaryOutcome) throws -> Void
+        writeNote: (URL, MeetingNote.SummaryOutcome, [Int: String]) throws -> Void
     ) async throws -> (URL, String?) {
+        // Read now, not at the start: the user may have named Speakers.
+        let note = try vault.meetingNote(at: noteURL)
+        let speakerNames = note.speakerNames
         let (summary, title) = await summarize(
-            transcript, language: language,
-            personalNotes: try vault.meetingNote(at: noteURL).personalNotes,
+            transcript.naming(speakerNames), language: language, personalNotes: note.personalNotes,
             template: vault.template(named: record.templateName), profile: record.summaryProfile, vocabulary: vocabulary
         )
         let rename = renameIfProvisional(noteURL, title: title, startedAt: record.startedAt, in: vault)
-        try writeNote(rename.url, summary)
+        try writeNote(rename.url, summary, speakerNames)
         if rename.follow { RenamedNoteFollower.follow(rename.url, in: vault) }
         if case .failed(let reason) = summary {
             return (rename.url, String(localized: "Summary not generated: \(reason)"))
