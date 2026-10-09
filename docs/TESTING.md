@@ -1,17 +1,17 @@
-# Steno v1 manual tests
+# Takku v1 manual tests
 
-Manual checks to run before using Steno for real meetings. Each one says what to do and what must happen. Labels are the English ones; on a Mac set to Italian the app shows the Italian translation (e.g. *Start meeting* = *Avvia riunione*).
+Manual checks to run before using Takku for real meetings. Each one says what to do and what must happen. Labels are the English ones; on a Mac set to Italian the app shows the Italian translation (e.g. *Start meeting* = *Avvia riunione*).
 
-Before starting: Steno running from the menu bar (notebook icon), Vault and a Summary Profile configured. **With a Profile outside the EU (e.g. OpenRouter) use test recordings only**: your own voice, public videos, never work meetings.
+Before starting: Takku running from the menu bar (notebook icon), Vault and a Summary Profile configured. **With a Profile outside the EU (e.g. OpenRouter) use test recordings only**: your own voice, public videos, never work meetings.
 
 ## Icons
 
 - [x] **App icon**: Finder and notifications show the orange notebook.
 - [x] **Menu bar**: the notebook outline and handwriting are crisp on light and dark menu bars and when the menu is selected. Recording still shows a red dot; Processing still shows an hourglass.
 
-- [ ] **Open at login**: Settings → *General* → *Open at login* on → Steno is in System Settings → General → Login Items; log out and back in → Steno is in the menu bar. Turn it off → it disappears from Login Items.
+- [ ] **Open at login**: Settings → *General* → *Open at login* on → Takku is in System Settings → General → Login Items; log out and back in → Takku is in the menu bar. Turn it off → it disappears from Login Items.
 
-- [ ] **First use**: move `~/Library/Application Support/Steno/Models` to the Trash, start a Meeting → the menu shows "Downloading transcription model… N%" rising, then "Preparing transcription model, first time only", then nothing; the Meeting is transcribed. The menu does not blink while the percentage changes.
+- [ ] **First use**: move `~/Library/Application Support/Takku/Models` to the Trash, start a Meeting → the menu shows "Downloading transcription model… N%" rising, then "Preparing transcription model, first time only", then nothing; the Meeting is transcribed. The menu does not blink while the percentage changes.
 
 - [ ] **Parakeet**: with Models in the Trash, Settings → *Transcription* → *Download* on Parakeet v3 → percentage, then "Preparing…" while macOS compiles it, then *Use* and *Delete* appear. *Use* on Parakeet v3, record a Meeting with long and short replies → the Transcript is in the Meeting language, with sentences and times; note any reply in the wrong language.
 - [ ] **Transcription models**: Settings → *Transcription* → *Download* on Small → percentage, then *Use* and *Delete* appear; *Download* on the model in use → the menu shows the percentage, and nothing once it is done; *Use* → "In use" moves to Small; a Meeting is transcribed with Small; *Retry* on an older Meeting with Large v3 Turbo in use transcribes it again with Large. *Delete* on Small brings back *Download*.
@@ -31,7 +31,7 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 - [x] **Summary**: after the stop an hourglass in the bar, then the "Summary ready" notification; the note has the Summary, the Transcript link and the frontmatter (duration, language, template, provider).
 - [x] **Title and rename**: the note is no longer "… - Meeting" but "… - <title>"; the Transcript in `Transcripts/` has the same name with "(transcript)". With the note open and Obsidian in front, Obsidian shows the renamed note, not the previous one.
 - [x] **Notification click**: opens the note in Obsidian.
-- [x] **Note renamed by you**: rename the note during the call → Steno finds it and does not rename it.
+- [x] **Note renamed by you**: rename the note during the call → Takku finds it and does not rename it.
 - [x] **English meeting**: a test with an English video → Transcript and Summary in English.
 - [x] **Short first sentence**: say only "ok" or "sì" at the start, then talk for a minute → the first sentence is transcribed in the Meeting language, not translated.
 - [x] **Other Summary language**: a Template with `summary_language: fr` → Summary in French from an Italian meeting.
@@ -58,7 +58,7 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 
 ## Speakers
 
-- [ ] **First use**: move `~/Library/Application Support/Steno/Models/fluidaudio/speaker-diarization` to the Trash, record a call with two or three other people → the Transcript has *Speaker 1*, *Speaker 2*… instead of *Others*, with the turns matching who spoke; the models are back in that folder.
+- [ ] **First use**: move `~/Library/Application Support/Takku/Models/fluidaudio/speaker-diarization` to the Trash, record a call with two or three other people → the Transcript has *Speaker 1*, *Speaker 2*… instead of *Others*, with the turns matching who spoke; the models are back in that folder.
 - [ ] **Names in the Summary**: in a call where someone is called by name and answers → the Summary uses that name for their points and actions; for someone never named it writes "Speaker N" only as who takes on an action, never in a heading or in the other bullets.
 - [ ] **Offline**: with the diarization models deleted and no internet, *Retry* on a Meeting with its audio → the Transcript has *Others*, the menu and the notification say "Speakers not told apart: …", the Summary is written anyway.
 - [ ] **Old Transcript**: *Retry* without audio on a Meeting processed before Speakers existed → the Summary is made from the Transcript with *Others*.
@@ -68,7 +68,7 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 - [ ] **Open Vocabulary**: Settings → *Vocabulary* → *Open Vocabulary* → `Meetings/_Vocabulary.md` is created with the explanation text and opens in Obsidian; *Entries* says 0. Add `- Scaleway = scale uai | our EU cloud provider`, go back to the Settings window → *Entries* says 1.
 - [ ] **Variants in the Transcript**: add a term with a variant Parakeet really gets wrong in your voice, record a short Meeting saying it → in the Transcript file the term is written right; the Meeting note's Summary writes it right too.
 - [ ] **Terms in the Summary**: say a term that is in the Vocabulary but write no variant for it, with recognition getting it wrong → the Summary spells the term right when the context makes it clear, and leaves other doubtful words alone.
-- [ ] **Short terms**: a term that sounds like common words (like "Steno" next to "meno", "sono") → ordinary sentences with "meno" or "sono" are not changed, in the Transcript or in the Summary.
+- [ ] **Short terms**: a term that sounds like common words (like "Takku" next to "meno", "sono") → ordinary sentences with "meno" or "sono" are not changed, in the Transcript or in the Summary.
 - [ ] **Retry with a new variant**: add a variant for a word that is wrong in an older Meeting still having its audio → *Retry* → the Transcript file has the term. Without the audio, *Retry* does not touch the Transcript text.
 - [ ] **Transcript only**: *Summary Profile* → *Transcript*, record a Meeting saying a word that has a variant → the variant is replaced in the Transcript even with no Summary.
 - [ ] **No Vocabulary file**: delete `_Vocabulary.md` → Meetings are processed as before, *Entries* says 0.
@@ -78,20 +78,20 @@ Before starting: Steno running from the menu bar (notebook icon), Vault and a Su
 - [x] **AirPods from the start**: AirPods connected before starting, not in a call → the Me Track records (there is a `me-000.m4a`), even though macOS switches them to call mode.
 - [ ] **Microphone change**: during a Meeting connect or remove the AirPods, then keep talking → your sentences after the change are in the Transcript, at the right time compared with the others'.
 - [x] **Transcript only**: *Summary Profile* → *Transcript* (the Template menu disappears), record a Meeting → the note holds only the "Full transcript" link, no warning, notification "Transcript ready". Then choose a Profile in the menu and *Retry* → the Summary is written.
-- [x] **Quit during Processing**: stop a Meeting and quit Steno right away → at the next launch Processing resumes by itself.
-- [x] **Italian interface**: `defaults write dev.mameli.steno AppleLanguages -array it`, restart Steno → menu, Settings and notifications in Italian (`defaults delete dev.mameli.steno AppleLanguages` to go back).
+- [x] **Quit during Processing**: stop a Meeting and quit Takku right away → at the next launch Processing resumes by itself.
+- [x] **Italian interface**: `defaults write app.takku.takku AppleLanguages -array it`, restart Takku → menu, Settings and notifications in Italian (`defaults delete app.takku.takku AppleLanguages` to go back).
 - [x] **Wrong key**: in Settings replace the key with a random one → *Test connection* shows the provider's error; then put the right one back.
 
 ## v2
 
-- [ ] **Silent Track**: System Settings → Privacy & Security → Screen & System Audio Recording, turn Steno off; start a Meeting with a video playing → after 2 minutes the menu shows "⚠️ No sound from the system audio for 2 min" and a notification says to check that setting. Turn it back on. In a normal call where the others are quiet for 2 minutes the menu line may appear, with no notification.
+- [ ] **Silent Track**: System Settings → Privacy & Security → Screen & System Audio Recording, turn Takku off; start a Meeting with a video playing → after 2 minutes the menu shows "⚠️ No sound from the system audio for 2 min" and a notification says to check that setting. Turn it back on. In a normal call where the others are quiet for 2 minutes the menu line may appear, with no notification.
 - [ ] **Meeting languages**: Settings → *Transcription* → *Meeting languages*, tick only French, record a French video → Transcript in French. Tick Italian, English and French, record each → each in its language. The last ticked language cannot be unticked.
-- [ ] **Language migration**: before updating, `defaults write dev.mameli.steno language en` → after updating only English is ticked.
+- [ ] **Language migration**: before updating, `defaults write app.takku.takku language en` → after updating only English is ticked.
 - [ ] **Calendar**: *Use the calendar* on → macOS asks for access; an event with invited people in progress, start a Meeting → the note is named after the event, `participants` lists them (not you, not rooms); after Processing the note keeps that name. Deny access in System Settings → the switch is off when Settings opens again.
 - [ ] **Speaker names**: after a Meeting with two Speakers, add `speakers: [Speaker 2 = Mario Rossi]` to the note, *Retry* → the Transcript shows *Mario Rossi (Speaker 2)* and the Summary uses the name. Change it to another name and *Retry* again, also once the audio is deleted → the Transcript follows.
 - [ ] **Marks**: ⌃⌥⌘M during a Meeting from another app → the dot becomes a star for a second, the menu shows "Marked moments: 1"; after Processing the paragraph just before has a ⭐ and the Summary covers it.
 - [ ] **Call suggestions**: idle, join a Meet, Zoom or Teams call → within 20 seconds "Looks like a call in <app>" with *Start meeting*, which starts. Leave the call → within 35 seconds "The call seems over" with *Stop meeting*. A 5-second dictation with another app suggests nothing. Turn it off in Settings → no notifications.
-- [ ] **Update check**: with `MARKETING_VERSION` lowered in a Debug build, the menu shows "Steno <latest> is available…", which opens the release page.
+- [ ] **Update check**: with `MARKETING_VERSION` lowered in a Debug build, the menu shows "Takku <latest> is available…", which opens the release page.
 - [ ] **Show all in Obsidian**: *Recent meetings* → *Show all in Obsidian…* → Obsidian's search lists the Meeting notes, not the Transcripts.
 
 ## 5. When you set them up

@@ -1,11 +1,11 @@
-# Steno icons
+# Takku icons
 
 The app icon is the orange stenographer notebook selected from concept 2. The menu bar uses concept C, reduced to an outline, two top binding loops and one handwritten mark. It is a monochrome template: macOS supplies the foreground color for light, dark and selected states.
 
 ## Files
 
-- `Steno/Assets.xcassets/AppIcon.appiconset/`: the ten macOS icon sizes, generated from the 1024 px master `icon_512x512@2x.png`.
-- `Steno/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon.pdf`: vector template with an 18 pt intrinsic size.
+- `Takku/Assets.xcassets/AppIcon.appiconset/`: the ten macOS icon sizes, generated from the 1024 px master `icon_512x512@2x.png`.
+- `Takku/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon.pdf`: vector template with an 18 pt intrinsic size.
 - `docs/assets/menu-icon.svg`: editable SVG equivalent.
 - `scripts/generate-menu-icon.swift`: regenerates the PDF and SVG; run from the repository root with `swift scripts/generate-menu-icon.swift`.
 

@@ -1,6 +1,6 @@
-// Shared settings of the Steno target.
-PRODUCT_NAME = Steno
-PRODUCT_BUNDLE_IDENTIFIER = dev.mameli.steno
+// Shared settings of the Takku target.
+PRODUCT_NAME = Takku
+PRODUCT_BUNDLE_IDENTIFIER = app.takku.takku
 MARKETING_VERSION = 0.2.1
 CURRENT_PROJECT_VERSION = 8
 
@@ -10,17 +10,17 @@ SWIFT_VERSION = 6.0
 INFOPLIST_FILE = Config/Info.plist
 ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon
 
-// User-facing strings are in English in the code, translated in Steno/*.xcstrings.
+// User-facing strings are in English in the code, translated in Takku/*.xcstrings.
 LOCALIZATION_PREFERS_STRING_CATALOGS = YES
 SWIFT_EMIT_LOC_STRINGS = YES
 LD_RUNPATH_SEARCH_PATHS = $(inherited) @executable_path/../Frameworks
 COMBINE_HIDPI_IMAGES = YES
 
-// Another process cannot inject code into Steno (DYLD_INSERT_LIBRARIES) to use its
+// Another process cannot inject code into Takku (DYLD_INSERT_LIBRARIES) to use its
 // microphone and audio permissions. Release only: in Debug, the self-signed certificate has
-// no Team ID and library validation would refuse Xcode's Steno.debug.dylib.
+// no Team ID and library validation would refuse Xcode's Takku.debug.dylib.
 ENABLE_HARDENED_RUNTIME[config=Release] = YES
-CODE_SIGN_ENTITLEMENTS = Config/Steno.entitlements
+CODE_SIGN_ENTITLEMENTS = Config/Takku.entitlements
 
 // Without Local.xcconfig the app is signed ad hoc: it builds, but macOS may
 // ask for the permissions again after every build.

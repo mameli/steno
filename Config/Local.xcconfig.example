@@ -1,9 +1,9 @@
 // Copy to Config/Local.xcconfig (ignored by git) to sign with a stable identity: macOS then
 // keeps the microphone and audio permissions across builds. See "Signing" in the README.
 //
-// Option 1: a self-signed "Steno" code signing certificate in your login keychain.
+// Option 1: a self-signed "Takku" code signing certificate in your login keychain.
 CODE_SIGN_STYLE = Manual
-CODE_SIGN_IDENTITY = Steno
+CODE_SIGN_IDENTITY = Takku
 DEVELOPMENT_TEAM =
 //
 // Option 2: the free Personal Team of your Apple ID in Xcode.

@@ -4,7 +4,7 @@ import Foundation
 // Run from the repository root: swift scripts/generate-menu-icon.swift
 // Coordinates match the 20 × 20 SVG; the PDF has an 18 pt intrinsic size.
 let repository = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
-let output = repository.appendingPathComponent("Steno/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon.pdf")
+let output = repository.appendingPathComponent("Takku/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon.pdf")
 var page = CGRect(x: 0, y: 0, width: 18, height: 18)
 guard let context = CGContext(output as CFURL, mediaBox: &page, nil) else {
     fatalError("Could not create menu icon PDF")

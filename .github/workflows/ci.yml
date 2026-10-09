@@ -12,12 +12,12 @@ concurrency:
 
 jobs:
   core-tests:
-    name: StenoCore tests
+    name: TakkuCore tests
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       - name: swift test
-        working-directory: StenoCore
+        working-directory: TakkuCore
         run: swift test
 
   app-build:
@@ -29,10 +29,10 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/DerivedData/SourcePackages
-          key: spm-${{ hashFiles('Steno.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: spm-${{ hashFiles('Takku.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
       # Without Config/Local.xcconfig the app is signed ad hoc, as in Base.xcconfig.
       - name: xcodebuild
         run: >
-          xcodebuild -project Steno.xcodeproj -scheme Steno -configuration Debug
+          xcodebuild -project Takku.xcodeproj -scheme Takku -configuration Debug
           -derivedDataPath build/DerivedData -skipPackagePluginValidation -skipMacroValidation
           build

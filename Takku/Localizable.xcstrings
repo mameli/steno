@@ -1,0 +1,1612 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "\"%@\" is not a valid file name.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\"%@\" non è un nome di file valido."
+          }
+        }
+      }
+    },
+    "%@ The note will be created at the end of Processing.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ La nota verrà creata a fine Elaborazione."
+          }
+        }
+      }
+    },
+    "%@ Track: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traccia %1$@: %2$@"
+          }
+        }
+      }
+    },
+    "%@ keeps changing while Takku tries to update it.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ continua a cambiare mentre Takku prova ad aggiornarla."
+          }
+        }
+      }
+    },
+    "A new Template starts from Notes: change instructions and sections in Obsidian. They live in Meetings/_Templates/ in the Vault.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un Template nuovo parte da Notes: in Obsidian cambi istruzioni e sezioni. Sono in Meetings/_Templates/ nel Vault."
+          }
+        }
+      }
+    },
+    "API key": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiave API"
+          }
+        }
+      }
+    },
+    "About 20 MB per hour of Meeting. Notes and Transcripts stay in the Vault: without the audio, Retry makes only the Summary again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Circa 20 MB per ora di riunione. Note e trascrizioni restano nel Vault: senza l'audio, Riprova rifà solo il riepilogo."
+          }
+        }
+      }
+    },
+    "Add Profile": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi Profilo"
+          }
+        }
+      }
+    },
+    "Allow Takku in System Settings → Login Items.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti Takku in Impostazioni di Sistema → Elementi login."
+          }
+        }
+      }
+    },
+    "Any server with an OpenAI-compatible API. For work meetings use only local Providers or Providers based and hosting data in the EU.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualsiasi server con API compatibile OpenAI. Per le riunioni di lavoro usa solo Provider locali o con sede e dati in UE."
+          }
+        }
+      }
+    },
+    "Audio on this Mac": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio su questo Mac"
+          }
+        }
+      }
+    },
+    "Base URL": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "URL base"
+          }
+        }
+      }
+    },
+    "Cannot read the audio of %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile leggere l'audio di %@."
+          }
+        }
+      }
+    },
+    "Changes are saved as you type. The key goes to the Keychain when you press Return or Save key.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le modifiche si salvano mentre scrivi. La chiave va nel Portachiavi quando premi Invio o Salva chiave."
+          }
+        }
+      }
+    },
+    "Choose the Vault first.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli prima il Vault."
+          }
+        }
+      }
+    },
+    "Choose…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scegli…"
+          }
+        }
+      }
+    },
+    "Core Audio could not complete \"%@\" (code %d).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Core Audio non riesce a completare \"%@\" (codice %d)."
+          }
+        }
+      }
+    },
+    "Create and open": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea e apri"
+          }
+        }
+      }
+    },
+    "Created \"%@\": edit it in Obsidian.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creato \"%@\": modificalo in Obsidian."
+          }
+        }
+      }
+    },
+    "Default": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default"
+          }
+        }
+      }
+    },
+    "Default Template": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Template di default"
+          }
+        }
+      }
+    },
+    "Delete": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina"
+          }
+        }
+      }
+    },
+    "Delete audio": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancella audio"
+          }
+        }
+      }
+    },
+    "Delete the audio of all concluded Meetings?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancellare l'audio di tutte le riunioni concluse?"
+          }
+        }
+      }
+    },
+    "Download": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scarica"
+          }
+        }
+      }
+    },
+    "Download of %@ failed: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download di %@ non riuscito: %@"
+          }
+        }
+      }
+    },
+    "Downloading transcription model… %lld%%": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scaricamento del modello di trascrizione… %lld%%"
+          }
+        }
+      }
+    },
+    "Entries": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voci"
+          }
+        }
+      }
+    },
+    "Folder": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartella"
+          }
+        }
+      }
+    },
+    "General": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generali"
+          }
+        }
+      }
+    },
+    "In use": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In uso"
+          }
+        }
+      }
+    },
+    "Incomplete recording: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrazione incompleta: %@"
+          }
+        }
+      }
+    },
+    "Incomplete transcript: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascrizione incompleta: %@"
+          }
+        }
+      }
+    },
+    "Invalid Profile URL: \"%@\" (http:// or https:// and an address are needed).": {
+      "extractionState": "manual",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "URL del Profilo non valido: \"%@\" (servono http:// o https:// e un indirizzo)."
+          }
+        }
+      }
+    },
+    "It cannot be undone. Meetings being recorded or processed are not touched.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non si può annullare. Le riunioni in registrazione o in elaborazione non vengono toccate."
+          }
+        }
+      }
+    },
+    "It works. Reply: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Funziona. Risposta: %@"
+          }
+        }
+      }
+    },
+    "Keep audio for %lld days": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conserva l'audio per %lld giorni"
+          }
+        }
+      }
+    },
+    "Key removed.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiave rimossa."
+          }
+        }
+      }
+    },
+    "Key saved in the Keychain.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiave salvata nel Portachiavi."
+          }
+        }
+      }
+    },
+    "Keychain: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Portachiavi: %@"
+          }
+        }
+      }
+    },
+    "Light and fast; more mistakes, especially in Italian.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leggero e veloce; più errori, soprattutto in italiano."
+          }
+        }
+      }
+    },
+    "Loading transcription model…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Caricamento del modello di trascrizione…"
+          }
+        }
+      }
+    },
+    "Max context (tokens)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contesto massimo (token)"
+          }
+        }
+      }
+    },
+    "Meeting": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riunione"
+          }
+        }
+      }
+    },
+    "Meeting in progress": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riunione in corso"
+          }
+        }
+      }
+    },
+    "Meeting note not found in the Vault.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nota della Riunione non trovata nel Vault."
+          }
+        }
+      }
+    },
+    "Meeting state not saved to disk: a restart now would not resume it. %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stato della Riunione non salvato su disco: un riavvio ora non la riprenderebbe. %@"
+          }
+        }
+      }
+    },
+    "Meetings that used it switch to the Notes Template.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le Riunioni che lo usavano passano al Template Notes."
+          }
+        }
+      }
+    },
+    "Microphone not authorized: open System Settings…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microfono non autorizzato: apri Impostazioni di Sistema…"
+          }
+        }
+      }
+    },
+    "Model": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modello"
+          }
+        }
+      }
+    },
+    "Models run on this Mac. Each is downloaded once from Hugging Face: only the model is downloaded, no audio or text is sent. The model in use applies to new Meetings and to Retry.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "I modelli girano su questo Mac. Ognuno si scarica una volta sola da Hugging Face: viene scaricato solo il modello, nessun audio o testo viene inviato. Il modello in uso vale per le nuove riunioni e per Riprova."
+          }
+        }
+      }
+    },
+    "Move the Template \"%@\" to the Trash?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spostare il Template \"%@\" nel Cestino?"
+          }
+        }
+      }
+    },
+    "Move to Trash": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sposta nel Cestino"
+          }
+        }
+      }
+    },
+    "Name": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nome"
+          }
+        }
+      }
+    },
+    "Names and technical words that recognition gets wrong, in Meetings/_Vocabulary.md in the Vault. The Summary uses them; the variants you list are fixed in the Transcript.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nomi e parole tecniche che il riconoscimento sbaglia, in Meetings/_Vocabulary.md nel Vault. Il Summary li usa; le varianti che elenchi vengono corrette nel Transcript."
+          }
+        }
+      }
+    },
+    "New Template": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuovo Template"
+          }
+        }
+      }
+    },
+    "No Profile yet. Add one to generate Summaries.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun Profilo. Aggiungine uno per generare i Riepiloghi."
+          }
+        }
+      }
+    },
+    "No Vault configured: no Summary, the Transcript is only in the Recording folder.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun Vault configurato: niente Riepilogo, la Trascrizione è solo nella cartella della Registrazione."
+          }
+        }
+      }
+    },
+    "None": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessuno"
+          }
+        }
+      }
+    },
+    "Obsidian Vault": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault Obsidian"
+          }
+        }
+      }
+    },
+    "Open Login Items": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri Elementi login"
+          }
+        }
+      }
+    },
+    "Open at login": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri all'avvio del Mac"
+          }
+        }
+      }
+    },
+    "Open in Obsidian": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri in Obsidian"
+          }
+        }
+      }
+    },
+    "Open note": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri nota"
+          }
+        }
+      }
+    },
+    "Open Vocabulary": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri il Vocabolario"
+          }
+        }
+      }
+    },
+    "Paste the key here": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incolla qui la chiave"
+          }
+        }
+      }
+    },
+    "Plain-text Profile URL: \"%@\". Use https://; http:// is allowed only for servers on this Mac.": {
+      "extractionState": "manual",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "URL del Profilo in chiaro: \"%@\". Usa https://; http:// è ammesso solo per i server su questo Mac."
+          }
+        }
+      }
+    },
+    "Preparing transcription model, first time only: a few minutes…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparazione del modello di trascrizione, solo la prima volta: qualche minuto…"
+          }
+        }
+      }
+    },
+    "Preparing…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparazione…"
+          }
+        }
+      }
+    },
+    "Processing failed": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elaborazione non riuscita"
+          }
+        }
+      }
+    },
+    "Processing…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elaborazione in corso…"
+          }
+        }
+      }
+    },
+    "Processing… (%lld more queued)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elaborazione in corso… (altre %lld in coda)"
+          }
+        }
+      }
+    },
+    "Profile: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profilo: %@"
+          }
+        }
+      }
+    },
+    "Quit Takku": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esci da Takku"
+          }
+        }
+      }
+    },
+    "Recent meetings": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riunioni recenti"
+          }
+        }
+      }
+    },
+    "Recommended: fast and accurate.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consigliato: veloce e preciso."
+          }
+        }
+      }
+    },
+    "Recording interrupted and not recoverable: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrazione interrotta e non recuperabile: %@"
+          }
+        }
+      }
+    },
+    "Recording unreadable: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrazione illeggibile: %@"
+          }
+        }
+      }
+    },
+    "Recording · %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In registrazione · %@"
+          }
+        }
+      }
+    },
+    "Recordings": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrazioni"
+          }
+        }
+      }
+    },
+    "Remove": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rimuovi"
+          }
+        }
+      }
+    },
+    "Retry": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprova"
+          }
+        }
+      }
+    },
+    "Retry failed: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riprova non riuscita: %@"
+          }
+        }
+      }
+    },
+    "Retry not possible: the audio is deleted and the Meeting note or Transcript is not in the Vault.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossibile riprovare: l'audio è stato cancellato e la nota della riunione o la trascrizione non sono nel Vault."
+          }
+        }
+      }
+    },
+    "Save key": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salva chiave"
+          }
+        }
+      }
+    },
+    "Saved in the Keychain (…%@) · paste here to replace it": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Salvata nel Portachiavi (…%@) · incolla qui per sostituirla"
+          }
+        }
+      }
+    },
+    "Set up the Vault to get the Summary.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configura il Vault per avere il Riepilogo."
+          }
+        }
+      }
+    },
+    "Settings…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni…"
+          }
+        }
+      }
+    },
+    "Show in Finder": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra nel Finder"
+          }
+        }
+      }
+    },
+    "Slightly more accurate; more memory, slower to prepare.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un po' più preciso; più memoria, più lento da preparare."
+          }
+        }
+      }
+    },
+    "Speakers not told apart: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partecipanti non distinti: %@"
+          }
+        }
+      }
+    },
+    "Start meeting    ⌃⌥⌘R": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia riunione    ⌃⌥⌘R"
+          }
+        }
+      }
+    },
+    "Stop meeting    ⌃⌥⌘R": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ferma riunione    ⌃⌥⌘R"
+          }
+        }
+      }
+    },
+    "Summary Profile": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profilo Riepilogo"
+          }
+        }
+      }
+    },
+    "Summary Profiles": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profili per il Riepilogo"
+          }
+        }
+      }
+    },
+    "Summary not generated: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riepilogo non generato: %@"
+          }
+        }
+      }
+    },
+    "Summary ready": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riepilogo pronto"
+          }
+        }
+      }
+    },
+    "Template": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Template"
+          }
+        }
+      }
+    },
+    "Templates": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Template"
+          }
+        }
+      }
+    },
+    "Test connection": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova connessione"
+          }
+        }
+      }
+    },
+    "The microphone does not start (%@): %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il microfono non parte (%1$@): %2$@"
+          }
+        }
+      }
+    },
+    "The model's reply was cut off by the length limit.": {
+      "extractionState": "manual",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La risposta del modello è stata troncata per il limite di lunghezza."
+          }
+        }
+      }
+    },
+    "The provider answered with error %lld: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il provider ha risposto con l'errore %1$lld: %2$@"
+          }
+        }
+      }
+    },
+    "The provider returned no text.": {
+      "extractionState": "manual",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il provider non ha restituito testo."
+          }
+        }
+      }
+    },
+    "To be configured": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da configurare"
+          }
+        }
+      }
+    },
+    "Transcript": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascrizione"
+          }
+        }
+      }
+    },
+    "Transcript ready": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascrizione pronta"
+          }
+        }
+      }
+    },
+    "Transcription": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascrizione"
+          }
+        }
+      }
+    },
+    "Transcription failed: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascrizione non riuscita: %@"
+          }
+        }
+      }
+    },
+    "Transcription failed: the Recording is saved, you can retry.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trascrizione non riuscita: la Registrazione è salvata, si potrà riprovare."
+          }
+        }
+      }
+    },
+    "Unsupported audio format: %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Formato audio non supportato: %@."
+          }
+        }
+      }
+    },
+    "Untitled": {
+      "extractionState": "manual",
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senza nome"
+          }
+        }
+      }
+    },
+    "Use": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa"
+          }
+        }
+      }
+    },
+    "Use for Summaries": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa per i Riepiloghi"
+          }
+        }
+      }
+    },
+    "Use this Vault": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa questo Vault"
+          }
+        }
+      }
+    },
+    "Used for Summaries": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In uso per i Riepiloghi"
+          }
+        }
+      }
+    },
+    "Vault not reachable: %@.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault non raggiungibile: %@."
+          }
+        }
+      }
+    },
+    "Version %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versione %@"
+          }
+        }
+      }
+    },
+    "Very fast and accurate; on short replies it can switch language.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Molto veloce e preciso; sulle risposte brevi può cambiare lingua."
+          }
+        }
+      }
+    },
+    "Vocabulary": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vocabolario"
+          }
+        }
+      }
+    },
+    "Writing to the Vault failed: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrittura nel Vault non riuscita: %@"
+          }
+        }
+      }
+    },
+    "code %d": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "codice %d"
+          }
+        }
+      }
+    },
+    "e.g. Mistral EU": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. Mistral UE"
+          }
+        }
+      }
+    },
+    "e.g. Weekly 1:1": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. 1:1 settimanale"
+          }
+        }
+      }
+    },
+    "e.g. https://api.mistral.ai/v1": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. https://api.mistral.ai/v1"
+          }
+        }
+      }
+    },
+    "e.g. mistral-medium-latest": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "es. mistral-medium-latest"
+          }
+        }
+      }
+    },
+    "the Profile \"%@\" was deleted: choose another one in the menu and Retry.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "il Profilo \"%@\" è stato eliminato: scegline un altro dal menu e premi Riprova."
+          }
+        }
+      }
+    },
+    "there is no speech in the Recording.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nella Registrazione non c'è parlato."
+          }
+        }
+      }
+    },
+    "⌃⌥⌘R is already used by another app": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌃⌥⌘R è già usata da un'altra app"
+          }
+        }
+      }
+    },
+    "⚠️ %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⚠️ %@"
+          }
+        }
+      }
+    },
+    "⚠️ No sound from the microphone for %lld min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⚠️ Nessun suono dal microfono da %lld min"
+          }
+        }
+      }
+    },
+    "⚠️ No sound from the system audio for %lld min": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⚠️ Nessun suono dall'audio di sistema da %lld min"
+          }
+        }
+      }
+    },
+    "No sound from the microphone": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun suono dal microfono"
+          }
+        }
+      }
+    },
+    "No sound from the system audio": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nessun suono dall'audio di sistema"
+          }
+        }
+      }
+    },
+    "Takku has recorded nothing from your microphone for 2 minutes. Check System Settings → Privacy & Security → Microphone.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da 2 minuti Takku non registra niente dal tuo microfono. Controlla Impostazioni di Sistema → Privacy e sicurezza → Microfono."
+          }
+        }
+      }
+    },
+    "Takku has recorded nothing from the call for 2 minutes. Check System Settings → Privacy & Security → Screen & System Audio Recording.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da 2 minuti Takku non registra niente dalla chiamata. Controlla Impostazioni di Sistema → Privacy e sicurezza → Registrazione schermo e audio di sistema."
+          }
+        }
+      }
+    },
+    "Meeting languages": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lingue delle riunioni"
+          }
+        }
+      }
+    },
+    "Every Meeting is transcribed in this language.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ogni riunione viene trascritta in questa lingua."
+          }
+        }
+      }
+    },
+    "Takku detects which of these languages each Meeting is in.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Takku riconosce in quale di queste lingue è ogni riunione."
+          }
+        }
+      }
+    },
+    "Mark this moment    ⌃⌥⌘M": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segna questo momento    ⌃⌥⌘M"
+          }
+        }
+      }
+    },
+    "Marked moments: %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Momenti segnati: %lld"
+          }
+        }
+      }
+    },
+    "⌃⌥⌘M is already used by another app": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌃⌥⌘M è già usata da un'altra app"
+          }
+        }
+      }
+    },
+    "Moment marked": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Momento segnato"
+          }
+        }
+      }
+    },
+    "Use the calendar": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa il calendario"
+          }
+        }
+      }
+    },
+    "The Meeting note takes the name and the participants of the event in progress.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La nota della riunione prende il nome e i partecipanti dell'evento in corso."
+          }
+        }
+      }
+    },
+    "Allow Takku in System Settings → Privacy & Security → Calendars.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Consenti Takku in Impostazioni di Sistema → Privacy e sicurezza → Calendari."
+          }
+        }
+      }
+    },
+    "Open Calendars": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri Calendari"
+          }
+        }
+      }
+    },
+    "another app": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "un'altra app"
+          }
+        }
+      }
+    },
+    "Start meeting": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia riunione"
+          }
+        }
+      }
+    },
+    "Stop meeting": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ferma riunione"
+          }
+        }
+      }
+    },
+    "Looks like a call in %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sembra una chiamata su %@"
+          }
+        }
+      }
+    },
+    "Start recording?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avviare la registrazione?"
+          }
+        }
+      }
+    },
+    "The call seems over": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La chiamata sembra finita"
+          }
+        }
+      }
+    },
+    "Stop recording?": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermare la registrazione?"
+          }
+        }
+      }
+    },
+    "Suggest recording when a call starts": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggerisci di registrare quando inizia una chiamata"
+          }
+        }
+      }
+    },
+    "A notification when an app uses the microphone for a while, and another when it stops. Takku never starts or stops by itself.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una notifica quando un'app usa il microfono per un po', e un'altra quando smette. Takku non avvia né ferma mai da solo."
+          }
+        }
+      }
+    },
+    "Takku %@ is available…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "È disponibile Takku %@…"
+          }
+        }
+      }
+    },
+    "Check for updates": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Controlla gli aggiornamenti"
+          }
+        }
+      }
+    },
+    "Once a day Takku asks GitHub for the latest version; nothing about you or your Meetings is sent.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una volta al giorno Takku chiede a GitHub l'ultima versione; non invia niente su di te o sulle tue riunioni."
+          }
+        }
+      }
+    },
+    "Show all in Obsidian…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra tutte in Obsidian…"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
