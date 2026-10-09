@@ -25,11 +25,12 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+      # The key names the project: packages cached for Steno.xcodeproj do not resolve for Takku.xcodeproj.
       - name: Cache Swift packages
         uses: actions/cache@v4
         with:
           path: build/DerivedData/SourcePackages
-          key: spm-${{ hashFiles('Takku.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          key: spm-takku-${{ hashFiles('Takku.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
       # Without Config/Local.xcconfig the app is signed ad hoc, as in Base.xcconfig.
       - name: xcodebuild
         run: >
