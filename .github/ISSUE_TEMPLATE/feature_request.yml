@@ -1,0 +1,16 @@
+name: Feature request
+description: An idea to make Takku more useful.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How you'd like Takku to handle it. Optional, the problem matters most.

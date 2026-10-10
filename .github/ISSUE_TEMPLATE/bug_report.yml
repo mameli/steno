@@ -1,0 +1,75 @@
+name: Bug report
+description: Something in Takku doesn't work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please check the [FAQ](https://takku.app/faq) first.
+        **Don't paste Transcripts, Summaries or meeting notes**: issues are public. Describe the problem instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start a meeting from the menu bar
+        2. …
+  - type: input
+    id: version
+    attributes:
+      label: Takku version
+      description: Shown at the top of Takku Settings.
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and Mac
+      placeholder: "macOS 26.1, MacBook Air M2 16 GB"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installed with
+      options:
+        - Homebrew
+        - Zip from the release page
+        - Built from source
+  - type: dropdown
+    id: model
+    attributes:
+      label: Transcription model
+      options:
+        - Large v3 Turbo
+        - Large v3 Turbo (full)
+        - Small
+        - Parakeet v3
+        - Not relevant
+  - type: input
+    id: summary
+    attributes:
+      label: Summary provider and model
+      description: For example llama.cpp + gemma-4-E4B, Mistral + mistral-medium-latest, or Transcript only. No API keys.
+  - type: input
+    id: call
+    attributes:
+      label: Call app and audio devices
+      description: If the problem is about recording.
+      placeholder: "Google Meet in Safari, AirPods Pro"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Run this in Terminal right after the problem, then paste the output (check it first and remove anything you don't want to share):
+        `/usr/bin/log show --last 1h --style compact --predicate 'subsystem == "app.takku.takku"'`
+      render: text

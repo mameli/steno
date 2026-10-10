@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: FAQ
+    url: https://takku.app/faq
+    about: Answers to common questions about install, permissions and privacy.
+  - name: Guide
+    url: https://takku.app/guide
+    about: How to use Takku day to day.
