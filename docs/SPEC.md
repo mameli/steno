@@ -308,7 +308,7 @@ When the Summary cannot tell who a Speaker is, the user can say it:
 
 ### Smaller changes
 
-- **Update check**: Settings → *General* → *Check for updates* (on by default). At launch and once a day Takku asks GitHub for the latest release (`api.github.com/repos/mameli/takku/releases/latest`, no data about the user or the Meetings, only the request). If its version (`v0.1.6` → `0.1.6`) is newer than the running one, the menu shows "Takku 0.1.6 is available…", which opens the release page. The README lists this request in "Where your data is".
+- **Update check**: Settings → *General* → *Check for updates* (on by default). At launch and once a day Takku asks GitHub for the latest release (`api.github.com/repos/mameli/Takku/releases/latest`, no data about the user or the Meetings, only the request). If its version (`v0.1.6` → `0.1.6`) is newer than the running one, the menu shows "Takku 0.1.6 is available…", which opens the release page. The README lists this request in "Where your data is".
 - **Recent meetings → Show all in Obsidian…**: opens Obsidian's search on the Vault with the Meeting notes (`([takku_id] OR [steno_id]) -path:"Meetings/Transcripts"`, `steno_id` for notes written before the rename).
 - **CI**: GitHub Actions runs `swift test` on `TakkuCore` and builds the app (signed ad hoc) at every push and pull request.
 - **Code**: `SettingsView.swift` split by section; `MeetingProcessor.swift` without the retention and the notifications of the outcome, moved to their own types.

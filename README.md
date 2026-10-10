@@ -8,7 +8,7 @@
 
 <h1 align="center">Takku</h1>
 
-<p align="center"><a href="https://takku.app">takku.app</a> · <a href="https://github.com/mameli/takku/releases/latest"><b>Download the latest version</b></a> · macOS 15+ · Apple Silicon</p>
+<p align="center"><a href="https://takku.app">takku.app</a> · <a href="https://github.com/mameli/Takku/releases/latest"><b>Download the latest version</b></a> · macOS 15+ · Apple Silicon</p>
 
 A macOS menu bar app that records your meetings, transcribes them **on your Mac** and writes the Transcript and a Summary into your **Obsidian** vault. You choose who writes the Summary: a model running locally, or any OpenAI-compatible provider you trust (for example one hosted in the EU).
 
@@ -40,7 +40,7 @@ Meetings can be in Italian, English or 23 other European languages (*Settings �
    ```sh
    brew install --cask mameli/takku/takku
    ```
-   Or without Homebrew: download `Takku-<version>.zip` from the [latest release](https://github.com/mameli/takku/releases/latest) (Safari unzips it on its own) and move **Takku** to **Applications**.
+   Or without Homebrew: download `Takku-<version>.zip` from the [latest release](https://github.com/mameli/Takku/releases/latest) (Safari unzips it on its own) and move **Takku** to **Applications**.
 2. Open Takku. macOS says it cannot verify the app: Takku is signed, but not notarized by Apple, which needs a paid developer account. Press **Done**.
 3. Go to **System Settings → Privacy & Security**, scroll down and press **Open Anyway** next to Takku, then confirm with your password. Alternatively, run `xattr -dr com.apple.quarantine /Applications/Takku.app` in Terminal before opening it.
 
@@ -130,7 +130,7 @@ Recording a meeting may require the consent of the other participants: tell them
 1. Install Xcode 16 or later from the App Store and open it once.
 2. Clone the repository:
    ```sh
-   git clone https://github.com/mameli/takku.git
+   git clone https://github.com/mameli/Takku.git
    cd takku
    ```
 3. Choose how to sign it (see [Signing](#signing)) and copy `Config/Local.xcconfig.example` to `Config/Local.xcconfig`.

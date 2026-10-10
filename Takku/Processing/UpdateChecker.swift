@@ -15,7 +15,7 @@ final class UpdateChecker {
         let page: URL
     }
 
-    private static let latestRelease = URL(string: "https://api.github.com/repos/mameli/takku/releases/latest")!
+    private static let latestRelease = URL(string: "https://api.github.com/repos/mameli/Takku/releases/latest")!
 
     /// A release newer than the running app, shown in the menu.
     private(set) var available: Release?
