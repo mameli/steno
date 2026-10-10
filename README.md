@@ -24,7 +24,7 @@ It was built as an alternative to Granola for people whose company does not allo
 - **Templates are notes in your vault**: write the structure and instructions of the Summary in Obsidian.
 - **A Vocabulary for your jargon**: names and technical terms that recognition gets wrong are fixed in the Transcript and spelled right in the Summary.
 
-https://github.com/user-attachments/assets/17e4b5a5-6223-4542-9fcf-5659cbca26c8
+https://github.com/user-attachments/assets/f74b6fe5-6423-46f6-9194-a4f1c48a4579
 
 ## Requirements
 
