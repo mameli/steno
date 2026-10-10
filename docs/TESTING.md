@@ -92,6 +92,7 @@ Before starting: Takku running from the menu bar (notebook icon), Vault and a Su
 - [ ] **Marks**: ⌃⌥⌘M during a Meeting from another app → the dot becomes a star for a second, the menu shows "Marked moments: 1"; after Processing the paragraph just before has a ⭐ and the Summary covers it.
 - [ ] **Call suggestions**: idle, join a Meet, Zoom or Teams call → within 20 seconds "Looks like a call in <app>" with *Start meeting*, which starts. Leave the call → within 35 seconds "The call seems over" with *Stop meeting*. A 5-second dictation with another app suggests nothing. Turn it off in Settings → no notifications.
 - [ ] **Update check**: with `MARKETING_VERSION` lowered in a Debug build, the menu shows "Takku <latest> is available…", which opens the release page.
+- [ ] **Report a problem**: menu → *Report a problem…* → Finder shows `Takku report <date>.txt` with version, Mac, models and the logs of the last 3 days (no Profile name or address); the browser opens the GitHub bug form with version, macOS, transcription model and Summary filled in (and *Homebrew* when installed with it).
 - [ ] **Show all in Obsidian**: *Recent meetings* → *Show all in Obsidian…* → Obsidian's search lists the Meeting notes, not the Transcripts.
 
 ## 5. When you set them up

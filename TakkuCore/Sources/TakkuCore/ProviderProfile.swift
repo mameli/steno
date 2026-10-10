@@ -50,6 +50,12 @@ public struct ProviderProfile: Codable, Identifiable, Equatable, Hashable, Senda
         return url
     }
 
+    /// Whether the provider is a server on this Mac (llama.cpp, Ollama, LM Studio).
+    public var runsOnThisMac: Bool {
+        guard let host = URL(string: baseURL.trimmingCharacters(in: .whitespaces))?.host() else { return false }
+        return Self.loopbackHosts.contains(host.lowercased())
+    }
+
     /// The name shown in menus, even when the user did not type one. "Untitled" is looked up
     /// in the app's string catalog (Bundle.main), so the app can translate it.
     public var displayName: String {

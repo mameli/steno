@@ -813,6 +813,16 @@
         }
       }
     },
+    "Report a problem…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Segnala un problema…"
+          }
+        }
+      }
+    },
     "Retry": {
       "localizations": {
         "it": {

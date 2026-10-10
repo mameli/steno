@@ -129,6 +129,7 @@ private struct MeetingMenu: View {
         }
 
         Divider()
+        Button("Report a problem…") { ProblemReporter.report() }
         Button("Settings…") {
             // Takku has no Dock icon: without activating it the window would stay behind the others.
             NSApplication.shared.activate()

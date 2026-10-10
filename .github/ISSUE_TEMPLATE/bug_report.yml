@@ -70,6 +70,6 @@ body:
     attributes:
       label: Logs
       description: |
-        Run this in Terminal right after the problem, then paste the output (check it first and remove anything you don't want to share):
-        `/usr/bin/log show --last 1h --style compact --predicate 'subsystem == "app.takku.takku"'`
-      render: text
+        In the Takku menu, **Report a problem…** writes a report and shows it in Finder: check it, then drag the file here. It also opens this form with the fields above filled in.
+        If Takku doesn't open, run this in Terminal and paste the output (check it first and remove anything you don't want to share):
+        `/usr/bin/log show --last 3d --style compact --predicate 'subsystem == "app.takku.takku"'`
